@@ -1,46 +1,56 @@
+import os
+
 import battle
-import sqlite3
 from playhouse.db_url import connect
 import datetime
+import logging
+
+from peewee import (
+    BooleanField, CharField, DatabaseProxy, DateTimeField, DeferredForeignKey, ForeignKeyField,
+    IntegerField, Model, SmallIntegerField, SQL, TextField,
+)
+
+PROJECT_PATH = os.path.dirname(__file__)
+
+
+db_proxy = DatabaseProxy()
+
+
+class AstroboxRating(Model):
+    user_name = CharField(max_length=255)
+    rating = CharField(max_length=255, null=True, default=0)
+    created_at = DateTimeField(default=datetime.datetime.now, null=True)
+    updated_at = DateTimeField(default=datetime.datetime.now, null=True)
+
+    class Meta:
+        database = db_proxy  # см https://clck.ru/Jy4BB
+
+    def save(self, force_insert=False, only=None):
+        self.updated_at = datetime.datetime.now()
+        super().save(force_insert=force_insert, only=only)
 
 
 class RatingUpdater:
 
-    def __init__(self, table_name='astrobox', db_url='sqlite:///astro.sqlite'):
+    def __init__(self, db_url):
         self.database = connect(db_url)
-        self.cursor = self.database.cursor()
-        self.table_name = table_name
-        try:
-            self.cursor.execute(f"CREATE TABLE {self.table_name} (user_name STRING)")
-            self.cursor.execute(f'''
-            ALTER TABLE {self.table_name}
-            ADD COLUMN rating STRING
-            ''')
-        except sqlite3.OperationalError:
-            print(f"Таблица {self.table_name} уже есть в базе данных")
+        db_proxy.initialize(self.database)
+        self.database.create_tables([AstroboxRating, ])
 
     def add_new_player_in_db(self, user_name):
-        try:
-            self.cursor.execute(
-                f'''ALTER TABLE {self.table_name}
-                ADD COLUMN {user_name} STRING''')
-            self.cursor.execute(f"INSERT INTO {self.table_name} (user_name) VALUES ('{user_name}')")
-        except sqlite3.OperationalError:
-            print(f'{user_name} уже есть в {self.table_name}')
+        AstroboxRating.create(user_name=user_name)
 
     def save_results_in_db(self, parsed_results):
-        for user, user_results in parsed_results.items():
+        for user_name, user_results in parsed_results.items():
             for column_name, result in user_results.items():
-                self.cursor.execute(f"""
-                UPDATE {self.table_name}
-                SET {column_name} = '{result}'
-                WHERE user_name = '{user}'
-                """)
+                user, created = AstroboxRating.get_or_create(user_name=user_name, defaults=dict(rating=result))
+                if not created:
+                    user.rating = result
+                    user.save()
 
     def get_results_from_db(self):
-        self.cursor.execute(f"SELECT * FROM {self.table_name}")
-        ratings = self.cursor.fetchall()
-        print(f'Рейтинговая таблица: {ratings}')
+        ratings = AstroboxRating.select().all()
+        logging.debug(f'Рейтинговая таблица: {ratings}')
         return ratings
 
     def get_ratings(self, results):
@@ -48,10 +58,8 @@ class RatingUpdater:
         for new_user in results:
             self.add_new_player_in_db(new_user)
         for user in results:
-            self.cursor.execute(f"""
-                    SELECT rating FROM {self.table_name}
-                    WHERE user_name = '{user}'""")
-            rating = self.cursor.fetchall()
+            rating = AstroboxRating.get_or_create(user_name=user)
+            # TODO тут привести к работе с обьектами
             if rating[0][0] is not None:
                 players_rating[user] = rating[0][0]
             else:
@@ -88,16 +96,24 @@ class RatingUpdater:
             rating_table[element[0]] = element[1]
         rating_list = sorted(rating_table.items(), key=lambda x: x[1], reverse=True)
         with open(path_to_file, 'w') as table:
-            table.write(f"Рэйтинг по состоянию на {datetime.date.today().strftime('%d.%m.%Y')}\n\n")
+            table.write(f"Рейтинг по состоянию на {datetime.date.today().strftime('%d.%m.%Y')}\n\n")
             for index, (name, rating) in enumerate(rating_list):
                 table.write(f"{index + 1}. {name} - {rating}\n")
 
     def update_table_and_database(self, results_from_battle):
         parsed_results = self.parse_results(results_from_battle)
         self.save_results_in_db(parsed_results)
+        # TODO если студ запустит этот скрипт, то у него перезапишется рейтинг
+        #  и когда студ будет делать МР в базу - рейтинги будут в конфликте :(
+        #  надо что-то придумать. что бы рейтинг не перезаписывался. видимо по умолчанию
+        #  писать в файл из .gitignore, а куратор будет может указать реальный файл
         self.write_results_in_file(self.get_results_from_db(), 'RATING_2019.md')
 
 
-astro_rating = RatingUpdater(db_url='sqlite:///astro.sqlite')
-res_from_battle = battle.drones_choose()
-astro_rating.update_table_and_database(res_from_battle)
+if __name__ == '__main__':
+    # TODO тут добавить argparse что бы можно было указать:
+    #  файл с результатами игры - если указан не запускать битву
+    astro_rating = RatingUpdater(db_url='sqlite:///{}/astro.sqlite'.format(PROJECT_PATH))
+    drones = battle.drones_choose()
+    res_from_battle = battle.run_battle(drones, asteroids_count=10)
+    astro_rating.update_table_and_database(res_from_battle)
