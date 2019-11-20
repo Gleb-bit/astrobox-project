@@ -4,6 +4,8 @@ import battle
 from playhouse.db_url import connect
 import datetime
 import logging
+import argparse
+from playhouse.shortcuts import model_to_dict
 
 from peewee import (
     BooleanField, CharField, DatabaseProxy, DateTimeField, DeferredForeignKey, ForeignKeyField,
@@ -37,31 +39,35 @@ class RatingUpdater:
         db_proxy.initialize(self.database)
         self.database.create_tables([AstroboxRating, ])
 
-    def add_new_player_in_db(self, user_name):
-        AstroboxRating.create(user_name=user_name)
+    @staticmethod
+    def add_new_player_in_db(user_name):
+        AstroboxRating.get_or_create(user_name=user_name)
 
-    def save_results_in_db(self, parsed_results):
+    @staticmethod
+    def save_results_in_db(parsed_results):
         for user_name, user_results in parsed_results.items():
-            for column_name, result in user_results.items():
-                user, created = AstroboxRating.get_or_create(user_name=user_name, defaults=dict(rating=result))
-                if not created:
-                    user.rating = result
-                    user.save()
+            result = user_results['rating']
+            user, created = AstroboxRating.get_or_create(user_name=user_name, defaults=dict(rating=result))
+            if not created:
+                user.rating = result
+                user.save()
 
-    def get_results_from_db(self):
-        ratings = AstroboxRating.select().all()
+    @staticmethod
+    def get_results_from_db():
+        ratings = AstroboxRating.select().dicts()
         logging.debug(f'Рейтинговая таблица: {ratings}')
-        return ratings
+        return list(ratings)
 
     def get_ratings(self, results):
         players_rating = {}
         for new_user in results:
             self.add_new_player_in_db(new_user)
         for user in results:
-            rating = AstroboxRating.get_or_create(user_name=user)
-            # TODO тут привести к работе с обьектами
-            if rating[0][0] is not None:
-                players_rating[user] = rating[0][0]
+            rating, created = AstroboxRating.get_or_create(user_name=user)
+            # тут привести к работе с обьектами
+            new_rating = int(rating.get().rating)
+            if created:
+                players_rating[user] = new_rating
             else:
                 players_rating[user] = 0
         return players_rating
@@ -90,10 +96,11 @@ class RatingUpdater:
                     koef_elo * (parsed_results[user_name][opponent_name] - expectation))
         return parsed_results
 
-    def write_results_in_file(self, ratings, path_to_file):
+    @staticmethod
+    def write_results_in_file(ratings, path_to_file):
         rating_table = {}
         for element in ratings:
-            rating_table[element[0]] = element[1]
+            rating_table[element['user_name']] = element['rating']
         rating_list = sorted(rating_table.items(), key=lambda x: x[1], reverse=True)
         with open(path_to_file, 'w') as table:
             table.write(f"Рейтинг по состоянию на {datetime.date.today().strftime('%d.%m.%Y')}\n\n")
@@ -103,7 +110,7 @@ class RatingUpdater:
     def update_table_and_database(self, results_from_battle):
         parsed_results = self.parse_results(results_from_battle)
         self.save_results_in_db(parsed_results)
-        # TODO если студ запустит этот скрипт, то у него перезапишется рейтинг
+        #  если студ запустит этот скрипт, то у него перезапишется рейтинг
         #  и когда студ будет делать МР в базу - рейтинги будут в конфликте :(
         #  надо что-то придумать. что бы рейтинг не перезаписывался. видимо по умолчанию
         #  писать в файл из .gitignore, а куратор будет может указать реальный файл
@@ -111,9 +118,15 @@ class RatingUpdater:
 
 
 if __name__ == '__main__':
-    # TODO тут добавить argparse что бы можно было указать:
+    #  тут добавить argparse что бы можно было указать:
     #  файл с результатами игры - если указан не запускать битву
+    parser = argparse.ArgumentParser(description='results')
+    parser.add_argument('result_file', type=str, help='path to file with results')
+    args = parser.parse_args(['test'])
+    if args.result_file:
+        res_from_battle = {'kharit': 1, 'vinog': 0.5}
+    else:
+        drones = battle.players_choose()
+        res_from_battle = battle.run_battle(drones, asteroids_count=10)
     astro_rating = RatingUpdater(db_url='sqlite:///{}/astro.sqlite'.format(PROJECT_PATH))
-    drones = battle.drones_choose()
-    res_from_battle = battle.run_battle(drones, asteroids_count=10)
     astro_rating.update_table_and_database(res_from_battle)
