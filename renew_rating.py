@@ -5,7 +5,6 @@ from playhouse.db_url import connect
 import datetime
 import logging
 import argparse
-from playhouse.shortcuts import model_to_dict
 
 from peewee import (
     BooleanField, CharField, DatabaseProxy, DateTimeField, DeferredForeignKey, ForeignKeyField,
@@ -66,7 +65,7 @@ class RatingUpdater:
             rating, created = AstroboxRating.get_or_create(user_name=user)
             # тут привести к работе с обьектами
             new_rating = int(rating.get().rating)
-            if created:
+            if not created:
                 players_rating[user] = new_rating
             else:
                 players_rating[user] = 0
@@ -124,7 +123,7 @@ if __name__ == '__main__':
     parser.add_argument('result_file', type=str, help='path to file with results')
     args = parser.parse_args(['test'])
     if args.result_file:
-        res_from_battle = {'kharit': 1, 'vinog': 0.5}
+        res_from_battle = {'kharit': 0.5, 'vinog': 0.5}
     else:
         drones = battle.players_choose()
         res_from_battle = battle.run_battle(drones, asteroids_count=10)
