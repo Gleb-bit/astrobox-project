@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
+import json
 import logging
 import os
+from pprint import pprint
+
 from astrobox.space_field import SpaceField
 import importlib
 import argparse
@@ -32,12 +35,13 @@ def players_choose():
     return added_players
 
 
-def run_battle(players, speed=150, asteroids_count=50):
+def run_battle(players, speed=150, asteroids_count=50, show_screen=False):
     scene = SpaceField(
         speed=speed,
         field=(1200, 600),
         asteroids_count=asteroids_count,
-        # headless=True,
+        can_fight=True,
+        headless=not show_screen,
     )
     drones_teams = {}
     NUMBER_OF_DRONES = 5
@@ -52,24 +56,34 @@ def run_battle(players, speed=150, asteroids_count=50):
 
 
 def print_battle_result(result):
-    print('\t', result)
+    pprint(result)
 
 
 if __name__ == '__main__':
-    #  тут добавить argparse что бы можно было указать:
-    #  названия модулей студентов для битвы (в формате hangar/stud_cod, если указаны - то не спрашивать)
-    #  скорость, астероиды, показывать ли поле - для запуска
-    #  файл для сохранения результаттов игры - что бы потом считать рейтинг
-    parser = argparse.ArgumentParser(description='drones, space_field, results')
-    parser.add_argument('game_speed', type=int, default=5, help='game speed')
-    parser.add_argument('asteroids_count', type=int, default=10, help='asteroids count')
-    parser.add_argument('out_file', type=str, help='path to file with results')
-    parser.add_argument('players', type=str, nargs=argparse.REMAINDER, help='list of players')
-    args = parser.parse_args('5 10 RATING_2019.md hangar_2019.kharitonov hangar_2019.vinogradov'.split())
-    drones = args.players if args.players else players_choose()
+    parser = argparse.ArgumentParser(description='Запускает битву нескольких игроков.')
+    parser.add_argument('-p', '--players', type=str, nargs=argparse.ONE_OR_MORE,
+                        help='Список модулей команд игроков в формате hangar_XXXX.module_name')
+    parser.add_argument('-s', '--game-speed', type=int, default=5, help='Скорость игры')
+    parser.add_argument('-a', '--asteroids-count', type=int, default=10, help='Количество астероидов')
+    parser.add_argument('-o', '--out-file', type=str, help='Путь для сохранения json-результатов игры')
+    parser.add_argument('-c', '--show-screen', action='store_true', help='показать экран игры')
+    # TODO запиши себе параметры в запуск в пайчарме
+    # args = parser.parse_args(''
+    #                          '-p hangar_2019.kharitonov hangar_2019.vinogradov'
+    #                          ' -s 5 -a 10 '
+    #                          # '--show-screen'
+    #                          # ' -o /tmp/battle_1.json'
+    #                          ''.split())
+    args = parser.parse_args()
+    players = args.players if args.players else players_choose()
     try:
-        result = run_battle(players=drones, speed=args.game_speed, asteroids_count=args.asteroids_count)
+        result = run_battle(players=players, speed=args.game_speed,
+                            asteroids_count=args.asteroids_count, show_screen=args.show_screen)
         if result:
-            print_battle_result(result=result)
+            if args.out_file:
+                with open(args.out_file, 'w') as ff:
+                    json.dump(ff, result)
+            else:
+                print_battle_result(result=result)
     except Exception as exc:
-        logging.exception('Game failed :( ')
+        logging.exception('Что-то пошло не так...')
