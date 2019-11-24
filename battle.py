@@ -59,6 +59,12 @@ def print_battle_result(result):
     pprint(result)
 
 
+def save_battle_result(result, path):
+    with open(path, 'w') as ff:
+        ff.write(json.dumps(result))
+    print(f'Battle result save to {path}')
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Запускает битву нескольких игроков.')
     parser.add_argument('-p', '--players', type=str, nargs=argparse.ONE_OR_MORE,
@@ -81,8 +87,7 @@ if __name__ == '__main__':
                             asteroids_count=args.asteroids_count, show_screen=args.show_screen)
         if result:
             if args.out_file:
-                with open(args.out_file, 'w') as ff:
-                    json.dump(ff, result)
+                save_battle_result(result=result, path=args.out_file)
             else:
                 print_battle_result(result=result)
     except Exception as exc:
