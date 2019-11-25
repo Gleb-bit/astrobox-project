@@ -3,7 +3,7 @@ import json
 import logging
 import os
 from pprint import pprint
-
+import uuid
 from astrobox.space_field import SpaceField
 import importlib
 import argparse
@@ -49,7 +49,9 @@ def run_battle(players, speed=150, asteroids_count=50, drones_count=5, show_scre
             team_module = team_module.replace(PROJECT_PATH, '').replace('.py', '').replace('/', '.')
         drone = importlib.import_module(team_module).drone_class
         drones_teams[i] = [drone() for _ in range(drones_count)]
-    return scene.go()
+    results = scene.go()
+    results['uuid'] = uuid.uuid1().hex
+    return results
 
 
 def print_battle_result(result):
@@ -100,3 +102,4 @@ if __name__ == '__main__':
                 print_battle_result(result=result)
     except Exception as exc:
         logging.exception('Что-то пошло не так...')
+

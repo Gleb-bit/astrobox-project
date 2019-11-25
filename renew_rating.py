@@ -36,8 +36,7 @@ class AstroboxRating(BaseModel):
 
 class ProceededBattles(BaseModel):
     """ для хранения данных об обработанных результатах битв """
-    teams = CharField(max_length=255)
-    fought_at = DateTimeField()
+    battle_id = CharField(max_length=255)
     # тут можно еще сами результаты сохранять... вдруг перерасчет нужен будет
 
 
@@ -118,9 +117,14 @@ class RatingUpdater:
                 table.write(f"{index + 1}. {name} - {rating}\n")
 
     def update_table_and_database(self, results_from_battle):
-        parsed_results = self.parse_results(results_from_battle)
-        self.save_results_in_db(parsed_results)
-        self.write_results_in_file(self.get_results_from_db(), 'RATING_2019.md')
+        try:
+            battle_id = results_from_battle.pop('uuid')
+            if ProceededBattles.get_or_create(battle_id=battle_id)[1]:
+                parsed_results = self.parse_results(results_from_battle)
+                self.save_results_in_db(parsed_results)
+                self.write_results_in_file(self.get_results_from_db(), 'RATING_2019.md')
+        except KeyError:
+            print('Нет uuid!')
 
     def renew_from_files(self, *files):
         for file in files:
