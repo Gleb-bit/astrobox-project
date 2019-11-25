@@ -1,6 +1,6 @@
+import json
 import os
 
-import battle
 from playhouse.db_url import connect
 import datetime
 import logging
@@ -33,10 +33,11 @@ class AstroboxRating(Model):
 
 class RatingUpdater:
 
-    def __init__(self, db_url):
+    def __init__(self, db_url, out_file):
         self.database = connect(db_url)
         db_proxy.initialize(self.database)
         self.database.create_tables([AstroboxRating, ])
+        self.out_file = out_file
 
     @staticmethod
     def add_new_player_in_db(user_name):
@@ -109,23 +110,39 @@ class RatingUpdater:
     def update_table_and_database(self, results_from_battle):
         parsed_results = self.parse_results(results_from_battle)
         self.save_results_in_db(parsed_results)
-        #  если студ запустит этот скрипт, то у него перезапишется рейтинг
-        #  и когда студ будет делать МР в базу - рейтинги будут в конфликте :(
-        #  надо что-то придумать. что бы рейтинг не перезаписывался. видимо по умолчанию
-        #  писать в файл из .gitignore, а куратор будет может указать реальный файл
         self.write_results_in_file(self.get_results_from_db(), 'RATING_2019.md')
+
+    def renew_from_files(self, *files):
+        for file in files:
+            with open(file, 'r') as ff:
+                battle_result = json.load(ff)
+            self.update_table_and_database(battle_result)
+
+    def renew_from_directory(self, path):
+        for dirpath, dirnames, filenames in os.walk(path):
+            self.renew_from_files(filenames)
 
 
 if __name__ == '__main__':
-    #  тут добавить argparse что бы можно было указать:
-    #  файл с результатами игры - если указан не запускать битву
-    parser = argparse.ArgumentParser(description='results')
-    parser.add_argument('result_file', type=str, help='path to file with results')
-    args = parser.parse_args(['test'])
-    if args.result_file:
-        res_from_battle = {'kharit': 0.5, 'vinog': 0.5}
-    else:
-        drones = battle.players_choose()
-        res_from_battle = battle.run_battle(drones, asteroids_count=10)
-    astro_rating = RatingUpdater(db_url='sqlite:///{}/astro.sqlite'.format(PROJECT_PATH))
-    astro_rating.update_table_and_database(res_from_battle)
+    parser = argparse.ArgumentParser(
+        description='Перерасчитывает таблицу рейтинга по формуле Elo. '
+                    'Предыдущая таблица берется из базы sqllite, '
+                    'новые результаты битв можно передать как список json-файлов или указать директорию с ними')
+    parser.add_argument('-r', '--battle-result', type=str, nargs=argparse.ONE_OR_MORE,
+                        help='путь до файла(ов) с результатами игры')
+    parser.add_argument('-d', '--battle-result-directory', type=str,
+                        help='путь до папки с файлами результатов битв')
+    parser.add_argument('-o', '--out-file', type=str, default='LOCAL_RATING.md',
+                        help='куда сохранять таблицу рейтинга')
+    parser.add_argument('-b', '--database', type=str, default=f'{PROJECT_PATH}/astro.sqlite',
+                        help='путь до файла sqlite базы данных с рейтингом')
+    args = parser.parse_args()
+    if not args.battle_result and not args.battle_result_directory:
+        raise ValueError('Нужно указать или файл с результатом битвы или директорию с такими файлами')
+
+    astro_rating = RatingUpdater(db_url=f'sqlite:///{args.database}', out_file=args.out_file)
+    if args.battle_result:
+        astro_rating.renew_from_files(*args.battle_result)
+    if args.battle_result_directory:
+        astro_rating.renew_from_directory(args.battle_result_directory)
+
