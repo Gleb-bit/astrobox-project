@@ -17,9 +17,7 @@ PROJECT_PATH = os.path.dirname(__file__)
 db_proxy = DatabaseProxy()
 
 
-class AstroboxRating(Model):
-    user_name = CharField(max_length=255)
-    rating = CharField(max_length=255, null=True, default=0)
+class BaseModel(Model):
     created_at = DateTimeField(default=datetime.datetime.now, null=True)
     updated_at = DateTimeField(default=datetime.datetime.now, null=True)
 
@@ -31,12 +29,24 @@ class AstroboxRating(Model):
         super().save(force_insert=force_insert, only=only)
 
 
+class AstroboxRating(BaseModel):
+    user_name = CharField(max_length=255)
+    rating = CharField(max_length=255, null=True, default=0)
+
+
+class ProceededBattles(BaseModel):
+    """ для хранения данных об обработанных результатах битв """
+    teams = CharField(max_length=255)
+    fought_at = DateTimeField()
+    # тут можно еще сами результаты сохранять... вдруг перерасчет нужен будет
+
+
 class RatingUpdater:
 
     def __init__(self, db_url, out_file):
         self.database = connect(db_url)
         db_proxy.initialize(self.database)
-        self.database.create_tables([AstroboxRating, ])
+        self.database.create_tables([AstroboxRating, ProceededBattles])
         self.out_file = out_file
 
     @staticmethod
@@ -132,7 +142,7 @@ if __name__ == '__main__':
                         help='путь до файла(ов) с результатами игры')
     parser.add_argument('-d', '--battle-result-directory', type=str,
                         help='путь до папки с файлами результатов битв')
-    parser.add_argument('-o', '--out-file', type=str, default='LOCAL_RATING.md',
+    parser.add_argument('-o', '--out-file', type=str, default=f'{PROJECT_PATH}/LOCAL_RATING.md',
                         help='куда сохранять таблицу рейтинга')
     parser.add_argument('-b', '--database', type=str, default=f'{PROJECT_PATH}/astro.sqlite',
                         help='путь до файла sqlite базы данных с рейтингом')
