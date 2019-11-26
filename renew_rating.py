@@ -117,20 +117,25 @@ class RatingUpdater:
                 table.write(f"{index + 1}. {name} - {rating}\n")
 
     def update_table_and_database(self, results_from_battle):
-        try:
-            battle_id = results_from_battle.pop('uuid')
-            if ProceededBattles.get_or_create(battle_id=battle_id)[1]:
-                parsed_results = self.parse_results(results_from_battle)
-                self.save_results_in_db(parsed_results)
-                self.write_results_in_file(self.get_results_from_db(), 'RATING_2019.md')
-        except KeyError:
-            print('Нет uuid!')
+        if 'uuid' not in results_from_battle:
+            raise ValueError('Battle results must contain uuid!')
+        battle_id = results_from_battle['uuid']
+        if ProceededBattles.get_or_none(ProceededBattles.battle_id==battle_id):
+            logging.warning(f'Battle {battle_id} has been processed before. Skipped.')
+            return
+        parsed_results = self.parse_results(results_from_battle)
+        self.save_results_in_db(parsed_results)
+        self.write_results_in_file(self.get_results_from_db(), 'RATING_2019.md')
+        ProceededBattles.create(battle_id=battle_id)
 
     def renew_from_files(self, *files):
         for file in files:
             with open(file, 'r') as ff:
                 battle_result = json.load(ff)
-            self.update_table_and_database(battle_result)
+            try:
+                self.update_table_and_database(battle_result)
+            except Exception:
+                logging.exception(f'Some error happened while process file {file}. Skipped.')
 
     def renew_from_directory(self, path):
         for dirpath, dirnames, filenames in os.walk(path):
