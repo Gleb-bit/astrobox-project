@@ -13,7 +13,6 @@ from peewee import (
 
 PROJECT_PATH = os.path.dirname(__file__)
 
-
 db_proxy = DatabaseProxy()
 
 
@@ -82,9 +81,10 @@ class RatingUpdater:
         return players_rating
 
     def parse_results(self, results):
+        user_score = results['collected']
         parsed_results = {}
-        players_rating = self.get_ratings(results)
-        for user_name in results:
+        players_rating = self.get_ratings(user_score)
+        for user_name in user_score:
             parsed_results[user_name] = {}
             parsed_results[user_name]['rating'] = players_rating[user_name]
             if parsed_results[user_name]['rating'] >= 2400:
@@ -93,13 +93,13 @@ class RatingUpdater:
                 koef_elo = 20
             else:
                 koef_elo = 40
-            for opponent_name, elerium in results.items():
+            for opponent_name, elerium in user_score.items():
                 expectation = 1 / (1 + 10 ** ((players_rating[opponent_name] - players_rating[user_name]) / 400))
-                if (elerium * 0.95) <= results[user_name] <= (elerium * 1.05):
+                if (elerium * 0.95) <= user_score[user_name] <= (elerium * 1.05):
                     parsed_results[user_name][opponent_name] = 0.5
-                elif results[user_name] < elerium:
+                elif user_score[user_name] < elerium:
                     parsed_results[user_name][opponent_name] = 0
-                elif results[user_name] > elerium:
+                elif user_score[user_name] > elerium:
                     parsed_results[user_name][opponent_name] = 1
                 parsed_results[user_name]['rating'] += int(
                     koef_elo * (parsed_results[user_name][opponent_name] - expectation))
@@ -120,7 +120,7 @@ class RatingUpdater:
         if 'uuid' not in results_from_battle:
             raise ValueError('Battle results must contain uuid!')
         battle_id = results_from_battle['uuid']
-        if ProceededBattles.get_or_none(ProceededBattles.battle_id==battle_id):
+        if ProceededBattles.get_or_none(ProceededBattles.battle_id == battle_id):
             logging.warning(f'Battle {battle_id} has been processed before. Skipped.')
             return
         parsed_results = self.parse_results(results_from_battle)
@@ -164,4 +164,3 @@ if __name__ == '__main__':
         astro_rating.renew_from_files(*args.battle_result)
     if args.battle_result_directory:
         astro_rating.renew_from_directory(args.battle_result_directory)
-
