@@ -11,14 +11,28 @@ import argparse
 PROJECT_PATH = os.path.dirname(__file__)
 
 
+def get_user_answer(prompt, valid_values=None):
+    while True:
+        answer = input(f'{prompt} >>> ')
+        try:
+            answer = int(answer)
+        except ValueError:
+            print('Необходимо ввести номер')
+            continue
+        if valid_values and answer not in valid_values:
+            print(f'Выберите один вариант из {list(valid_values)}')
+            continue
+        return answer
+
+
 def players_choose():
     hangars = [x for x in os.listdir(PROJECT_PATH) if 'hangar' in x]
     if not hangars:
         raise ValueError(f'No hangars in {PROJECT_PATH}')
     for index, path in enumerate(hangars):
         print(f'\t {index} - {path}')
-    choice = int(input('Номер директории для подгрузки кода >>> '))
-    number_of_players = int(input('Количество игроков >>> '))
+    choice = get_user_answer('Номер директории для подгрузки кода', range(len(hangars)))
+    number_of_players = get_user_answer('Количество игроков', range(1, 5))
     hangar_path = hangars[choice] if os.path.exists(os.path.join(PROJECT_PATH, hangars[choice])) else None
     players_to_add = [x for x in os.listdir(os.path.join(PROJECT_PATH, hangar_path)) if '__' not in x]
     added_players = []
@@ -26,7 +40,7 @@ def players_choose():
         for number in range(1, number_of_players + 1):
             for index, path in enumerate(players_to_add):
                 print(f'\t {index} - {path}')
-            index_for_pop = int(input(f"Выберите игрока №{number} >>> "))
+            index_for_pop = get_user_answer(f"Выберите игрока №{number}", range(len(players_to_add)))
             name = players_to_add.pop(index_for_pop)[:-3]
             added_players.append(os.path.join(hangar_path + '.' + name))
     else:
