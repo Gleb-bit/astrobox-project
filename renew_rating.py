@@ -48,10 +48,6 @@ class RatingUpdater:
         self.out_file = out_file
 
     @staticmethod
-    def add_new_player_in_db(user_name):
-        AstroboxRating.get_or_create(user_name=user_name)
-
-    @staticmethod
     def save_results_in_db(parsed_results):
         for user_name, user_results in parsed_results.items():
             result = user_results['rating']
@@ -66,24 +62,17 @@ class RatingUpdater:
         logging.debug(f'Рейтинговая таблица: {ratings}')
         return list(ratings)
 
-    def get_ratings(self, results):
+    def get_ratings(self, users):
         players_rating = {}
-        for new_user in results:
-            self.add_new_player_in_db(new_user)
-        for user in results:
-            rating, created = AstroboxRating.get_or_create(user_name=user)
-            # тут привести к работе с обьектами
-            new_rating = int(rating.get().rating)
-            if not created:
-                players_rating[user] = new_rating
-            else:
-                players_rating[user] = 0
+        for user_name in users:
+            rating, created = AstroboxRating.get_or_create(user_name=user_name)
+            players_rating[user_name] = rating.rating
         return players_rating
 
     def parse_results(self, results):
         user_score = results['collected']
         parsed_results = {}
-        players_rating = self.get_ratings(user_score)
+        players_rating = self.get_ratings(users=user_score.keys())
         for user_name in user_score:
             parsed_results[user_name] = {}
             parsed_results[user_name]['rating'] = players_rating[user_name]
