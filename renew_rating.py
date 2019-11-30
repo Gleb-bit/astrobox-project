@@ -30,7 +30,7 @@ class BaseModel(Model):
 
 class AstroboxRating(BaseModel):
     user_name = CharField(max_length=255)
-    rating = CharField(max_length=255, null=True, default=0)
+    rating = IntegerField(default=0)
 
 
 class ProceededBattles(BaseModel):
@@ -47,34 +47,18 @@ class RatingUpdater:
         self.database.create_tables([AstroboxRating, ProceededBattles])
         self.out_file = out_file
 
-    @staticmethod
-    def save_results_in_db(parsed_results):
-        for user_name, user_results in parsed_results.items():
-            result = user_results['rating']
-            user, created = AstroboxRating.get_or_create(user_name=user_name, defaults=dict(rating=result))
-            if not created:
-                user.rating = result
-                user.save()
-
-    @staticmethod
-    def get_results_from_db():
-        ratings = AstroboxRating.select().dicts()
-        logging.debug(f'Рейтинговая таблица: {ratings}')
-        return list(ratings)
-
-    def get_ratings(self, users):
-        players_rating = {}
-        for user_name in users:
-            rating, created = AstroboxRating.get_or_create(user_name=user_name)
-            players_rating[user_name] = rating
-        return players_rating
+    def get_players(self, names):
+        players = {}
+        for name in names:
+            player, created = AstroboxRating.get_or_create(user_name=name)
+            players[name] = player
+        return players
 
     def parse_results(self, results):
         user_score = results['collected']
-        parsed_results = {}
-        players_rating = self.get_ratings(users=user_score.keys())
+        players = self.get_players(names=user_score.keys())
         for user_name, user_elerium in user_score.items():
-            user = players_rating[user_name]
+            user = players[user_name]
             if user.rating >= 2400:
                 koef_elo = 10
             elif user.rating >= 2300:
@@ -84,7 +68,7 @@ class RatingUpdater:
             for opponent_name, opponent_elerium in user_score.items():
                 if opponent_name == user_name:
                     continue
-                opponent = players_rating[opponent_name]
+                opponent = players[opponent_name]
                 expectation = 1 / (1 + 10 ** ((opponent.rating - user.rating) / 400))
                 if user_elerium < opponent_elerium * 0.95:
                     battle_result = 0
@@ -94,7 +78,7 @@ class RatingUpdater:
                     battle_result = 0.5
                 user.rating += int(koef_elo * (battle_result - expectation))
             user.save()
-
+        return players
 
             # parsed_results[user_name] = {}
             # parsed_results[user_name]['rating'] = players_rating[user_name]
@@ -114,29 +98,22 @@ class RatingUpdater:
             #         parsed_results[user_name][opponent_name] = 1
             #     parsed_results[user_name]['rating'] += int(
             #         koef_elo * (parsed_results[user_name][opponent_name] - expectation))
-        return parsed_results
 
-    @staticmethod
-    def write_results_in_file(ratings, path_to_file):
-        rating_table = {}
-        for element in ratings:
-            rating_table[element['user_name']] = element['rating']
-        rating_list = sorted(rating_table.items(), key=lambda x: x[1], reverse=True)
-        with open(path_to_file, 'w') as table:
+    def write_results_in_file(self):
+        with open(self.out_file, 'w') as table:
             table.write(f"Рейтинг по состоянию на {datetime.date.today().strftime('%d.%m.%Y')}\n\n")
-            for index, (name, rating) in enumerate(rating_list):
-                table.write(f"{index + 1}. {name} - {rating}\n")
+            players = AstroboxRating.select().order_by('-rating')
+            for index, player in enumerate(players):
+                table.write(f"{index + 1}. {player.user_name} - {player.rating}\n")
 
-    def update_table_and_database(self, results_from_battle):
+    def update_rating(self, results_from_battle):
         if 'uuid' not in results_from_battle:
             raise ValueError('Battle results must contain uuid!')
         battle_id = results_from_battle['uuid']
         if ProceededBattles.get_or_none(ProceededBattles.battle_id == battle_id):
             logging.warning(f'Battle {battle_id} has been processed before. Skipped.')
             return
-        parsed_results = self.parse_results(results_from_battle)
-        self.save_results_in_db(parsed_results)
-        self.write_results_in_file(self.get_results_from_db(), 'RATING_2019.md')
+        self.parse_results(results_from_battle)
         ProceededBattles.create(battle_id=battle_id)
 
     def renew_from_files(self, *files):
@@ -144,7 +121,7 @@ class RatingUpdater:
             with open(file, 'r') as ff:
                 battle_result = json.load(ff)
             try:
-                self.update_table_and_database(battle_result)
+                self.update_rating(battle_result)
             except Exception:
                 logging.exception(f'Some error happened while process file {file}. Skipped.')
 
@@ -175,3 +152,4 @@ if __name__ == '__main__':
         astro_rating.renew_from_files(*args.battle_result)
     if args.battle_result_directory:
         astro_rating.renew_from_directory(args.battle_result_directory)
+    astro_rating.write_results_in_file()
