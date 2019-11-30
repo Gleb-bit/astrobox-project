@@ -66,32 +66,54 @@ class RatingUpdater:
         players_rating = {}
         for user_name in users:
             rating, created = AstroboxRating.get_or_create(user_name=user_name)
-            players_rating[user_name] = rating.rating
+            players_rating[user_name] = rating
         return players_rating
 
     def parse_results(self, results):
         user_score = results['collected']
         parsed_results = {}
         players_rating = self.get_ratings(users=user_score.keys())
-        for user_name in user_score:
-            parsed_results[user_name] = {}
-            parsed_results[user_name]['rating'] = players_rating[user_name]
-            if parsed_results[user_name]['rating'] >= 2400:
+        for user_name, user_elerium in user_score.items():
+            user = players_rating[user_name]
+            if user.rating >= 2400:
                 koef_elo = 10
-            elif parsed_results[user_name]['rating'] >= 2300:
+            elif user.rating >= 2300:
                 koef_elo = 20
             else:
                 koef_elo = 40
-            for opponent_name, elerium in user_score.items():
-                expectation = 1 / (1 + 10 ** ((players_rating[opponent_name] - players_rating[user_name]) / 400))
-                if (elerium * 0.95) <= user_score[user_name] <= (elerium * 1.05):
-                    parsed_results[user_name][opponent_name] = 0.5
-                elif user_score[user_name] < elerium:
-                    parsed_results[user_name][opponent_name] = 0
-                elif user_score[user_name] > elerium:
-                    parsed_results[user_name][opponent_name] = 1
-                parsed_results[user_name]['rating'] += int(
-                    koef_elo * (parsed_results[user_name][opponent_name] - expectation))
+            for opponent_name, opponent_elerium in user_score.items():
+                if opponent_name == user_name:
+                    continue
+                opponent = players_rating[opponent_name]
+                expectation = 1 / (1 + 10 ** ((opponent.rating - user.rating) / 400))
+                if user_elerium < opponent_elerium * 0.95:
+                    battle_result = 0
+                elif user_elerium > opponent_elerium * 0.95:
+                    battle_result = 1
+                else:
+                    battle_result = 0.5
+                user.rating += int(koef_elo * (battle_result - expectation))
+            user.save()
+
+
+            # parsed_results[user_name] = {}
+            # parsed_results[user_name]['rating'] = players_rating[user_name]
+            # if parsed_results[user_name]['rating'] >= 2400:
+            #     koef_elo = 10
+            # elif parsed_results[user_name]['rating'] >= 2300:
+            #     koef_elo = 20
+            # else:
+            #     koef_elo = 40
+            # for opponent_name, elerium in user_score.items():
+            #     expectation = 1 / (1 + 10 ** ((players_rating[opponent_name] - players_rating[user_name]) / 400))
+            #     if (elerium * 0.95) <= user_score[user_name] <= (elerium * 1.05):
+            #         parsed_results[user_name][opponent_name] = 0.5
+            #     elif user_score[user_name] < elerium:
+            #         parsed_results[user_name][opponent_name] = 0
+            #     elif user_score[user_name] > elerium:
+            #         parsed_results[user_name][opponent_name] = 1
+            #     parsed_results[user_name]['rating'] += int(
+            #         koef_elo * (parsed_results[user_name][opponent_name] - expectation))
         return parsed_results
 
     @staticmethod
