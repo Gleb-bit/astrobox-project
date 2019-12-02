@@ -70,12 +70,14 @@ class RatingUpdater:
                     continue
                 opponent = players[opponent_name]
                 expectation = 1 / (1 + 10 ** ((opponent.rating - user.rating) / 400))
-                if user_elerium < opponent_elerium * 0.95:
-                    battle_result = 0
-                elif user_elerium > opponent_elerium * 0.95:
+                avg = (user_elerium + opponent_elerium) / 2
+                delta = abs(user_elerium - opponent_elerium) / avg
+                if delta < .05:
+                    battle_result = 0.5
+                elif user_elerium > opponent_elerium:
                     battle_result = 1
                 else:
-                    battle_result = 0.5
+                    battle_result = 0
                 user.rating += int(koef_elo * (battle_result - expectation))
             user.save()
         return players
