@@ -102,9 +102,11 @@ class RatingUpdater:
     def write_results_in_file(self):
         with open(self.out_file, 'w') as table:
             table.write(f"Рейтинг по состоянию на {datetime.date.today().strftime('%d.%m.%Y')}\n\n")
+            table.write(f"Позиция|Имя команды|Рейтинг\n")
+            table.write(f"---|---|---:\n")
             players = AstroboxRating.select().order_by('-rating')
             for index, player in enumerate(players):
-                table.write(f"{index + 1}. {player.user_name} - {player.rating}\n")
+                table.write(f"{index + 1}|{player.user_name}|{player.rating}\n")
 
     def update_rating(self, results_from_battle):
         if 'uuid' not in results_from_battle:
