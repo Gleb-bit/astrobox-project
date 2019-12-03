@@ -13,6 +13,7 @@ from peewee import (
 
 PROJECT_PATH = os.path.dirname(__file__)
 INITIAL_RATING = 700
+ELO_COEFFICIENTS = ((1000, 10), (700, 20), )
 
 db_proxy = DatabaseProxy()
 
@@ -61,12 +62,11 @@ class RatingUpdater:
         players = self.get_players(names=player_scores.keys())
         for name, player_elerium in player_scores.items():
             user = players[name]
-            if user.rating >= 2400:
-                koef_elo = 10
-            elif user.rating >= 2300:
-                koef_elo = 20
-            else:
-                koef_elo = 40
+            koef_elo = 40
+            for rating_bond, coeff in ELO_COEFFICIENTS:
+                if user.rating >= rating_bond:
+                    koef_elo = coeff
+                    break
             for opponent_name, opponent_elerium in player_scores.items():
                 if opponent_name == name:
                     continue
