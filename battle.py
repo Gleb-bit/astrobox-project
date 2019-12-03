@@ -73,7 +73,7 @@ def print_battle_result(result):
 
 def save_battle_result(result, path):
     with open(path, 'w') as ff:
-        ff.write(json.dumps(result))
+        ff.write(json.dumps(result, indent=1))
     print('')
     print(f'Battle result saved to {path}')
 
