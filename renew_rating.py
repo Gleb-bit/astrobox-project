@@ -12,6 +12,8 @@ from peewee import (
 )
 
 PROJECT_PATH = os.path.dirname(__file__)
+INITIAL_RATING = 700
+ELO_COEFFICIENTS = ((1000, 10), (700, 20), )
 
 db_proxy = DatabaseProxy()
 
@@ -30,15 +32,15 @@ class BaseModel(Model):
 
 class Player(BaseModel):
     name = CharField(max_length=255)
-    rating = IntegerField(default=0)
+    rating = IntegerField(default=INITIAL_RATING)
     path = CharField(max_length=255)
 
 
 class Battle(BaseModel):
     """ для хранения данных об обработанных результатах битв """
     uuid = CharField(max_length=255)
-    happened_at = DateTimeField(null=True)
-    # тут можно еще сами результаты сохранять... вдруг перерасчет нужен будет
+    happened_at = DateTimeField()
+    result = TextField()
 
 
 class RatingUpdater:
@@ -63,12 +65,11 @@ class RatingUpdater:
         players = self.get_players(battle_results=results)
         for name, player_elerium in player_scores.items():
             user = players[name]
-            if user.rating >= 2400:
-                koef_elo = 10
-            elif user.rating >= 2300:
-                koef_elo = 20
-            else:
-                koef_elo = 40
+            koef_elo = 40
+            for rating_bond, coeff in ELO_COEFFICIENTS:
+                if user.rating >= rating_bond:
+                    koef_elo = coeff
+                    break
             for opponent_name, opponent_elerium in player_scores.items():
                 if opponent_name == name:
                     continue
@@ -129,7 +130,7 @@ class RatingUpdater:
             logging.warning(f'Battle {battle_uuid} has been processed before. Skipped.')
             return
         self.parse_results(battle_results)
-        Battle.create(uuid=battle_uuid, happened_at=battle_results.get('happened_at'))
+        Battle.create(uuid=battle_uuid, happened_at=battle_results.get('happened_at'), result=battle_results)
 
     def renew_from_files(self, *files):
         for file in files:
