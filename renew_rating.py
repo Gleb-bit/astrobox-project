@@ -28,14 +28,15 @@ class BaseModel(Model):
         super().save(force_insert=force_insert, only=only)
 
 
-class AstroboxRating(BaseModel):
-    user_name = CharField(max_length=255)
+class Player(BaseModel):
+    name = CharField(max_length=255)
     rating = IntegerField(default=0)
 
 
-class ProceededBattles(BaseModel):
+class Battle(BaseModel):
     """ для хранения данных об обработанных результатах битв """
-    battle_id = CharField(max_length=255)
+    uuid = CharField(max_length=255)
+    happened_at = DateTimeField(null=True)
     # тут можно еще сами результаты сохранять... вдруг перерасчет нужен будет
 
 
@@ -44,37 +45,37 @@ class RatingUpdater:
     def __init__(self, db_url, out_file):
         self.database = connect(db_url)
         db_proxy.initialize(self.database)
-        self.database.create_tables([AstroboxRating, ProceededBattles])
+        self.database.create_tables([Player, Battle])
         self.out_file = out_file
 
     def get_players(self, names):
         players = {}
         for name in names:
-            player, created = AstroboxRating.get_or_create(user_name=name)
+            player, _ = Player.get_or_create(name=name)
             players[name] = player
         return players
 
     def parse_results(self, results):
-        user_score = results['collected']
-        players = self.get_players(names=user_score.keys())
-        for user_name, user_elerium in user_score.items():
-            user = players[user_name]
+        player_scores = results['collected']
+        players = self.get_players(names=player_scores.keys())
+        for name, player_elerium in player_scores.items():
+            user = players[name]
             if user.rating >= 2400:
                 koef_elo = 10
             elif user.rating >= 2300:
                 koef_elo = 20
             else:
                 koef_elo = 40
-            for opponent_name, opponent_elerium in user_score.items():
-                if opponent_name == user_name:
+            for opponent_name, opponent_elerium in player_scores.items():
+                if opponent_name == name:
                     continue
                 opponent = players[opponent_name]
                 expectation = 1 / (1 + 10 ** ((opponent.rating - user.rating) / 400))
-                avg = (user_elerium + opponent_elerium) / 2
-                delta = abs(user_elerium - opponent_elerium) / avg
+                avg = (player_elerium + opponent_elerium) / 2
+                delta = abs(player_elerium - opponent_elerium) / avg
                 if delta < .05:
                     battle_result = 0.5
-                elif user_elerium > opponent_elerium:
+                elif player_elerium > opponent_elerium:
                     battle_result = 1
                 else:
                     battle_result = 0
@@ -106,21 +107,21 @@ class RatingUpdater:
             table.write(f"##### Рейтинг по состоянию на {datetime.date.today().strftime('%d.%m.%Y')}\n\n")
             table.write(f"Позиция|Имя команды|Рейтинг\n")
             table.write(f"---|---|---:\n")
-            players = AstroboxRating.select().order_by('-rating')
+            players = Player.select().order_by(Player.rating.desc())
             for index, player in enumerate(players):
                 if index > 41:
                     break
-                table.write(f"{index + 1}|{player.user_name}|{player.rating}\n")
+                table.write(f"{index + 1}|{player.name}|{player.rating}\n")
 
-    def update_rating(self, results_from_battle):
-        if 'uuid' not in results_from_battle:
+    def update_rating(self, battle_results):
+        if 'uuid' not in battle_results:
             raise ValueError('Battle results must contain uuid!')
-        battle_id = results_from_battle['uuid']
-        if ProceededBattles.get_or_none(ProceededBattles.battle_id == battle_id):
-            logging.warning(f'Battle {battle_id} has been processed before. Skipped.')
+        battle_uuid = battle_results['uuid']
+        if Battle.get_or_none(Battle.uuid == battle_uuid):
+            logging.warning(f'Battle {battle_uuid} has been processed before. Skipped.')
             return
-        self.parse_results(results_from_battle)
-        ProceededBattles.create(battle_id=battle_id)
+        self.parse_results(battle_results)
+        Battle.create(uuid=battle_uuid, happened_at=battle_results.get('happened_at'))
 
     def renew_from_files(self, *files):
         for file in files:
