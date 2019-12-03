@@ -70,7 +70,10 @@ class RatingUpdater:
                 if opponent_name == name:
                     continue
                 opponent = players[opponent_name]
+                logging.info(f'Рассчет Ело: {name}/{user.rating} vs {opponent_name}/{opponent.rating}')
+                logging.info(f'\tЭлериум: {name}: {player_elerium}, {opponent_name}: {opponent_elerium}')
                 expectation = 1 / (1 + 10 ** ((opponent.rating - user.rating) / 400))
+                logging.info(f'\texpectation {expectation}')
                 avg = (player_elerium + opponent_elerium) / 2
                 delta = abs(player_elerium - opponent_elerium) / avg
                 if delta < .05:
@@ -79,7 +82,9 @@ class RatingUpdater:
                     battle_result = 1
                 else:
                     battle_result = 0
-                user.rating += int(koef_elo * (battle_result - expectation))
+                rating_change = int(koef_elo * (battle_result - expectation))
+                logging.info(f'\tdelta elerium {delta} battle_result {battle_result} rating_change {rating_change}')
+                user.rating += rating_change
             user.save()
         return players
 
@@ -150,9 +155,13 @@ if __name__ == '__main__':
                         help='куда сохранять таблицу рейтинга')
     parser.add_argument('-b', '--database', type=str, default=f'{PROJECT_PATH}/astro.sqlite',
                         help='путь до файла sqlite базы данных с рейтингом')
+    parser.add_argument('-v', '--verbose', default=False, action='store_true',
+                        help='подробности рассчета рейтинга')
     args = parser.parse_args()
     if not args.battle_result and not args.battle_result_directory:
         raise ValueError('Нужно указать или файл с результатом битвы или директорию с такими файлами')
+    if args.verbose:
+        logging.basicConfig(level=logging.INFO)
 
     astro_rating = RatingUpdater(db_url=f'sqlite:///{args.database}', out_file=args.out_file)
     if args.battle_result:
