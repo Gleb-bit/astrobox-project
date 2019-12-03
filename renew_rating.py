@@ -12,6 +12,7 @@ from peewee import (
 )
 
 PROJECT_PATH = os.path.dirname(__file__)
+INITIAL_RATING = 700
 
 db_proxy = DatabaseProxy()
 
@@ -30,14 +31,14 @@ class BaseModel(Model):
 
 class Player(BaseModel):
     name = CharField(max_length=255)
-    rating = IntegerField(default=0)
+    rating = IntegerField(default=INITIAL_RATING)
 
 
 class Battle(BaseModel):
     """ для хранения данных об обработанных результатах битв """
     uuid = CharField(max_length=255)
-    happened_at = DateTimeField(null=True)
-    # тут можно еще сами результаты сохранять... вдруг перерасчет нужен будет
+    happened_at = DateTimeField()
+    result = TextField()
 
 
 class RatingUpdater:
@@ -126,7 +127,7 @@ class RatingUpdater:
             logging.warning(f'Battle {battle_uuid} has been processed before. Skipped.')
             return
         self.parse_results(battle_results)
-        Battle.create(uuid=battle_uuid, happened_at=battle_results.get('happened_at'))
+        Battle.create(uuid=battle_uuid, happened_at=battle_results.get('happened_at'), result=battle_results)
 
     def renew_from_files(self, *files):
         for file in files:
