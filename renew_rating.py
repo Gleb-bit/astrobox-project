@@ -31,6 +31,7 @@ class BaseModel(Model):
 class Player(BaseModel):
     name = CharField(max_length=255)
     rating = IntegerField(default=0)
+    path = CharField(max_length=255)
 
 
 class Battle(BaseModel):
@@ -48,16 +49,18 @@ class RatingUpdater:
         self.database.create_tables([Player, Battle])
         self.out_file = out_file
 
-    def get_players(self, names):
+    def get_players(self, battle_results):
         players = {}
+        names = battle_results['collected'].keys()
         for name in names:
-            player, _ = Player.get_or_create(name=name)
+            path = battle_results['players_modules'][name]
+            player, _ = Player.get_or_create(name=name, path=path)
             players[name] = player
         return players
 
     def parse_results(self, results):
         player_scores = results['collected']
-        players = self.get_players(names=player_scores.keys())
+        players = self.get_players(battle_results=results)
         for name, player_elerium in player_scores.items():
             user = players[name]
             if user.rating >= 2400:
@@ -88,24 +91,24 @@ class RatingUpdater:
             user.save()
         return players
 
-            # parsed_results[user_name] = {}
-            # parsed_results[user_name]['rating'] = players_rating[user_name]
-            # if parsed_results[user_name]['rating'] >= 2400:
-            #     koef_elo = 10
-            # elif parsed_results[user_name]['rating'] >= 2300:
-            #     koef_elo = 20
-            # else:
-            #     koef_elo = 40
-            # for opponent_name, elerium in user_score.items():
-            #     expectation = 1 / (1 + 10 ** ((players_rating[opponent_name] - players_rating[user_name]) / 400))
-            #     if (elerium * 0.95) <= user_score[user_name] <= (elerium * 1.05):
-            #         parsed_results[user_name][opponent_name] = 0.5
-            #     elif user_score[user_name] < elerium:
-            #         parsed_results[user_name][opponent_name] = 0
-            #     elif user_score[user_name] > elerium:
-            #         parsed_results[user_name][opponent_name] = 1
-            #     parsed_results[user_name]['rating'] += int(
-            #         koef_elo * (parsed_results[user_name][opponent_name] - expectation))
+        # parsed_results[user_name] = {}
+        # parsed_results[user_name]['rating'] = players_rating[user_name]
+        # if parsed_results[user_name]['rating'] >= 2400:
+        #     koef_elo = 10
+        # elif parsed_results[user_name]['rating'] >= 2300:
+        #     koef_elo = 20
+        # else:
+        #     koef_elo = 40
+        # for opponent_name, elerium in user_score.items():
+        #     expectation = 1 / (1 + 10 ** ((players_rating[opponent_name] - players_rating[user_name]) / 400))
+        #     if (elerium * 0.95) <= user_score[user_name] <= (elerium * 1.05):
+        #         parsed_results[user_name][opponent_name] = 0.5
+        #     elif user_score[user_name] < elerium:
+        #         parsed_results[user_name][opponent_name] = 0
+        #     elif user_score[user_name] > elerium:
+        #         parsed_results[user_name][opponent_name] = 1
+        #     parsed_results[user_name]['rating'] += int(
+        #         koef_elo * (parsed_results[user_name][opponent_name] - expectation))
 
     def write_results_in_file(self):
         with open(self.out_file, 'w') as table:

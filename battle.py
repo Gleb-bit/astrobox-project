@@ -62,7 +62,12 @@ def run_battle(players, speed=150, asteroids_count=50, drones_count=5, show_scre
             team_module = team_module.replace(PROJECT_PATH, '').replace('.py', '').replace('/', '.')
         drone = importlib.import_module(team_module).drone_class
         drones_teams[i] = [drone() for _ in range(drones_count)]
-    return scene.go()
+
+    battle_result = scene.go()
+    battle_result['players_modules'] = {}
+    for (name, rating), path in zip(battle_result['collected'].items(), players):
+        battle_result['players_modules'][name] = path.replace('.', '/') + '.py'
+    return battle_result
 
 
 def print_battle_result(result):
