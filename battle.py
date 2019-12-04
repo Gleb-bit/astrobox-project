@@ -39,16 +39,16 @@ def players_choose():
         for number in range(1, number_of_players + 1):
             for index, path in enumerate(players_to_add):
                 print(f'\t {index} - {path}')
-            index_for_pop = get_user_answer(f"Выберите игрока №{number}", range(len(players_to_add)))
-            name = players_to_add.pop(index_for_pop)[:-3]
-            added_players.append(os.path.join(hangar_path + '.' + name))
+            player_number = get_user_answer(f"Выберите игрока №{number}", range(len(players_to_add)))
+            name = players_to_add.pop(player_number)
+            added_players.append(os.path.join(hangar_path, name))
     else:
         print('Ангар пуст.')
         return None
     return added_players
 
 
-def run_battle(players, speed=150, asteroids_count=50, drones_count=5, show_screen=False):
+def run_battle(player_modules, speed=150, asteroids_count=50, drones_count=5, show_screen=False):
     scene = SpaceField(
         speed=speed,
         field=(1200, 600),
@@ -58,11 +58,10 @@ def run_battle(players, speed=150, asteroids_count=50, drones_count=5, show_scre
     )
     drones_teams = {}
     drones_paths = {}
-    for i, team_module in enumerate(players):
-        if '.py' in team_module:
-            team_module = team_module.replace(PROJECT_PATH, '').replace('.py', '').replace('/', '.')
-        drone = importlib.import_module(team_module).drone_class
-        drones_paths[drone.__name__] = team_module.replace('.', '/') + '.py'
+    for i, team_module in enumerate(player_modules):
+        module_to_import = team_module.replace(PROJECT_PATH, '').replace('.py', '').replace('/', '.')
+        drone = importlib.import_module(module_to_import).drone_class
+        drones_paths[drone.__name__] = team_module
         drones_teams[i] = [drone() for _ in range(drones_count)]
 
     battle_result = scene.go()
@@ -86,29 +85,22 @@ def save_battle_result(result, path):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Запускает битву нескольких команд дронов. '
-                    'Модули с дронами можно указать как python-модули, так и пути к ним. '
-                    'Например: "python -m battle -p hangar_2019.module_1 hangar_2019.module_2" '
-                    'или "python -m battle -p hangar_2019/.module_1.py hangar_2019/.module_2.py" ". '
+                    'Модули с дронами можно указать как относительные пути к python-модулям. '
+                    'Например: "python -m battle -p hangar_2019/.module_1.py hangar_2020/module_2.py" ". '
                     'Если модули не указаны, скрипт выяснит их интерактивно '
     )
     parser.add_argument('-p', '--player-module', type=str, nargs=argparse.ONE_OR_MORE,
-                        help='Список модулей команд игроков в формате hangar_XXXX.module_name')
+                        help='Список модулей команд игроков в формате hangar_XXXX/module_name.py')
     parser.add_argument('-s', '--game-speed', type=int, default=5, help='Скорость битвы')
     parser.add_argument('-a', '--asteroids-count', type=int, default=10, help='Количество астероидов')
     parser.add_argument('-d', '--drones-count', type=int, default=5, help='Количество дронов в команде')
     parser.add_argument('-o', '--out-file', type=str, help='Путь для сохранения json-результатов битвы')
     parser.add_argument('-c', '--show-screen', action='store_true', help='показать экран битвы')
-    # TODO запиши себе параметры в запуск в пайчарме
-    # args = parser.parse_args(''
-    #                          '-p hangar_2019.kharitonov hangar_2019.vinogradov'
-    #                          ' -s 5 -a 10 '
-    #                          # '--show-screen'
-    #                          # ' -o /tmp/battle_1.json'
-    #                          ''.split())
+
     args = parser.parse_args()
     players = args.player_module if args.player_module else players_choose()
     try:
-        result = run_battle(players=players, speed=args.game_speed,
+        result = run_battle(player_modules=players, speed=args.game_speed,
                             asteroids_count=args.asteroids_count, drones_count=args.drones_count,
                             show_screen=args.show_screen)
         if result:
@@ -117,5 +109,5 @@ if __name__ == '__main__':
             else:
                 print_battle_result(result=result)
     except Exception as exc:
-        logging.exception('Что-то пошло не так...')
+        logging.exception(f'Что-то пошло не так с параметрами {args}')
 
