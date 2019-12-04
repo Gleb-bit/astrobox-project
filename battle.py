@@ -95,6 +95,8 @@ if __name__ == '__main__':
     parser.add_argument('-a', '--asteroids-count', type=int, default=10, help='Количество астероидов')
     parser.add_argument('-d', '--drones-count', type=int, default=5, help='Количество дронов в команде')
     parser.add_argument('-o', '--out-file', type=str, help='Путь для сохранения json-результатов битвы')
+    parser.add_argument('-od', '--out-dir', type=str,
+                        help='Папка для сохранения json-результатов битвы, имя файла автоматическое')
     parser.add_argument('-c', '--show-screen', action='store_true', help='показать экран битвы')
 
     args = parser.parse_args()
@@ -106,6 +108,10 @@ if __name__ == '__main__':
         if result:
             if args.out_file:
                 save_battle_result(result=result, path=args.out_file)
+            elif args.out_dir:
+                os.makedirs(args.out_dir, exist_ok=True)
+                path = os.path.join(args.out_dir, f"{result['uuid']}.json")
+                save_battle_result(result=result, path=path)
             else:
                 print_battle_result(result=result)
     except Exception as exc:

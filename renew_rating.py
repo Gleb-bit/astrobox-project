@@ -132,9 +132,10 @@ class RatingUpdater:
         self.parse_results(battle_results)
         Battle.create(uuid=battle_uuid, happened_at=battle_results.get('happened_at'), result=battle_results)
 
-    def renew_from_files(self, *files):
+    def renew_from_files(self, path, files):
         for file in files:
-            with open(file, 'r') as ff:
+            full_file_name = os.path.join(path, file)
+            with open(full_file_name, 'r') as ff:
                 battle_result = json.load(ff)
             try:
                 self.update_rating(battle_result)
@@ -143,7 +144,7 @@ class RatingUpdater:
 
     def renew_from_directory(self, path):
         for dirpath, dirnames, filenames in os.walk(path):
-            self.renew_from_files(filenames)
+            self.renew_from_files(dirpath, filenames)
 
 
 if __name__ == '__main__':
