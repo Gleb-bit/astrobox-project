@@ -6,41 +6,10 @@ import datetime
 import logging
 import argparse
 
-from peewee import (
-    BooleanField, CharField, DatabaseProxy, DateTimeField, DeferredForeignKey, ForeignKeyField,
-    IntegerField, Model, SmallIntegerField, SQL, TextField,
-)
+from models import Player, Battle, db_proxy
 
 PROJECT_PATH = os.path.dirname(__file__)
-INITIAL_RATING = 700
 ELO_COEFFICIENTS = ((1000, 10), (700, 20), )
-
-db_proxy = DatabaseProxy()
-
-
-class BaseModel(Model):
-    created_at = DateTimeField(default=datetime.datetime.now, null=True)
-    updated_at = DateTimeField(default=datetime.datetime.now, null=True)
-
-    class Meta:
-        database = db_proxy  # см https://clck.ru/Jy4BB
-
-    def save(self, force_insert=False, only=None):
-        self.updated_at = datetime.datetime.now()
-        super().save(force_insert=force_insert, only=only)
-
-
-class Player(BaseModel):
-    name = CharField(max_length=255)
-    rating = IntegerField(default=INITIAL_RATING)
-    path = CharField(max_length=255)
-
-
-class Battle(BaseModel):
-    """ для хранения данных об обработанных результатах битв """
-    uuid = CharField(max_length=255)
-    happened_at = DateTimeField()
-    result = TextField()
 
 
 class RatingUpdater:
