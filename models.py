@@ -6,7 +6,7 @@ from peewee import (
 )
 from playhouse.db_url import connect
 
-INITIAL_RATING = 700
+import settings
 
 db_proxy = DatabaseProxy()
 
@@ -25,7 +25,7 @@ class BaseModel(Model):
 
 class Player(BaseModel):
     name = CharField(max_length=255)
-    rating = IntegerField(default=INITIAL_RATING)
+    rating = IntegerField(default=settings.INITIAL_RATING)
     path = CharField(max_length=255)
 
 

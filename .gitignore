@@ -4,6 +4,8 @@ LOCAL_RATING.md
 **probe.py
 *.sqlite
 
+settings/local.py
+
 # User-specific stuff:
 .idea/
 

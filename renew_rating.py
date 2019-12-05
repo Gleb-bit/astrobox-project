@@ -5,9 +5,7 @@ import logging
 import os
 
 from models import Player, Battle, init_db
-
-PROJECT_PATH = os.path.dirname(__file__)
-ELO_COEFFICIENTS = ((1000, 10), (700, 20), )
+import settings
 
 
 class RatingUpdater:
@@ -31,7 +29,7 @@ class RatingUpdater:
         for name, player_elerium in player_scores.items():
             user = players[name]
             koef_elo = 40
-            for rating_bond, coeff in ELO_COEFFICIENTS:
+            for rating_bond, coeff in settings.ELO_COEFFICIENTS:
                 if user.rating >= rating_bond:
                     koef_elo = coeff
                     break
@@ -102,9 +100,9 @@ if __name__ == '__main__':
                         help='путь до файла(ов) с результатами игры')
     parser.add_argument('-d', '--battle-result-directory', type=str,
                         help='путь до папки с файлами результатов битв')
-    parser.add_argument('-o', '--out-file', type=str, default=f'{PROJECT_PATH}/LOCAL_RATING.md',
+    parser.add_argument('-o', '--out-file', type=str, default=f'{settings.PROJECT_PATH}/LOCAL_RATING.md',
                         help='куда сохранять таблицу рейтинга')
-    parser.add_argument('-b', '--database', type=str, default=f'{PROJECT_PATH}/astro.sqlite',
+    parser.add_argument('-b', '--database', type=str, default=f'{settings.PROJECT_PATH}/astro.sqlite',
                         help='путь до файла sqlite базы данных с рейтингом')
     parser.add_argument('-v', '--verbose', default=False, action='store_true',
                         help='подробности рассчета рейтинга')
