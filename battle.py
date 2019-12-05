@@ -98,6 +98,8 @@ if __name__ == '__main__':
     parser.add_argument('-od', '--out-dir', type=str,
                         help='Папка для сохранения json-результатов битвы, имя файла автоматическое')
     parser.add_argument('-c', '--show-screen', action='store_true', help='показать экран битвы')
+    parser.add_argument('-b', '--database', type=str, default=f'{PROJECT_PATH}/astro.sqlite',
+                        help='путь до файла sqlite базы данных с рейтингом')
 
     args = parser.parse_args()
     players = args.player_module if args.player_module else players_choose()
