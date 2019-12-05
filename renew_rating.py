@@ -57,25 +57,6 @@ class RatingUpdater:
             user.save()
         return players
 
-        # parsed_results[user_name] = {}
-        # parsed_results[user_name]['rating'] = players_rating[user_name]
-        # if parsed_results[user_name]['rating'] >= 2400:
-        #     koef_elo = 10
-        # elif parsed_results[user_name]['rating'] >= 2300:
-        #     koef_elo = 20
-        # else:
-        #     koef_elo = 40
-        # for opponent_name, elerium in user_score.items():
-        #     expectation = 1 / (1 + 10 ** ((players_rating[opponent_name] - players_rating[user_name]) / 400))
-        #     if (elerium * 0.95) <= user_score[user_name] <= (elerium * 1.05):
-        #         parsed_results[user_name][opponent_name] = 0.5
-        #     elif user_score[user_name] < elerium:
-        #         parsed_results[user_name][opponent_name] = 0
-        #     elif user_score[user_name] > elerium:
-        #         parsed_results[user_name][opponent_name] = 1
-        #     parsed_results[user_name]['rating'] += int(
-        #         koef_elo * (parsed_results[user_name][opponent_name] - expectation))
-
     def write_results_in_file(self):
         with open(self.out_file, 'w') as table:
             table.write(f"##### Рейтинг по состоянию на {datetime.date.today().strftime('%d.%m.%Y')}\n\n")
