@@ -1,12 +1,10 @@
+import argparse
+import datetime
 import json
+import logging
 import os
 
-from playhouse.db_url import connect
-import datetime
-import logging
-import argparse
-
-from models import Player, Battle, db_proxy
+from models import Player, Battle, init_db
 
 PROJECT_PATH = os.path.dirname(__file__)
 ELO_COEFFICIENTS = ((1000, 10), (700, 20), )
@@ -15,9 +13,7 @@ ELO_COEFFICIENTS = ((1000, 10), (700, 20), )
 class RatingUpdater:
 
     def __init__(self, db_url, out_file):
-        self.database = connect(db_url)
-        db_proxy.initialize(self.database)
-        self.database.create_tables([Player, Battle])
+        self.database = init_db(db_url)
         self.out_file = out_file
 
     def get_players(self, battle_results):

@@ -4,6 +4,7 @@ import datetime
 from peewee import (
     CharField, DatabaseProxy, DateTimeField, IntegerField, Model, TextField,
 )
+from playhouse.db_url import connect
 
 INITIAL_RATING = 700
 
@@ -34,4 +35,10 @@ class Battle(BaseModel):
     happened_at = DateTimeField()
     result = TextField()
 
+
+def init_db(db_url):
+    database = connect(db_url)
+    db_proxy.initialize(database)
+    database.create_tables([Player, Battle])
+    return database
 
