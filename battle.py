@@ -85,9 +85,22 @@ def save_battle_result(result, path):
 
 
 def get_tournament_players(player_module):
-    # TODO тут надо понять какой рейтинг у игрока и выбрать ему соперников
-    player = Player.get(path=player_module)
-    player2 = player3 = player4 = None
+    rating_list = []
+    rating_from_db = Player.select().order_by(Player.rating.asc())
+    for player in rating_from_db:
+        rating_list.append([player.rating, player.path])
+    player = Player.get_or_create(path=player_module)
+    player2 = None
+    player3 = None
+    player4 = None
+    for reit, path in rating_list:
+        if reit < player.rating * 0.9:  # Самый ближний нижний
+            player2 = path
+        elif reit >= player.rating * 1.1:  # Самый ближний высший более 10%
+            if player4 is None:
+                player4 = path
+        else:
+            player3 = path  # Самый высокий из в диапазоне между 90% и 110%
     return [player, player2, player3, player4]
 
 
