@@ -78,9 +78,9 @@ class RatingUpdater:
             for battle in battles:
                 if (datetime.date.today() - battle.happened_at).days >= 30:
                     break
-                msg_out = battle.happened_at.strftime('%Y-%m-%d %H:%M:%S') + '|'
+                msg_out = battle.happened_at.strftime('%Y-%m-%d %H:%M:%S') + ' | '
                 for student, result in battle.result:
-                    msg_out += ' ' + str(student) + '-' + str(result)
+                    msg_out += ', ' + str(student) + ' - ' + str(result)
                 table.write(f"{msg_out}\n")
 
     def update_rating(self, battle_results):
