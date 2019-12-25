@@ -1,6 +1,7 @@
-Рейтинг по состоянию на 02.12.2019
+##### Рейтинг по состоянию на 10.12.2019
 
 Позиция|Имя команды|Рейтинг
 ---|---|---:
-1|IshmukhamedovDrone|20
-2|VinogradovDrone|-18
+1|IshmukhamedovDrone|714
+2|VinogradovDrone|705
+3|KharitonovDrone|695
