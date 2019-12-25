@@ -7,6 +7,8 @@ from astrobox.space_field import SpaceField
 import importlib
 import argparse
 
+from models import Player
+
 PROJECT_PATH = os.path.dirname(__file__)
 
 
@@ -82,6 +84,26 @@ def save_battle_result(result, path):
     print(f'Battle result saved to {path}')
 
 
+def get_tournament_players(player_module):
+    rating_list = []
+    rating_from_db = Player.select().order_by(Player.rating.asc())
+    for player in rating_from_db:
+        rating_list.append([player.rating, player.path])
+    player = Player.get_or_create(path=player_module)
+    player2 = None
+    player3 = None
+    player4 = None
+    for reit, path in rating_list:
+        if reit < player.rating * 0.9:  # Самый ближний нижний
+            player2 = path
+        elif reit >= player.rating * 1.1:  # Самый ближний высший более 10%
+            if player4 is None:
+                player4 = path
+        else:
+            player3 = path  # Самый высокий из в диапазоне между 90% и 110%
+    return [player, player2, player3, player4]
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Запускает битву нескольких команд дронов. '
@@ -91,7 +113,7 @@ if __name__ == '__main__':
     )
     parser.add_argument('-p', '--player-module', type=str, nargs=argparse.ONE_OR_MORE,
                         help='Список модулей команд игроков в формате hangar_XXXX/module_name.py')
-    parser.add_argument('-s', '--game-speed', type=int, default=5, help='Скорость битвы')
+    parser.add_argument('-s', '--game-speed', type=int, default=10, help='Скорость битвы')
     parser.add_argument('-a', '--asteroids-count', type=int, default=10, help='Количество астероидов')
     parser.add_argument('-d', '--drones-count', type=int, default=5, help='Количество дронов в команде')
     parser.add_argument('-o', '--out-file', type=str, help='Путь для сохранения json-результатов битвы')
@@ -100,9 +122,18 @@ if __name__ == '__main__':
     parser.add_argument('-c', '--show-screen', action='store_true', help='показать экран битвы')
     parser.add_argument('-b', '--database', type=str, default=f'{PROJECT_PATH}/astro.sqlite',
                         help='путь до файла sqlite базы данных с рейтингом')
+    parser.add_argument('-t', '--tournament', type=str,
+                        help='Режим турнира для указанного игрока, '
+                             'остальные 3 игрока выбираются автоматически по рейтингу: '
+                             'больший/меньший на 10% и примерно равный (+-5%)')
 
     args = parser.parse_args()
-    players = args.player_module if args.player_module else players_choose()
+    if args.tournament:
+        players = get_tournament_players(args.tournament)
+    elif args.player_module:
+        players = args.player_module
+    else:
+        players = players_choose()
     try:
         result = run_battle(player_modules=players, speed=args.game_speed,
                             asteroids_count=args.asteroids_count, drones_count=args.drones_count,
