@@ -10,9 +10,10 @@ import settings
 
 class RatingUpdater:
 
-    def __init__(self, db_url, out_file):
+    def __init__(self, db_url, out_file, log_file):
         self.database = init_db(db_url)
         self.out_file = out_file
+        self.log_file = log_file
 
     def get_players(self, battle_results):
         players = {}
@@ -66,6 +67,16 @@ class RatingUpdater:
                     break
                 table.write(f"{index + 1}|{player.name}|{player.rating}\n")
 
+    def write_logs_in_file(self):
+        print('logs')
+        with open(self.out_file, 'w') as table:
+            table.write(f"##### Логи за прошедшую неделю на {datetime.date.today().strftime('%d.%m.%Y')}\n\n")
+            table.write(f"uuid|Дата сражения|Результат\n")
+            table.write(f"---|---|---:\n")
+            battles = Battle.select().order_by(Battle.happened_at.desc())
+            for battle in battles:
+                table.write(f"{battle.happened_at}|{battle.result}\n")
+
     def update_rating(self, battle_results):
         if 'uuid' not in battle_results:
             raise ValueError('Battle results must contain uuid!')
@@ -74,7 +85,7 @@ class RatingUpdater:
             logging.warning(f'Battle {battle_uuid} has been processed before. Skipped.')
             return
         self.parse_results(battle_results)
-        Battle.create(uuid=battle_uuid, happened_at=battle_results.get('happened_at'), result=battle_results)
+        Battle.create(uuid=battle_uuid, happened_at=battle_results.get('happened_at'), result=battle_results['collected'])
 
     def renew_from_files(self, path, files):
         for file in files:
@@ -102,6 +113,8 @@ if __name__ == '__main__':
                         help='путь до папки с файлами результатов битв')
     parser.add_argument('-o', '--out-file', type=str, default=f'{settings.PROJECT_PATH}/LOCAL_RATING.md',
                         help='куда сохранять таблицу рейтинга')
+    parser.add_argument('-l', '--log-file', type=str, default=f'{settings.PROJECT_PATH}/LOGS.md',
+                        help='куда сохранять таблицу рейтинга')
     parser.add_argument('-b', '--database', type=str, default=f'{settings.PROJECT_PATH}/astro.sqlite',
                         help='путь до файла sqlite базы данных с рейтингом')
     parser.add_argument('-v', '--verbose', default=False, action='store_true',
@@ -112,9 +125,10 @@ if __name__ == '__main__':
     if args.verbose:
         logging.basicConfig(level=logging.INFO)
 
-    astro_rating = RatingUpdater(db_url=f'sqlite:///{args.database}', out_file=args.out_file)
+    astro_rating = RatingUpdater(db_url=f'sqlite:///{args.database}', out_file=args.out_file, log_file=args.log_file)
     if args.battle_result:
         astro_rating.renew_from_files(*args.battle_result)
     if args.battle_result_directory:
         astro_rating.renew_from_directory(args.battle_result_directory)
     astro_rating.write_results_in_file()
+    astro_rating.write_logs_in_file()

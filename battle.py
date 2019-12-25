@@ -6,6 +6,7 @@ from pprint import pprint
 from astrobox.space_field import SpaceField
 import importlib
 import argparse
+import datetime
 
 from models import Player
 
@@ -68,6 +69,7 @@ def run_battle(player_modules, speed=150, asteroids_count=50, drones_count=5, sh
 
     battle_result = scene.go()
     battle_result['players_modules'] = drones_paths
+    battle_result['happened_at'] = datetime.date.today()
     return battle_result
 
 
