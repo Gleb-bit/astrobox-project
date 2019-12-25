@@ -70,11 +70,17 @@ class RatingUpdater:
     def write_logs_in_file(self):
         print('logs')
         with open(self.out_file, 'w') as table:
-            table.write(f"##### Логи за прошедшую неделю на {datetime.date.today().strftime('%d.%m.%Y')}\n\n")
+            table.write(f"##### Логи за прошедший месяц на {datetime.date.today().strftime('%d.%m.%Y')}\n\n")
             table.write(f"uuid|Дата сражения|Результат\n")
             table.write(f"---|---|---:\n")
             battles = Battle.select().order_by(Battle.happened_at.desc())
+
             for battle in battles:
+                if (datetime.date.today() - battle.happened_at).days >= 30:
+                    break
+                msg_out = battle.happened_at.strftime('%Y-%m-%d %H:%M:%S')
+                for student, result in battle.result:
+                    msg_out += ' ' + str(student) + '-' + str(result)
                 table.write(f"{battle.happened_at}|{battle.result}\n")
 
     def update_rating(self, battle_results):
@@ -113,7 +119,7 @@ if __name__ == '__main__':
                         help='путь до папки с файлами результатов битв')
     parser.add_argument('-o', '--out-file', type=str, default=f'{settings.PROJECT_PATH}/LOCAL_RATING.md',
                         help='куда сохранять таблицу рейтинга')
-    parser.add_argument('-l', '--log-file', type=str, default=f'{settings.PROJECT_PATH}/LOGS.md',
+    parser.add_argument('-l', '--log-file', type=str, default=f'{settings.PROJECT_PATH}/LOCAL_LOGS.md',
                         help='куда сохранять таблицу рейтинга')
     parser.add_argument('-b', '--database', type=str, default=f'{settings.PROJECT_PATH}/astro.sqlite',
                         help='путь до файла sqlite базы данных с рейтингом')
