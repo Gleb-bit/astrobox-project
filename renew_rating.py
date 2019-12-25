@@ -75,15 +75,16 @@ class RatingUpdater:
             Battle.happened_at.desc()
         )
         rows = [
-            ('Дата сражения', 'Первый результат', 'Второй результат', 'Третий результат', 'Четвертый результат'),
-            ['---', ] * 5,
+            ('Дата сражения', 'Продолжительность (шагов игры)',
+             'Первый результат', 'Второй результат', 'Третий результат', 'Четвертый результат'),
+            ['---', ] * 6,
         ]
         for battle in battles:
             battle_result = json.loads(battle.result)
             collected = list(battle_result['collected'].items())
             collected.sort(key=lambda x: -x[1])
             dead = battle_result.get('dead')
-            cells = [battle.happened_at.strftime('%Y-%m-%d %H:%M:%S'), ]
+            cells = [battle.happened_at.strftime('%Y-%m-%d %H:%M:%S'), str(battle_result['game_steps']), ]
             for student, result in collected:
                 cell = f'{result} - {student}'
                 if dead and dead[student]:
