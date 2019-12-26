@@ -135,11 +135,11 @@ if __name__ == '__main__':
                         help='путь до файла(ов) с результатами игры')
     parser.add_argument('-d', '--battle-result-directory', type=str,
                         help='путь до папки с файлами результатов битв')
-    parser.add_argument('-o', '--out-file', type=str, default=f'{settings.PROJECT_PATH}/LOCAL_RATING.md',
+    parser.add_argument('-o', '--out-file', type=str, default=settings.RATING_FILE,
                         help='куда сохранять таблицу рейтинга')
-    parser.add_argument('-l', '--log-file', type=str, default=f'{settings.PROJECT_PATH}/LOCAL_LOGS.md',
+    parser.add_argument('-l', '--log-file', type=str, default=settings.BATTLES_LOG,
                         help='куда сохранять таблицу рейтинга')
-    parser.add_argument('-b', '--database', type=str, default=f'{settings.PROJECT_PATH}/astro.sqlite',
+    parser.add_argument('-b', '--database', type=str, default=settings.DB_URL,
                         help='путь до файла sqlite базы данных с рейтингом')
     parser.add_argument('-v', '--verbose', default=False, action='store_true',
                         help='подробности рассчета рейтинга')
@@ -149,7 +149,7 @@ if __name__ == '__main__':
     if args.verbose:
         logging.basicConfig(level=logging.INFO)
 
-    astro_rating = RatingUpdater(db_url=f'sqlite:///{args.database}', out_file=args.out_file)
+    astro_rating = RatingUpdater(db_url=args.database, out_file=args.out_file)
     if args.battle_result:
         astro_rating.renew_from_files(*args.battle_result)
     if args.battle_result_directory:

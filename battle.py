@@ -3,13 +3,13 @@ import json
 import logging
 import os
 from pprint import pprint
+
+import settings
 from astrobox.space_field import SpaceField
 import importlib
 import argparse
 
 from models import Player
-
-PROJECT_PATH = os.path.dirname(__file__)
 
 
 def get_user_answer(prompt, valid_values=None):
@@ -27,15 +27,15 @@ def get_user_answer(prompt, valid_values=None):
 
 
 def players_choose():
-    hangars = [x for x in os.listdir(PROJECT_PATH) if 'hangar' in x]
+    hangars = [x for x in os.listdir(settings.PROJECT_PATH) if 'hangar' in x]
     if not hangars:
-        raise ValueError(f'No hangars in {PROJECT_PATH}')
+        raise ValueError(f'No hangars in {settings.PROJECT_PATH}')
     for index, path in enumerate(hangars):
         print(f'\t {index} - {path}')
     choice = get_user_answer('Номер директории для подгрузки кода', range(len(hangars)))
     number_of_players = get_user_answer('Количество игроков', range(1, 5))
-    hangar_path = hangars[choice] if os.path.exists(os.path.join(PROJECT_PATH, hangars[choice])) else None
-    players_to_add = [x for x in os.listdir(os.path.join(PROJECT_PATH, hangar_path)) if '__' not in x]
+    hangar_path = hangars[choice] if os.path.exists(os.path.join(settings.PROJECT_PATH, hangars[choice])) else None
+    players_to_add = [x for x in os.listdir(os.path.join(settings.PROJECT_PATH, hangar_path)) if '__' not in x]
     added_players = []
     if players_to_add:
         for number in range(1, number_of_players + 1):
@@ -61,7 +61,7 @@ def run_battle(player_modules, speed=150, asteroids_count=50, drones_count=5, sh
     drones_teams = {}
     drones_paths = {}
     for i, team_module in enumerate(player_modules):
-        module_to_import = team_module.replace(PROJECT_PATH, '').replace('.py', '').replace('/', '.')
+        module_to_import = team_module.replace(settings.PROJECT_PATH, '').replace('.py', '').replace('/', '.')
         drone = importlib.import_module(module_to_import).drone_class
         drones_paths[drone.__name__] = team_module
         drones_teams[i] = [drone() for _ in range(drones_count)]
@@ -120,7 +120,7 @@ if __name__ == '__main__':
     parser.add_argument('-od', '--out-dir', type=str,
                         help='Папка для сохранения json-результатов битвы, имя файла автоматическое')
     parser.add_argument('-c', '--show-screen', action='store_true', help='показать экран битвы')
-    parser.add_argument('-b', '--database', type=str, default=f'{PROJECT_PATH}/astro.sqlite',
+    parser.add_argument('-b', '--database', type=str, default=settings.DB_URL,
                         help='путь до файла sqlite базы данных с рейтингом')
     parser.add_argument('-t', '--tournament', type=str,
                         help='Режим турнира для указанного игрока, '
