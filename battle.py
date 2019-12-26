@@ -9,7 +9,7 @@ from astrobox.space_field import SpaceField
 import importlib
 import argparse
 
-from models import Player
+from models import Player, init_db
 
 
 def get_user_answer(prompt, valid_values=None):
@@ -85,11 +85,9 @@ def save_battle_result(result, path):
 
 
 def get_tournament_players(player_module):
-    rating_list = []
-    rating_from_db = Player.select().order_by(Player.rating.asc())
-    for player in rating_from_db:
-        rating_list.append([player.rating, player.path])
-    player = Player.get_or_create(path=player_module)
+    all_players = Player.select().order_by(Player.rating.asc())
+    rating_list = [(player.rating, player.path) for player in all_players]
+    player, _ = Player.get_or_create(path=player_module)
     player2 = None
     player3 = None
     player4 = None
@@ -101,7 +99,8 @@ def get_tournament_players(player_module):
                 player4 = path
         else:
             player3 = path  # Самый высокий из в диапазоне между 90% и 110%
-    return [player, player2, player3, player4]
+    candidates = [player.path, player2, player3, player4]
+    return [candidate for candidate in candidates if candidate is not None]
 
 
 if __name__ == '__main__':
@@ -123,11 +122,12 @@ if __name__ == '__main__':
     parser.add_argument('-b', '--database', type=str, default=settings.DB_URL,
                         help='путь до файла sqlite базы данных с рейтингом')
     parser.add_argument('-t', '--tournament', type=str,
-                        help='Режим турнира для указанного игрока, '
+                        help='Режим турнира для указанного игрока (путь до модуля), '
                              'остальные 3 игрока выбираются автоматически по рейтингу: '
                              'больший/меньший на 10 процентов и примерно равный (плюс/минус 5 процентов)')
 
     args = parser.parse_args()
+    init_db(db_url=args.database)
     if args.tournament:
         players = get_tournament_players(args.tournament)
     elif args.player_module:
