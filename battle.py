@@ -2,6 +2,8 @@
 import json
 import logging
 import os
+import random
+import sys
 from pprint import pprint
 
 import settings
@@ -61,11 +63,13 @@ def run_battle(player_modules, speed=150, asteroids_count=50, drones_count=5, sh
     drones_teams = {}
     drones_paths = {}
     for i, team_module in enumerate(player_modules):
-        module_to_import = team_module.replace(settings.PROJECT_PATH, '').replace('.py', '').replace('/', '.')
-        drone = importlib.import_module(module_to_import).drone_class
+        module_to_import = team_module.replace('.py', '').replace('/', '.').replace('\\', '.')
+        drone_module = importlib.import_module(module_to_import)
+        if not hasattr(drone_module, 'drone_class'):
+            raise ValueError(f'In module {team_module} no variable drone_class: cant import drones!!!')
+        drone = drone_module.drone_class
         drones_paths[drone.__name__] = team_module
         drones_teams[i] = [drone() for _ in range(drones_count)]
-
     battle_result = scene.go()
     battle_result['players_modules'] = drones_paths
     return battle_result
@@ -85,22 +89,42 @@ def save_battle_result(result, path):
 
 
 def get_tournament_players(player_module):
-    all_players = Player.select().order_by(Player.rating.asc())
-    rating_list = [(player.rating, player.path) for player in all_players]
-    player, _ = Player.get_or_create(path=player_module)
-    player2 = None
-    player3 = None
-    player4 = None
-    for reit, path in rating_list:
-        if reit < player.rating * 0.9:  # Самый ближний нижний
-            player2 = path
-        elif reit >= player.rating * 1.1:  # Самый ближний высший более 10%
-            if player4 is None:
-                player4 = path
-        else:
-            player3 = path  # Самый высокий из в диапазоне между 90% и 110%
-    candidates = [player.path, player2, player3, player4]
-    return [candidate for candidate in candidates if candidate is not None]
+    if '.py' not in player_module:
+        raise ValueError("Param player_module must be kind of 'hangar_XXXX/student_module.py'")
+    player = Player.get_or_none(path=player_module)
+    if not player:
+        raise ValueError(f"No player with path {player_module} in database! Try renew_rating")
+    candidates = [player, ]
+    top_players = Player.select().filter(
+        Player.rating > player.rating * 1.1
+    ).order_by(Player.rating.asc()).limit(4)
+    bottom_players = Player.select().filter(
+        Player.rating < player.rating * 0.9
+    ).order_by(Player.rating.desc()).limit(4)
+    similar_players = Player.select().filter(
+        (Player.rating <= player.rating * 1.1) &
+        (Player.rating >= player.rating * 0.9) &
+        (Player.id != player.id)
+    )
+    similar_players = list(similar_players)
+    player_lists = [similar_players, list(top_players), list(bottom_players)]
+    while len(candidates) <= 4:
+        random.shuffle(similar_players)
+        for _players in player_lists:
+            candidate = _players.pop() if _players else None
+            if candidate:
+                candidates.append(candidate)
+        if not any(player_lists):
+            break
+    return [candidate.path for candidate in candidates]
+
+
+def _modules_exists(modules):
+    for module in modules:
+        full_path = os.path.join(settings.PROJECT_PATH, module)
+        if not os.path.exists(full_path):
+            return False
+    return True
 
 
 if __name__ == '__main__':
@@ -129,8 +153,14 @@ if __name__ == '__main__':
     args = parser.parse_args()
     init_db(db_url=args.database)
     if args.tournament:
+        if not _modules_exists([args.tournament, ]):
+            logging.error(f'No module {args.tournament}')
+            sys.exit(1)
         players = get_tournament_players(args.tournament)
     elif args.player_module:
+        if not _modules_exists(args.player_module):
+            logging.error(f'No one of modules: {args.player_module}')
+            sys.exit(1)
         players = args.player_module
     else:
         players = players_choose()
