@@ -136,11 +136,13 @@ if __name__ == '__main__':
     parser.add_argument('-d', '--battle-result-directory', type=str,
                         help='путь до папки с файлами результатов битв')
     parser.add_argument('-o', '--out-file', type=str, default=settings.RATING_FILE,
-                        help='куда сохранять таблицу рейтинга')
+                        help=f'куда сохранять таблицу рейтинга '
+                             f'(если не указано то {settings.RATING_FILE})')
     parser.add_argument('-l', '--log-file', type=str, default=settings.BATTLES_LOG,
-                        help='куда сохранять таблицу рейтинга')
+                        help=f'куда сохранять результаты последних сражений '
+                             f'(если не указано то {settings.BATTLES_LOG})')
     parser.add_argument('-b', '--database', type=str, default=settings.DB_URL,
-                        help='путь до файла sqlite базы данных с рейтингом')
+                        help=f'URL соединения с БД (если не указано то {settings.DB_URL})')
     parser.add_argument('-v', '--verbose', default=False, action='store_true',
                         help='подробности рассчета рейтинга')
     args = parser.parse_args()

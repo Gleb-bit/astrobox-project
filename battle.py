@@ -120,7 +120,7 @@ if __name__ == '__main__':
                         help='Папка для сохранения json-результатов битвы, имя файла автоматическое')
     parser.add_argument('-c', '--show-screen', action='store_true', help='показать экран битвы')
     parser.add_argument('-b', '--database', type=str, default=settings.DB_URL,
-                        help='путь до файла sqlite базы данных с рейтингом')
+                        help=f'URL соединения с БД (если не указано то {settings.DB_URL})')
     parser.add_argument('-t', '--tournament', type=str,
                         help='Режим турнира для указанного игрока (путь до модуля), '
                              'остальные 3 игрока выбираются автоматически по рейтингу: '
