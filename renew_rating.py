@@ -42,7 +42,7 @@ class RatingUpdater:
                 expectation = 1 / (1 + 10 ** ((opponent.rating - user.rating) / 400))
                 logging.info(f'\texpectation {expectation}')
                 avg = (player_elerium + opponent_elerium) / 2
-                delta = abs(player_elerium - opponent_elerium) / avg
+                delta = abs(player_elerium - opponent_elerium) / avg if avg else 0
                 if delta < .05:
                     battle_result = 0.5
                 elif player_elerium > opponent_elerium:
