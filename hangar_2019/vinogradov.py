@@ -54,4 +54,6 @@ class VinogradovDrone(Drone):
                     ASTEROIDS_DRONES[sorted_asteroid].append(self)
                     return sorted_asteroid
             return asteroids_params[0]
+
+
 drone_class = VinogradovDrone
