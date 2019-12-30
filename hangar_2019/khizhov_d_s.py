@@ -8,6 +8,7 @@ from robogame_engine.theme import theme
 # python -m battle -p hangar_2019/khizhov_d_s.py hangar_2019/ishmukhamedov.py
 # python -m battle -p hangar_2019/khizhov_d_s.py hangar_2019/surkova.py
 # python -m battle -p hangar_2019/khizhov_d_s.py hangar_2019/vinogradov.py
+# python -m battle -p hangar_2019/khizhov_d_s.py hangar_2019/khizhov.py
 
 
 class KhizhovDrone(Drone):
@@ -400,8 +401,8 @@ class KhizhovDrone(Drone):
         self.next_action()
 
     def on_hearbeat(self):
-        if self.get_enemy_bases_alive():
-            self.scene._prev_endgame_state['countdown'] = 260
+        # if self.get_enemy_bases_alive():
+        #     self.scene._prev_endgame_state['countdown'] = 260
         if self._sleep_countdown < 10:
             self.task = ()
             return self.next_action()

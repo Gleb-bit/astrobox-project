@@ -5,7 +5,7 @@ from robogame_engine import scene
 from robogame_engine.theme import theme
 
 
-class KhizhovDrone(Drone):
+class KhizhovDrone1(Drone):
     map_field = scene.theme.FIELD_WIDTH, scene.theme.FIELD_HEIGHT
     center_map = Point(x=round(int(map_field[0] // 2)), y=round(int(map_field[1] // 2)))
     my_team = []
@@ -395,8 +395,8 @@ class KhizhovDrone(Drone):
         self.next_action()
 
     def on_hearbeat(self):
-        if self.get_enemy_bases_alive():
-            self.scene._prev_endgame_state['countdown'] = 260
+        # if self.get_enemy_bases_alive():
+        #     self.scene._prev_endgame_state['countdown'] = 260
         if self._sleep_countdown < 10:
             self.task = ()
             return self.next_action()
@@ -451,4 +451,4 @@ class KhizhovDrone(Drone):
         self.next_action()
 
 
-drone_class = KhizhovDrone
+drone_class = KhizhovDrone1
