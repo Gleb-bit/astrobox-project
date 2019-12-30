@@ -52,13 +52,13 @@ def players_choose():
     return added_players
 
 
-def run_battle(player_modules, speed=3, asteroids_count=50, drones_count=5, show_screen=False):
+def run_battle(player_modules, speed=150, asteroids_count=50, drones_count=5, show_screen=False):
     scene = SpaceField(
         speed=speed,
         field=(1200, 600),
         asteroids_count=asteroids_count,
         can_fight=True,
-        # headless=not show_screen,
+        headless=not show_screen,
     )
     drones_teams = {}
     drones_paths = {}
