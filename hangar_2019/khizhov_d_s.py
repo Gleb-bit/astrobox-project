@@ -4,11 +4,11 @@ from robogame_engine.geometry import Vector, Point
 from robogame_engine import scene
 from robogame_engine.theme import theme
 
-# python -m battle -p hangar_2019/khizhov_d_s.py hangar_2019/kharitonov.py --out-dir "result_battle"
-# python -m battle -p hangar_2019/khizhov_d_s.py hangar_2019/ishmukhamedov.py --out-dir "result_battle"
-# python -m battle -p hangar_2019/khizhov_d_s.py hangar_2019/surkova.py --out-dir "result_battle"
-# python -m battle -p hangar_2019/khizhov_d_s.py hangar_2019/vinogradov.py --out-dir "result_battle"
-# python -m battle -p hangar_2019/khizhov_d_s.py hangar_2019/khizhov.py --out-dir "result_battle"
+# python -m battle -p hangar_2019/khizhov_d_s.py hangar_2019/kharitonov.py -c -s 2 -od "result_battle"
+# python -m battle -p hangar_2019/khizhov_d_s.py hangar_2019/ishmukhamedov.py -c -s 2 -od "result_battle"
+# python -m battle -p hangar_2019/khizhov_d_s.py hangar_2019/surkova.py -c -s 2 -od "result_battle"
+# python -m battle -p hangar_2019/khizhov_d_s.py hangar_2019/vinogradov.py -c -s 2 -od "result_battle"
+# python -m battle -p hangar_2019/khizhov_d_s.py hangar_2019/khizhov.py -c -s 2 -od "result_battle"
 
 
 class KhizhovDrone(Drone):
