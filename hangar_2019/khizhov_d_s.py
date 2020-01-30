@@ -4,8 +4,14 @@ from robogame_engine.geometry import Vector, Point
 from robogame_engine import scene
 from robogame_engine.theme import theme
 
+# python -m battle -p hangar_2019/khizhov_d_s.py hangar_2019/kharitonov.py -c -s 2 -od "result_battle"
+# python -m battle -p hangar_2019/khizhov_d_s.py hangar_2019/ishmukhamedov.py -c -s 2 -od "result_battle"
+# python -m battle -p hangar_2019/khizhov_d_s.py hangar_2019/surkova.py -c -s 2 -od "result_battle"
+# python -m battle -p hangar_2019/khizhov_d_s.py hangar_2019/vinogradov.py -c -s 2 -od "result_battle"
+# python -m battle -p hangar_2019/khizhov_d_s.py hangar_2019/khizhov.py -c -s 2 -od "result_battle"
 
-class KhizhovDrone1(Drone):
+
+class KhizhovDrone(Drone):
     map_field = scene.theme.FIELD_WIDTH, scene.theme.FIELD_HEIGHT
     center_map = Point(x=round(int(map_field[0] // 2)), y=round(int(map_field[1] // 2)))
     my_team = []
@@ -135,7 +141,7 @@ class KhizhovDrone1(Drone):
                 if target in self.near_aster:
                     self.near_aster.remove(target)
                 target = choice(self.near_aster)
-        vector_target = Vector.from_points(self.coord, target, module=1) if isinstance(target, Point) else\
+        vector_target = Vector.from_points(self.coord, target, module=1) if isinstance(target, Point) else \
             Vector.from_points(self.coord, target.coord, module=1)
         self.vector = vector_target
         target_coord = target.coord if hasattr(target, 'coord') else target
@@ -437,7 +443,7 @@ class KhizhovDrone1(Drone):
         """Генерируем координаты по вертикали"""
         temp = []
         for x in range(range_x[0], range_x[1], 40):
-            for y in range(self.map_field[1]-50, 50, -50):
+            for y in range(self.map_field[1] - 50, 50, -50):
                 point = Point(x=round(int(x)), y=round(int(y)))
                 if all([500 > mate.distance_to(point) > 100 for mate in self.teammates]):
                     temp.append(point)
@@ -451,4 +457,4 @@ class KhizhovDrone1(Drone):
         self.next_action()
 
 
-drone_class = KhizhovDrone1
+drone_class = KhizhovDrone
