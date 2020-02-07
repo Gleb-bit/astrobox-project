@@ -106,8 +106,32 @@ def get_tournament_players(player_module):
         (Player.rating >= player.rating * 0.9) &
         (Player.id != player.id)
     )
-    similar_players = list(similar_players)
-    player_lists = [similar_players, list(top_players), list(bottom_players)]
+
+    similar_players = list(similar_players) if similar_players else []
+    top_players = list(top_players) if top_players else []
+    bottom_players = list(bottom_players) if bottom_players else []
+
+    number_top_players = min(len(top_players), 1)
+    number_similar_players = min(2 - number_top_players, len(similar_players))
+    number_bottom_players = min(3 - number_top_players - number_similar_players, len(bottom_players))
+    number_other_players = 3 - (number_top_players + number_similar_players + number_bottom_players)
+
+    player_lists = []
+
+    for candidat in [top_players[:number_top_players],
+                     similar_players[:number_similar_players],
+                     bottom_players[:number_bottom_players]
+                     ]:
+        if candidat:
+            player_lists.append(candidat)
+
+    other_players = [*top_players[number_top_players:],
+                     *similar_players[number_similar_players:],
+                     *bottom_players[number_bottom_players:]]
+
+    random.shuffle(other_players)
+    player_lists.append(other_players[:number_other_players])
+
     while len(candidates) <= 4:
         random.shuffle(similar_players)
         for _players in player_lists:
@@ -179,4 +203,3 @@ if __name__ == '__main__':
                 print_battle_result(result=result)
     except Exception as exc:
         logging.exception(f'Что-то пошло не так с параметрами {args}')
-
