@@ -6,7 +6,7 @@ from robogame_engine.theme import theme
 
 # python -m battle -p hangar_2019/khizhov_d_s.py hangar_2019/kharitonov.py -c -s 2 -od "result_battle"
 # python -m battle -p hangar_2019/khizhov_d_s.py hangar_2019/ishmukhamedov.py -c -s 2 -od "result_battle"
-# python -m battle -p hangar_2019/khizhov_d_s.py hangar_2019/surkova.py -c -s 2 -od "result_battle"
+# python -m battle -p hangar_2019/khizhov_d_s.py hangar_2019/surkova_e_n.py -c -s 2 -od "result_battle"
 # python -m battle -p hangar_2019/khizhov_d_s.py hangar_2019/vinogradov.py -c -s 2 -od "result_battle"
 # python -m battle -p hangar_2019/khizhov_d_s.py hangar_2019/khizhov.py -c -s 2 -od "result_battle"
 
