@@ -110,6 +110,7 @@ def get_tournament_players(player_module):
     similar_players = list(similar_players) if similar_players else []
     top_players = list(top_players) if top_players else []
     bottom_players = list(bottom_players) if bottom_players else []
+    top_players.sort(key=lambda x: x.rating)
 
     number_top_players = min(len(top_players), 1)
     number_similar_players = min(2 - number_top_players, len(similar_players))
@@ -117,8 +118,7 @@ def get_tournament_players(player_module):
     number_other_players = 3 - (number_top_players + number_similar_players + number_bottom_players)
 
     player_lists = []
-
-    for candidat in [top_players[:number_top_players],
+    for candidat in [top_players[number_top_players - 1:1],
                      similar_players[:number_similar_players],
                      bottom_players[:number_bottom_players]
                      ]:

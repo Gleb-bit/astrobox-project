@@ -4,6 +4,7 @@
 *LOCAL_LOGS.md
 **probe.py
 *.sqlite
+*.zip
 
 settings/local.py
 
