@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import random
 import time
 
@@ -224,4 +225,4 @@ class ZhukovDrone(Drone):
         return is_valide
 
 
-drone_class = ZhukovDrone()
+drone_class = ZhukovDrone
