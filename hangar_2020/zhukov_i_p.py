@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import random
 import time
 
@@ -14,7 +13,7 @@ class ZhukovDrone(Drone):
     asteroids_in_use = list()
     dead_man = None
     reserved_positions = list()
-    limit_health = 0.6
+    limit_health = 0.5
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -40,6 +39,7 @@ class ZhukovDrone(Drone):
             self.get_vector(self.coord, self.dead_man.coord)
             self.gun.shot(self.dead_man)
         elif not self.dead_man or self.dead_man.distance_to(self.dead_man.my_mothership) < MOTHERSHIP_HEALING_DISTANCE:
+            self.war_is_over = True
             if self.get_bases(self) and self.distance_to(self.get_bases(self).coord) > self.gun.shot_distance - 50:
                 self.move_at(self.get_place_for_attack(self, self.get_bases(self)))
             elif self.get_bases(self):
@@ -51,6 +51,7 @@ class ZhukovDrone(Drone):
     def on_hearbeat(self):
         if self.meter_2 < self.limit_health:
             self.heal()
+            self.war_is_over = False
             return
         if self.get_enemies(self) and self.distance_to(self.get_enemies(self)) < self.gun.shot_distance - 20:
             if self.valide_place(self.coord) and not self.in_action:
@@ -65,6 +66,10 @@ class ZhukovDrone(Drone):
             self.war_is_over = True
             if self.find_closest_asteroids():
                 self.move_at(self.find_closest_asteroids())
+        if self.check_enemies_at_home() == len(self.get_all_enemies(self)) and \
+                self.distance_to(self.my_mothership) > self._map[0] / 2:
+            self.move_at(self.my_mothership)
+            return
 
     def on_stop_at_asteroid(self, asteroid):
         if self.war_is_over:
@@ -107,6 +112,19 @@ class ZhukovDrone(Drone):
             return enemies[0][0]
         return enemies[0][0]
 
+    def get_all_enemies(self, soldier):
+        enemies = [(drone, soldier.distance_to(drone)) for drone in soldier.scene.drones if
+                   soldier.team != drone.team and drone.is_alive]
+        return enemies
+
+    def check_enemies_at_home(self):
+        enemies_close_to_base = 0
+        enemies = self.get_all_enemies(self)
+        for drone in enemies:
+            if drone[0].distance_to(drone[0].my_mothership) < MOTHERSHIP_HEALING_DISTANCE:
+                enemies_close_to_base += 1
+        return enemies_close_to_base
+
     def get_bases(self, soldier):
         bases = [base for base in soldier.scene.motherships if
                  base.team != soldier.team and base.is_alive]
@@ -141,7 +159,10 @@ class ZhukovDrone(Drone):
         return distance
 
     def build_formation(self):
-        x = self.my_mothership.coord.x + self.radius * 2.5
+        if self.my_mothership.coord.x < 500:
+            x = self.my_mothership.coord.x + self.radius * 2.5
+        elif self.my_mothership.coord.x > 500:
+            x = self.my_mothership.coord.x - self.radius * 2.5
         y = 50
         for position in self.reserved_positions:
             if y in self.reserved_positions:
@@ -150,7 +171,7 @@ class ZhukovDrone(Drone):
                 self.position = y
                 self.reserved_positions.append(y)
                 spot = Point(x, y)
-                return spot
+                return self.move_at(spot)
         self.position = y
         self.reserved_positions.append(y)
         spot = Point(x, y)
