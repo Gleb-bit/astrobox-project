@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import random
 import time
 
@@ -141,7 +140,10 @@ class ZhukovDrone(Drone):
         return distance
 
     def build_formation(self):
-        x = self.my_mothership.coord.x + self.radius * 2.5
+        if self.my_mothership.coord.x < 500:
+            x = self.my_mothership.coord.x + self.radius * 2.5
+        elif self.my_mothership.coord.x > 500:
+            x = self.my_mothership.coord.x - self.radius * 2.5
         y = 50
         for position in self.reserved_positions:
             if y in self.reserved_positions:
@@ -150,7 +152,7 @@ class ZhukovDrone(Drone):
                 self.position = y
                 self.reserved_positions.append(y)
                 spot = Point(x, y)
-                return spot
+                return self.move_at(spot)
         self.position = y
         self.reserved_positions.append(y)
         spot = Point(x, y)
@@ -223,6 +225,3 @@ class ZhukovDrone(Drone):
             is_valide = is_valide and (partner.distance_to(point) >= 50)
 
         return is_valide
-
-
-drone_class = ZhukovDrone
