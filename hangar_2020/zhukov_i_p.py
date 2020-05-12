@@ -108,8 +108,6 @@ class ZhukovDrone(Drone):
         if not enemies:
             return
         enemies.sort(key=lambda x: x[1])
-        if len(enemies) < 2:
-            return enemies[0][0]
         return enemies[0][0]
 
     def get_all_enemies(self, soldier):
@@ -213,7 +211,7 @@ class ZhukovDrone(Drone):
         elif isinstance(target, Point):
             vec = Vector.from_points(target, soldier.coord)
         else:
-            raise Exception("target must be GameObject or Point!".format(target, ))
+            pass
 
         dist = vec.module
         _koef = 1 / dist
