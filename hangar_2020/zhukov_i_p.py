@@ -25,6 +25,7 @@ class ZhukovDrone(Drone):
         self.full_rounds = 1
         self.in_action = False
         self.war_is_over = False
+        self.lock = False
 
     def on_born(self):
         self.build_formation()
@@ -46,7 +47,14 @@ class ZhukovDrone(Drone):
                 self.get_vector(self.coord, self.get_bases(self).coord)
                 self.gun.shot(self.get_bases(self))
         elif self.dead_man:
-            self.move_at(self.get_place_for_attack(self, self.get_enemies(self)))
+            place = self.get_place_for_attack(self, self.get_enemies(self))
+            if place:
+                self.move_at(place)
+        if not self.get_bases(self) and not self.lock:
+            self.war_is_over = True
+            self.lock = True
+            if self.find_closest_asteroids():
+                self.move_at(self.find_closest_asteroids())
 
     def on_hearbeat(self):
         if self.meter_2 < self.limit_health:
@@ -212,7 +220,6 @@ class ZhukovDrone(Drone):
             vec = Vector.from_points(target, soldier.coord)
         else:
             pass
-
         dist = vec.module
         _koef = 1 / dist
         norm_vec = Vector(vec.x * _koef, vec.y * _koef)
