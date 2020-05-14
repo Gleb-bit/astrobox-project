@@ -14,6 +14,7 @@ class ZhukovDrone(Drone):
     dead_man = None
     reserved_positions = list()
     limit_health = 0.5
+    dead_drones_asteroids = set()
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -22,15 +23,18 @@ class ZhukovDrone(Drone):
         self.distance_partly_loaded = 0
         self.distance_fully_loaded = 0
         self.current_asteroid = None
-        self.full_rounds = 1
+        self.full_rounds = 0
         self.in_action = False
         self.war_is_over = False
         self.lock = False
+        self.my_asteroids = list()
 
     def on_born(self):
+        self.my_asteroids = self.asteroids
         self.build_formation()
 
     def on_wake_up(self):
+        self.find_all_elerium_left()
         self.dead_man = self.get_enemies(self)
         if self.have_gun and self.dead_man and \
                 self.distance_to(self.dead_man) < self.gun.shot_distance and \
@@ -75,7 +79,8 @@ class ZhukovDrone(Drone):
             if self.find_closest_asteroids():
                 self.move_at(self.find_closest_asteroids())
         if self.check_enemies_at_home() == len(self.get_all_enemies(self)) and \
-                self.distance_to(self.my_mothership) > self._map[0] / 2:
+                self.distance_to(self.my_mothership) > self._map[0] / 2 \
+                and not self.war_is_over:
             self.move_at(self.my_mothership)
             return
 
@@ -95,10 +100,10 @@ class ZhukovDrone(Drone):
             self.move_at(self.mothership)
 
     def on_stop_at_mothership(self, mothership):
+        self.unload_to(self.my_mothership)
         if not self.war_is_over:
             self.build_formation()
         if self.war_is_over:
-            # self.make_dead_drones_collectable()
             self.unload_to(self.my_mothership)
             if self.find_closest_asteroids():
                 self.move_at(self.find_closest_asteroids())
@@ -109,6 +114,18 @@ class ZhukovDrone(Drone):
             self.move_at(self.find_closest_asteroids())
         else:
             self.stop()
+
+    def on_stop_at_target(self, target):
+        try:
+            if self.my_mothership.near(target):
+                self.unload_to(self.my_mothership)
+                self.move_at(self.find_closest_asteroids())
+            for asteroid in self.my_asteroids:
+                if asteroid.near(target) and asteroid.payload > 0 and self.war_is_over:
+                    self.load_from(asteroid)
+                    self.move_at(self.mothership)
+        except:
+            pass
 
     def get_enemies(self, soldier):
         enemies = [(drone, soldier.distance_to(drone)) for drone in soldier.scene.drones if
@@ -156,7 +173,7 @@ class ZhukovDrone(Drone):
 
     def sort_asteroids_distance(self):
         distance = []
-        for asteroid in self.asteroids:
+        for asteroid in self.my_asteroids:
             if asteroid.payload > 100 and asteroid not in self.asteroids_in_use and self.full_rounds:
                 distance.append(((self.distance_to(asteroid)), asteroid))
             elif asteroid.payload and asteroid not in self.asteroids_in_use and self.full_rounds <= 0:
@@ -249,6 +266,19 @@ class ZhukovDrone(Drone):
             is_valide = is_valide and (partner.distance_to(point) >= 50)
 
         return is_valide
+
+    def get_dead_drones(self):
+        dead_drone = [drone for drone in self.scene.drones if not drone.is_alive and drone.payload > 0]
+        return dead_drone
+
+    def get_enemy_load_bases(self):
+        return [base for base in self.scene.motherships if
+                base.team is not self.team and base.is_alive and base.payload > 0]
+
+    def find_all_elerium_left(self):
+        self.dead_drones_asteroids.update(self.get_dead_drones())
+        self.dead_drones_asteroids.update(self.get_enemy_load_bases())
+        self.my_asteroids.extend(self.dead_drones_asteroids)
 
 
 drone_class = ZhukovDrone
