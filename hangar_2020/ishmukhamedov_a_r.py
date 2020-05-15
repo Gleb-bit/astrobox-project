@@ -1,9 +1,4 @@
 # -*- coding: utf-8 -*-
-from enum import IntEnum
-from math import sin, cos, pi
-from typing import Optional, List
-from robogame_engine.geometry import Vector, Point
-from astrobox.core import Drone, Asteroid, MotherShip
 
 # Атрибуты дрона / Астероида
 
@@ -26,6 +21,16 @@ from astrobox.core import Drone, Asteroid, MotherShip
 # unload_to(obj) - разгрузить элериум из трюма в объект
 # distance_to(obj) - рассчет расстояния до объекта/точки
 # near(obj) - дрон находится рядом с объектом/точкой
+from enum import IntEnum
+from math import sin, cos, pi, sqrt
+from random import shuffle
+from typing import Optional, List
+
+from astrobox.core import Drone, Asteroid, MotherShip
+from astrobox.space_field import SpaceField
+from robogame_engine import scene
+from robogame_engine.geometry import Vector, Point
+from robogame_engine.theme import theme
 
 
 class Commander:
@@ -36,6 +41,8 @@ class Commander:
     _enemies: List[Drone] = []
     _drones: List[Drone] = []
     _excluded_points: List[Point] = []
+    _initial: bool = True
+    _scene: SpaceField = None
 
     def __new__(cls, *args, **kwargs):
         if not cls._instance:
@@ -45,6 +52,15 @@ class Commander:
 
     def __init__(self, drone: Drone):
         self._drones.append(drone)
+        self._scene = drone.scene
+
+    @property
+    def initial(self):
+        return self._initial
+
+    @initial.setter
+    def initial(self, init):
+        self._initial = init
 
     @property
     def enemy(self) -> Drone:
@@ -102,6 +118,22 @@ class Commander:
 
         return points
 
+    def get_enemies(self, drone):
+        self.enemies = [enemy for enemy in drone.scene.drones
+                        if enemy not in drone.teammates and enemy != drone and enemy.is_alive]
+
+        self.enemies.extend([mother_ship for mother_ship in drone.scene.motherships
+                             if mother_ship != drone.my_mothership and mother_ship.is_alive])
+
+    def get_closest_enemy(self, drone):
+        closest_enemy = self.enemies[0]
+
+        for enemy in self.enemies:
+            if drone.distance_to(enemy) < drone.distance_to(closest_enemy):
+                closest_enemy = enemy
+
+        return closest_enemy
+
     def get_attack_point(self, drone):
         """
             Выбирает незанятую точку атаки для дрона
@@ -112,31 +144,26 @@ class Commander:
         if self.enemy and not self.enemy.is_alive:
             self._excluded_points = []
 
-        self.enemies = [enemy for enemy in drone.scene.drones
-                        if enemy not in drone.teammates and enemy != drone and enemy.is_alive]
-
-        if not self.enemies:
-            self.enemies = [mother_ship for mother_ship in drone.scene.motherships
-                            if mother_ship != drone.my_mothership and mother_ship.is_alive]
+        self.get_enemies(drone=drone)
 
         if not self.enemies:
             drone.mode = DroneMode.DRONE_HARVESTER
             return drone.mothership
 
-        closest_enemy = self.enemies[0]
+        self.enemy = self.get_closest_enemy(drone=drone)
 
-        for enemy in self.enemies:
-            if drone.distance_to(enemy) < drone.distance_to(closest_enemy):
-                closest_enemy = enemy
+        if self.enemy.state.target_point \
+                and drone.distance_to(self.enemy) > drone.distance_to(self.enemy.state.target_point):
+            target = self.enemy.state.target_point
+        else:
+            target = self.enemy.coord
 
-        self.enemy = closest_enemy
-
-        if closest_enemy.state.target_point:
-            self.attack_points = self.get_attack_points(closest_enemy.state.target_point,
+        if self.enemy.state.target_point:
+            self.attack_points = self.get_attack_points(target,
                                                         drone.radius,
-                                                        drone.gun.shot_distance/4)
-        elif type(closest_enemy) == MotherShip:
-            self.attack_points = self.get_attack_points(closest_enemy.coord,
+                                                        drone.gun.shot_distance/2)
+        elif type(self.enemy) == MotherShip:
+            self.attack_points = self.get_attack_points(self.enemy.coord,
                                                         drone.radius/2,
                                                         drone.gun.shot_distance/2)
         else:
@@ -171,6 +198,7 @@ class IshmukhamedovDrone(Drone):
 
     _commander: Optional[Commander] = None
     _attack_point: Optional[Point] = None
+    _enemy: Optional[Drone] = None
 
     _target: Optional[Asteroid] = None
     _teammates_targets: list = []
@@ -185,6 +213,14 @@ class IshmukhamedovDrone(Drone):
 
         self.vector = vec
         super().move_at(target=target, speed=speed)
+
+    @property
+    def enemy(self):
+        return self._enemy
+
+    @enemy.setter
+    def enemy(self, enemy):
+        self._enemy = enemy
 
     @property
     def mode(self) -> DroneMode:
@@ -295,14 +331,16 @@ class IshmukhamedovDrone(Drone):
             vector = Vector.from_points(self.coord, teammate.coord, module=1)
             difference = abs(self.vector.direction - vector.direction)
             distance = self.distance_to(teammate)
+
             if difference < 15 and distance < self.gun.shot_distance:
                 able_to_shot = False
                 break
 
         if able_to_shot and self.distance_to(enemy) <= self.gun.shot_distance:
-            self.gun.shot(enemy)
-        else:
-            self.move_at(self.attack_point)
+            if enemy.is_moving:
+                self.gun.shot(enemy.state.target_point)
+            else:
+                self.gun.shot(enemy)
 
     def _calculate_statistics(self, destination):
         if self.is_empty:
@@ -327,30 +365,128 @@ class IshmukhamedovDrone(Drone):
     def on_hearbeat(self):
         self.scene._prev_endgame_state['countdown'] = 260
 
+    def teammates_attack_points(self):
+
+        attack_points = []
+
+        for teammate in self.teammates:
+            attack_points.append(teammate.attack_point)
+
+        return attack_points
+
+    @staticmethod
+    def check_attack_point(point: Point, points: List[Point]):
+        """
+            Проверяет наличие точки в списке точек
+        :param point: Точка для проверки
+        :param points: Список точек
+        :return: True если точка есть и False если нет
+        """
+        for attack_point in points:
+            if attack_point and attack_point.x == point.x and attack_point.y == point.y:
+                return True
+
+        return False
+
     def on_born(self):
         self.commander = Commander(drone=self)
 
+        distance = theme.MOTHERSHIP_HEALING_DISTANCE
+
         if self.have_gun:
             self.mode = DroneMode.DRONE_INTERCEPTOR
-            self.attack_point = self.commander.get_attack_point(drone=self)
+
+            attack_points = self.commander.get_attack_points(self.my_mothership.coord, (len(self.teammates)+1)*4,
+                                                             distance*1.5)
+            for point in attack_points:
+                teammates_attack_points = self.teammates_attack_points()
+                if not self.check_attack_point(point, teammates_attack_points):
+                    self.attack_point = point
+                    break
+            else:
+                self.attack_point = self.commander.get_attack_point(drone=self)
+
             self.move_at(self.attack_point)
         else:
             self.move_at(self.get_target())
 
+    def make_a_step(self, start: Point, destination: Point, ratio: float = 2/8) -> Point:
+        """
+            Возвращает точку в направлении от start до destination
+        :param start: Начальная точка
+        :param destination: Точка назначения
+        :param ratio: Отпределяет в каком отношении точка делит отрезок.
+        :return: Точку на отрезке start - destination
+        """
+
+        x = (start.x+ratio*destination.x)/(1+ratio)
+        y = (start.y+ratio*destination.y)/(1+ratio)
+
+        distance = 5*self.radius
+
+        teammates = [teammate for teammate in self.teammates if self.point_in_circle(Point(x, y), teammate.coord)]
+
+        if not teammates:
+            return Point(x, y)
+        else:
+            points = self.commander.get_attack_points(center=Point(x, y), radius=36, size=distance)
+            return points[0]
+
+    def find_closest_enemy(self):
+
+        enemies = [enemy for enemy in self.scene.drones
+                   if enemy not in self.teammates and enemy != self and enemy.is_alive]
+
+        if not enemies:
+            enemies.extend([mother_ship for mother_ship in self.scene.motherships
+                            if mother_ship != self.my_mothership and mother_ship.is_alive])
+
+        if enemies:
+            closest_enemy = enemies[0]
+        else:
+            return False
+
+        for enemy in enemies:
+            if self.distance_to(enemy) < self.distance_to(closest_enemy):
+                closest_enemy = enemy
+
+        return closest_enemy
+
+    def point_in_circle(self, point, center):
+        radius = 2*self.radius
+
+        in_circle = sqrt(pow(center.x-point.x, 2)+pow(center.y-point.y, 2))
+
+        if in_circle <= radius:
+            return True
+
+        return False
+
+    def get_common_enemy(self):
+        closest_enemy = self.find_closest_enemy()
+        for teammate in self.teammates:
+            if teammate.enemy and teammate.enemy.is_alive:
+                if self.distance_to(teammate.enemy) < self.distance_to(closest_enemy):
+                    return teammate.enemy
+
+        return closest_enemy
+
     def on_stop(self):
         if self.mode == DroneMode.DRONE_INTERCEPTOR:
             if self.health < 75:
-                self.move_at(self.my_mothership)
+                if self.distance_to(self.my_mothership) > theme.MOTHERSHIP_HEALING_DISTANCE:
+                    point = self.make_a_step(self.coord, self.my_mothership.coord, 5/5)
+                    self.move_at(point)
             else:
-                if self.distance_to(self.commander.enemy) <= self.gun.shot_distance:
-                    if self.commander.enemy.is_alive:
-                        self.shot(self.commander.enemy)
+                closest_enemy = self.find_closest_enemy()
+                if closest_enemy:
+                    if self.distance_to(closest_enemy) <= self.gun.shot_distance:
+                        self.shot(closest_enemy)
                     else:
-                        self.attack_point = self.commander.get_attack_point(drone=self)
-                        self.move_at(self.attack_point)
+                        point = self.make_a_step(self.coord, closest_enemy.coord)
+                        self.move_at(point)
                 else:
-                    self.attack_point = self.commander.get_attack_point(drone=self)
-                    self.move_at(self.attack_point)
+                    self.mode = DroneMode.DRONE_HARVESTER
         else:
             self.move_at(self.my_mothership)
 
