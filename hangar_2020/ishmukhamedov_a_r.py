@@ -23,9 +23,7 @@
 # near(obj) - дрон находится рядом с объектом/точкой
 from enum import IntEnum
 from math import sin, cos, pi, sqrt
-from random import shuffle
 from typing import Optional, List
-
 from astrobox.core import Drone, Asteroid, MotherShip
 from astrobox.space_field import SpaceField
 from robogame_engine import scene
@@ -327,6 +325,12 @@ class IshmukhamedovDrone(Drone):
         self.vector = vector
         able_to_shot = True
 
+        if any(self.point_in_circle(self.coord, teammate) for teammate in self.teammates) or \
+                any(self.point_in_circle(self.coord, mother_ship.coord) for mother_ship in self.scene.motherships):
+            point = self.make_a_step(self.coord, Point(scene.theme.FIELD_WIDTH/2, scene.theme.FIELD_HEIGHT/2))
+            self.move_at(point)
+            return
+
         for teammate in self.teammates:
             vector = Vector.from_points(self.coord, teammate.coord, module=1)
             difference = abs(self.vector.direction - vector.direction)
@@ -338,7 +342,8 @@ class IshmukhamedovDrone(Drone):
 
         if able_to_shot and self.distance_to(enemy) <= self.gun.shot_distance:
             if enemy.is_moving:
-                self.gun.shot(enemy.state.target_point)
+                self.gun.shot(Point(enemy.coord.x+enemy.vector.x**enemy.vector.module,
+                                    enemy.coord.y+enemy.vector.y**enemy.vector.module))
             else:
                 self.gun.shot(enemy)
 
@@ -361,9 +366,6 @@ class IshmukhamedovDrone(Drone):
     @commander.setter
     def commander(self, commander: Commander):
         self._commander = commander
-
-    def on_hearbeat(self):
-        self.scene._prev_endgame_state['countdown'] = 260
 
     def teammates_attack_points(self):
 
@@ -444,7 +446,7 @@ class IshmukhamedovDrone(Drone):
         if enemies:
             closest_enemy = enemies[0]
         else:
-            return False
+            return
 
         for enemy in enemies:
             if self.distance_to(enemy) < self.distance_to(closest_enemy):
@@ -471,22 +473,25 @@ class IshmukhamedovDrone(Drone):
 
         return closest_enemy
 
-    def on_stop(self):
-        if self.mode == DroneMode.DRONE_INTERCEPTOR:
-            if self.health < 75:
-                if self.distance_to(self.my_mothership) > theme.MOTHERSHIP_HEALING_DISTANCE:
-                    point = self.make_a_step(self.coord, self.my_mothership.coord, 5/5)
+    def action(self):
+        if self.health < 75:
+            if self.distance_to(self.my_mothership) > theme.MOTHERSHIP_HEALING_DISTANCE:
+                point = self.make_a_step(self.coord, self.my_mothership.coord, 5 / 5)
+                self.move_at(point)
+        else:
+            closest_enemy = self.find_closest_enemy()
+            if closest_enemy:
+                if self.distance_to(closest_enemy) <= self.gun.shot_distance:
+                    self.shot(closest_enemy)
+                else:
+                    point = self.make_a_step(self.coord, closest_enemy.coord)
                     self.move_at(point)
             else:
-                closest_enemy = self.find_closest_enemy()
-                if closest_enemy:
-                    if self.distance_to(closest_enemy) <= self.gun.shot_distance:
-                        self.shot(closest_enemy)
-                    else:
-                        point = self.make_a_step(self.coord, closest_enemy.coord)
-                        self.move_at(point)
-                else:
-                    self.mode = DroneMode.DRONE_HARVESTER
+                self.mode = DroneMode.DRONE_HARVESTER
+
+    def on_stop(self):
+        if self.mode == DroneMode.DRONE_INTERCEPTOR:
+            self.action()
         else:
             self.move_at(self.my_mothership)
 
@@ -521,7 +526,7 @@ class IshmukhamedovDrone(Drone):
 
     def on_stop_at_asteroid(self, asteroid):
         if self.mode == DroneMode.DRONE_INTERCEPTOR:
-            self.on_stop()
+            self.action()
         else:
             self.load_from(asteroid)
 
@@ -550,7 +555,7 @@ class IshmukhamedovDrone(Drone):
                 if target:
                     self.move_at(target)
                 else:
-                    self.on_stop()
+                    self.move_at(self.my_mothership)
             else:
                 if mothership is self.my_mothership:
                     self.unload_to(mothership)
@@ -566,7 +571,7 @@ class IshmukhamedovDrone(Drone):
 
     def on_wake_up(self):
         if self.mode == DroneMode.DRONE_INTERCEPTOR:
-            self.on_stop()
+            self.action()
         else:
             self.move_at(self.my_mothership)
 
