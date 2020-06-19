@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
+import math
 
 from astrobox.core import Drone
-from astrobox.themes.default import MOTHERSHIP_HEALING_DISTANCE
+from astrobox.themes.default import MOTHERSHIP_HEALING_DISTANCE, PROJECTILE_SPEED, DRONE_SPEED
 from robogame_engine.geometry import Point, Vector
 from robogame_engine.theme import theme
 
@@ -79,23 +80,11 @@ class Headquarters:
         enemies_bases = self.get_bases(drone)
 
         if not full_elirium_stors and drone.stop_at_basa:
-            if drone.have_gun:
-                if not enemies and not enemies_bases:
-                    drone.actions = []
-                    drone.actions.append(['stop', 'stop'])
-            else:
-                drone.actions = []
-                drone.actions.append(['stop', 'stop'])
+            self._stop_action(drone, enemies, enemies_bases)
             return
 
         if drone.meter_2 <= drone.limit_health and drone.distance_to(drone.mothership) > MOTHERSHIP_HEALING_DISTANCE:
-            self.elirium_stors_in_work = []
-            self.elirium_stors_in_work_free_elirium = []
-            if hasattr(drone.role, 'remove_occupied_point_attack'):
-                drone.role.remove_occupied_point_attack(drone)
-            drone.actions.append(['move', drone.my_mothership])
-            if drone.payload > 0:
-                drone.actions.append(['unload', drone.my_mothership])
+            self._low_health_action(drone)
             return
 
         purpose = drone.role.next_purpose()
@@ -103,14 +92,52 @@ class Headquarters:
         if purpose:
             drone.role.next_step(purpose)
         else:
-            drone.action = []
-            drone.role.change_role()
-            purpose = drone.role.next_purpose()
-            if purpose:
-                drone.role.next_step(purpose)
-            else:
-                drone.actions.append(['move', drone.my_mothership])
-                drone._next_action()
+            self._emty_pupose_action(drone)
+
+    def _emty_pupose_action(self, drone):
+        """
+        Действия дрона при отсутствии цели
+        :param drone:
+        :return:
+        """
+        drone.action = []
+        drone.role.change_role()
+        purpose = drone.role.next_purpose()
+        if purpose:
+            drone.role.next_step(purpose)
+        else:
+            drone.actions.append(['move', drone.my_mothership])
+            drone._next_action()
+
+    def _low_health_action(self, drone):
+        """
+        Действия дрона при низком здоровье
+        :param drone:
+        :return:
+        """
+        self.elirium_stors_in_work = []
+        self.elirium_stors_in_work_free_elirium = []
+        if hasattr(drone.role, 'remove_occupied_point_attack'):
+            drone.role.remove_occupied_point_attack(drone)
+        drone.actions.append(['move', drone.my_mothership])
+        if drone.payload > 0:
+            drone.actions.append(['unload', drone.my_mothership])
+
+    def _stop_action(self, drone, enemies, enemies_bases):
+        """
+        Действия дрона, когда необходимо закончить игру
+        :param drone:
+        :param enemies:
+        :param enemies_bases:
+        :return:
+        """
+        if drone.have_gun:
+            if not enemies and not enemies_bases:
+                drone.actions = []
+                drone.actions.append(['stop', 'stop'])
+        else:
+            drone.actions = []
+            drone.actions.append(['stop', 'stop'])
 
     def get_enemies(self, drone):
         """
@@ -190,6 +217,12 @@ class Headquarters:
         return elirium_stor_as_target
 
     def get_nearest_elirium_stor(self, drone, available_elirium_stors):
+        """
+        Получение ближайшей цели, из которой можно добывать элириум
+        :param drone:
+        :param available_elirium_stors:
+        :return:
+        """
         elirium_stor_distances = [(elirium_stor, drone.distance_to(elirium_stor)) for elirium_stor in
                                   available_elirium_stors]
         elirium_stor = min(elirium_stor_distances, key=lambda x: x[1])[0] if elirium_stor_distances else None
@@ -239,27 +272,43 @@ class Headquarters:
 
 
 class DroneRole:
+    """
+    Базовый класс роли дрона
+    """
     victim = None
     occupied_points_attack = []
 
     def __init__(self, unit):
         self.unit = unit
-        # self.prev_point_attack = None
+        self.victim = None
 
     def change_role(self, role=None):
         drone = self.unit
         if not role:
-            drone.role = drone.role._next_role()
+            drone.role = self._next_role()
         else:
             drone.role = role(drone)
 
     def _next_role(self):
+        """
+        Следующая роль
+        :return:
+        """
         pass
 
     def next_purpose(self):
+        """
+        Следующая цель
+        :return:
+        """
         pass
 
     def next_step(self, purpose):
+        """
+        Следующие шаги, которые добавляются в обший список команд
+        :param purpose:
+        :return:
+        """
         pass
 
 
@@ -285,14 +334,7 @@ class Collector(DroneRole):
         if drone.is_full:
             return drone.my_mothership
 
-        full_elirium_stors = headquarters.get_full_elirium_stors(drone)
-        elirium_stors_as_targets = headquarters.get_elirium_stors_as_target(drone)
-
-        free_elirium_stors = full_elirium_stors - elirium_stors_as_targets
-        elirium_stor_as_target = headquarters.get_elirium_stor_as_target(drone, free_elirium_stors)
-
-        if any([basa[0].payload - drone.mothership.payload > 400 for basa in headquarters.get_bases(drone)]):
-            elirium_stor_as_target = max([basa[0] for basa in headquarters.get_bases(drone)], key=lambda x: x.payload)
+        elirium_stor_as_target = self._get_elirium_stor_as_target(drone, enemies, headquarters)
 
         if elirium_stor_as_target:
             return elirium_stor_as_target
@@ -302,11 +344,28 @@ class Collector(DroneRole):
             else:
                 return drone.my_mothership
 
+    def _get_elirium_stor_as_target(self, drone, enemies, headquarters):
+        """
+        Получение цели из которой добывать элириум
+        :param drone:
+        :param enemies:
+        :param headquarters:
+        :return:
+        """
+        full_elirium_stors = headquarters.get_full_elirium_stors(drone)
+        elirium_stors_as_targets = headquarters.get_elirium_stors_as_target(drone)
+        free_elirium_stors = full_elirium_stors - elirium_stors_as_targets
+        elirium_stor_as_target = headquarters.get_elirium_stor_as_target(drone, free_elirium_stors)
+        if (any([basa[0].payload - drone.mothership.payload > 400 for basa in headquarters.get_bases(drone)]) and
+                len(enemies <= 2)):
+            elirium_stor_as_target = max([basa[0] for basa in headquarters.get_bases(drone)], key=lambda x: x.payload)
+        return elirium_stor_as_target
+
     def next_step(self, purpose):
         drone = self.unit
         drone.actions.append(['move', purpose])
 
-        if self._next_step_by_dasa(purpose):
+        if self._next_step_by_dasa(purpose, drone):
             return
 
         if purpose not in drone.headquarters.elirium_stors_in_work:
@@ -320,8 +379,12 @@ class Collector(DroneRole):
         drone.actions.append(['load', purpose])
         drone.actions.append(['it is free', purpose])
 
-    def _next_step_by_dasa(self, purpose):
-        drone = self.unit
+    def _next_step_by_dasa(self, purpose, drone):
+        """
+        Определяет действия дрона, если целью, является своя база
+        :param purpose:
+        :return:
+        """
         headquarters = drone.headquarters
         full_elirium_stors = headquarters.get_full_elirium_stors(drone)
 
@@ -375,8 +438,6 @@ class Warrior(DroneRole):
 
     def next_step(self, purpose):
         drone = self.unit
-        headquarters = drone.headquarters
-        enemies_bases = headquarters.get_bases(drone)
 
         if drone.distance_to(purpose) > drone.attack_range:
             point_attack = self.get_place_for_attack(drone, purpose)
@@ -385,35 +446,20 @@ class Warrior(DroneRole):
                 drone.actions.append(['move', point_attack])
                 return
 
-        collector_is_alive = any((team_mate.is_alive and isinstance(team_mate.role, Collector)) for
-                                 team_mate in headquarters.drones)
-
-        if not collector_is_alive and any([drone.mothership.payload - basa[0].payload < 200 for basa in enemies_bases]):
-            full_elirium_stors = headquarters.get_full_elirium_stors(drone)
-            for elirium_stor in full_elirium_stors:
-                if drone.distance_to(elirium_stor) < drone.radius * 4:
-                    drone.actions.append(['move', elirium_stor])
-                    drone.actions.append(['load', elirium_stor])
-                    drone.actions.append(['it is free', elirium_stor])
+        self._load_elirium_if_not_collector(drone)
 
         if (Warrior.victim and self.valid_bullet_trajectory(drone.coord, Warrior.victim) and
                 drone.distance_to(Warrior.victim) < drone.attack_range):
             purpose = Warrior.victim
 
-        if (hasattr(purpose, 'mothership') and purpose.meter_2 < 0.7 and
-                drone.distance_to(purpose) < drone.attack_range * 0.6):
-            vec = Vector.from_points(purpose.coord, purpose.mothership.coord, module=1)
-            vec *= drone.radius * 4
-            possible_purpose_coord = Point(purpose.coord.x + vec.x, purpose.coord.y + vec.y)
-            drone.actions.append(['turn', possible_purpose_coord])
-        else:
-            drone.actions.append(['turn', purpose])
+        self._turn_to_purpose(drone, purpose)
 
         if self.valid_place(drone.coord) and self.valid_bullet_trajectory(drone.coord, purpose):
             safe_mothership_radius = round(drone.mothership.radius * 1.6)
             if drone.mothership.distance_to(drone.coord) < safe_mothership_radius:
                 safe_mothership_vec = Vector.from_points(drone.mothership.coord, purpose.coord, module=1)
-                safe_mothership_vec = safe_mothership_vec * safe_mothership_radius
+                dist_to_move = round(safe_mothership_radius - drone.distance_to(drone.mothership) + 1)
+                safe_mothership_vec = safe_mothership_vec * dist_to_move
                 point_attack = Point(drone.coord.x + safe_mothership_vec.x, drone.coord.y + safe_mothership_vec.y)
                 drone.actions.append(['move', point_attack])
                 return
@@ -424,27 +470,75 @@ class Warrior(DroneRole):
                 self.remove_occupied_point_attack(drone)
                 drone.actions.append(['move', point_attack])
 
+    def _turn_to_purpose(self, drone, purpose):
+        """
+        Поворот к цели
+        :param drone:
+        :param purpose:
+        :return:
+        """
+        if hasattr(purpose, 'is_moving') and purpose.is_moving:
+            purpose_vec = Vector.from_direction(direction=purpose.direction, module=1)
+            drone_purpose_vec = Vector.from_points(purpose.coord, drone.coord)
+
+            length = drone_purpose_vec.module if drone_purpose_vec.module > 0 else 1
+            _cos = ((purpose_vec.x * drone_purpose_vec.x + purpose_vec.y * drone_purpose_vec.y) /
+                    (length * purpose_vec.module))
+            coef_b = (PROJECTILE_SPEED ** 2 - DRONE_SPEED ** 2)
+            coef_d = (2 * DRONE_SPEED * length * _cos) ** 2 + 4 * coef_b * (length ** 2)
+            coef = round((-2 * DRONE_SPEED * length + coef_d ** 0.5) / (2 * coef_b) * DRONE_SPEED)
+            purpose_vec = purpose_vec * coef
+            possible_purpose = Point(purpose.coord.x + purpose_vec.x, purpose.coord.y + purpose_vec.y)
+
+            drone.actions.append(['turn', possible_purpose])
+        else:
+            drone.actions.append(['turn', purpose])
+
+    def _load_elirium_if_not_collector(self, drone):
+        """
+        Загрузка элириума, если нету живого сборщика в команде
+        :param drone:
+        :param headquarters:
+        :return:
+        """
+        headquarters = drone.headquarters
+        enemies_bases = headquarters.get_bases(drone)
+        collector_is_alive = any((team_mate.is_alive and isinstance(team_mate.role, Collector)) for
+                                 team_mate in headquarters.drones)
+        if (not collector_is_alive and
+                any([drone.mothership.payload - basa[0].payload < 200 for basa in enemies_bases]) and
+                drone.meter_1 < 1):
+            full_elirium_stors = headquarters.get_full_elirium_stors(drone)
+            for elirium_stor in full_elirium_stors:
+                if drone.distance_to(elirium_stor) < drone.radius * 4:
+                    drone.actions.append(['move', elirium_stor])
+                    drone.actions.append(['load', elirium_stor])
+                    drone.actions.append(['it is free', elirium_stor])
+
     def remove_occupied_point_attack(self, drone):
+        """
+        Очистка занятой точки для атаки
+        :param drone:
+        :return:
+        """
         for point in self.occupied_points_attack:
             if drone.distance_to(point) <= round(drone.radius * 1.5):
                 self.occupied_points_attack.remove(point)
 
     def get_place_for_attack(self, drone, target):
+        """
+        Получение места для атаки
+        :param drone:
+        :param target:
+        :return:
+        """
         vec = Vector.from_points(target.coord, drone.coord, module=1)
 
         dist = drone.distance_to(target)
         vec_gunshot = vec * min(int(drone.attack_range), int(dist))
         purpose = Point(target.coord.x + vec_gunshot.x, target.coord.y + vec_gunshot.y)
 
-        angles = [ang for ang in range(-50, 51, 10)]
-        possible_points_attack = []
-        for ang in angles:
-            vec = Vector(purpose.x - target.x, purpose.y - target.y)
-            vec.rotate(ang)
-            possible_point_attack = Point(target.x + vec.x, target.y + vec.y)
-            possible_points_attack.append(possible_point_attack)
-
-        possible_points_attack.sort(key=lambda x: drone.distance_to(x))
+        possible_points_attack = self._get_possible_points_attack(purpose, target, drone)
         for point_attack in possible_points_attack:
             place_free = True
             for occupied_point in self.occupied_points_attack:
@@ -457,7 +551,29 @@ class Warrior(DroneRole):
 
         return None
 
+    def _get_possible_points_attack(self, purpose, target, drone):
+        """
+        Получение возможных точек для атаки в порядке удаления от текущего положения дрона
+        :param purpose:
+        :param target:
+        :return:
+        """
+        angles = [ang for ang in range(-50, 51, 10)]
+        possible_points_attack = []
+        for ang in angles:
+            vec = Vector(purpose.x - target.x, purpose.y - target.y)
+            vec.rotate(ang)
+            possible_point_attack = Point(target.x + vec.x, target.y + vec.y)
+            possible_points_attack.append(possible_point_attack)
+        possible_points_attack.sort(key=lambda x: drone.distance_to(x))
+        return possible_points_attack
+
     def valid_place(self, point):
+        """
+        Проверка валидности места для атаки
+        :param point:
+        :return:
+        """
         drone = self.unit
         save_distance = round(drone.radius * 1.5)
         is_valid = 0 < point.x < theme.FIELD_WIDTH and 0 < point.y < theme.FIELD_HEIGHT
@@ -470,9 +586,17 @@ class Warrior(DroneRole):
         return is_valid
 
     def valid_bullet_trajectory(self, point, target):
+        """
+        Проверка, нету ли дронов из своей команда на траектории выстрела
+        :param point:
+        :param target:
+        :return:
+        """
         drone = self.unit
         save_distance = round(drone.radius * 1.2)
         is_valid = 0 < point.x < theme.FIELD_WIDTH and 0 < point.y < theme.FIELD_HEIGHT
+        mothership = drone.mothership
+        is_valid = is_valid and (mothership.distance_to(target) > mothership.radius)
 
         for length in range(1, round(point.distance_to(target.coord)), round(save_distance / 2)):
             attack_vec = Vector.from_points(point, target.coord, module=1)
@@ -501,6 +625,10 @@ class OkhotnikovFNDrone(Drone):
         self.role = None
 
     def _next_action(self):
+        """
+        Выполение команды из списка, если команды нету, то получает новую команду
+        :return:
+        """
 
         if not self.actions:
             self.headquarters.get_actions(self)
@@ -550,13 +678,27 @@ class OkhotnikovFNDrone(Drone):
             self._next_action()
 
     def _move_to(self, target):
+        """
+        Модификация базавого метода move, для расчета движения дронов с разной загрузкой
+        :param target:
+        :return:
+        """
         self.headquarters.save_statistic_move(self, target)
         super().move_at(target)
 
     def elirium_stor_is_free(self, elirium_stor):
+        """
+        Освобождение источника элириума из занятых
+        :param elirium_stor:
+        :return:
+        """
         self.headquarters.remove_item_elirium_stors_in_work(elirium_stor)
 
     def _first_step(self):
+        """
+        Первая команда для всех дронов
+        :return:
+        """
 
         full_elirium_stors = self.headquarters.get_full_elirium_stors(self)
         elirium_stors_as_targets = set(elirium_stor for elirium_stor in self.headquarters.elirium_stors_in_work)
