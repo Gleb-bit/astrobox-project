@@ -65,7 +65,7 @@ class KochetovDrone(Drone):
         if self.index == 2 or self.index == 3 or self.index == 4:
             self.type = 'base_killer'
             self.enemy = self.get_enemies_motherships()[0][0]
-            self.target = self.get_enemies_motherships()[0][0]
+            # self.target = self.get_enemies_motherships()[0][0]
         else:
             self.type = 'defender'
 
@@ -170,10 +170,8 @@ class KochetovDrone(Drone):
         if self.enemies_list:
             if any(enemy[1] <= 590 for enemy in self.enemies_list):
                 self.checking_possibility_of_shot_at_drone_and_shot()
-
             elif any(base[1] <= 590 for base in self.enemies_motherships_list):
                 self.checking_possibility_of_shot_at_mothership_and_shot()
-
             else:
                 pass  # self.move_ahead()
         else:
@@ -238,7 +236,6 @@ class KochetovDrone(Drone):
 
     def harvester_action(self):
         """Логика роли 'harvester' """
-
         if isinstance(self.target, Point):
             self.check_new_target()
         elif self.target.is_empty:
@@ -304,6 +301,7 @@ class KochetovDrone(Drone):
     def harvester_first_action(self):
         """Логика роли 'harvester_first' """
         if not self.enemy.is_empty:
+            self.target = self.enemy
             self.move_at(self.target)
         else:
             self.type = 'harvester'
