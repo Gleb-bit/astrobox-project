@@ -19,11 +19,13 @@ class KochetovDrone(Drone):
     - 'base_killer' : убийца чужжой базы
     - 'harvester' : сборщик элириума
     - 'harvester_first' : первый сборщик
+    - 'harvest_near_base' : сборщики только около базы
 
     """
     asteroid_list = []  # Список астероидов
     my_drones_list = []  # Список моих дронов
     asteroid_pick_list = []  # Список уже взятых астероидов
+    asteroid_pick_list_near_base = []  # Список уже взятых астероидов около базы
     enemies_list = []  # Список врагов дронов
     enemies_motherships_list = []  # Список вражеских баз
     die_enemies_motherships_list = []  # Список мертвых вражеских баз
@@ -42,19 +44,16 @@ class KochetovDrone(Drone):
         self.index = self.my_drones_list.index(self)
         self.enemies_motherships_list = self.get_enemies_motherships()
         self.amount_team = len(self.scene.motherships)
-        x = self.my_mothership.coord.x + DICT_CORNERS[self.my_mothership_corner][self.index][0]
-        y = self.my_mothership.coord.y + DICT_CORNERS[self.my_mothership_corner][self.index][1]
-        self.target = Point(x, y)
-        self.step = 1
-        self.move_at(self.target)
 
         if self.amount_team == 2:
             self.on_born_2_team()
         else:
-            self.on_born_more_2_team()
+            self.type = 'harvest_near_base'
 
     def on_born_2_team(self):
         """Распределение ролей при 2-х командах в игре"""
+        self.go_on_position()
+
         if self.index == 0 or self.index == 1 or self.index == 2:
             self.type = 'defender'
         else:
@@ -62,12 +61,21 @@ class KochetovDrone(Drone):
 
     def on_born_more_2_team(self):
         """Распределение ролей при больше чем 2-х командах в игре"""
-        if self.index == 2 or self.index == 3 or self.index == 4:
+        self.go_on_position()
+
+        if self.index == 3 or self.index == 4:  # self.index == 2 or
             self.type = 'base_killer'
             self.enemy = self.get_enemies_motherships()[0][0]
-            # self.target = self.get_enemies_motherships()[0][0]
         else:
             self.type = 'defender'
+
+    def go_on_position(self):
+        """Двигаться на координаты из словаря"""
+        x = self.my_mothership.coord.x + DICT_CORNERS[self.my_mothership_corner][self.index][0]
+        y = self.my_mothership.coord.y + DICT_CORNERS[self.my_mothership_corner][self.index][1]
+        self.target = Point(x, y)
+        self.step = 1
+        self.move_at(self.target)
 
     def check_my_mothership_corner(self):
         """узнаем в каком углу наша база"""
@@ -142,11 +150,14 @@ class KochetovDrone(Drone):
                 continue
             elif self.check_drone_my_team_on_line_fire(enemy[0]):
                 continue
+            elif enemy[0].my_mothership.is_alive and enemy[0].distance_to(enemy[0].my_mothership) <= 200:
+                continue
             else:
                 self.enemy = enemy[0]
                 self.turn_to(self.enemy)
                 self.gun.shot(self.enemy)
                 break
+        return
 
     def checking_possibility_of_shot_at_mothership_and_shot(self):
         """Проверка возможно высрела по вражеской базе и выстрел"""
@@ -160,22 +171,6 @@ class KochetovDrone(Drone):
                 self.turn_to(self.enemy)
                 self.gun.shot(self.enemy)
                 break
-
-    def defender_action(self):
-        """Логика роли 'defender' """
-        self.enemies_list = self.get_enemies_list()
-        self.enemies_motherships_list = self.get_enemies_motherships()
-        self.die_enemies_motherships_list = self.get_die_enemies_motherships_list()
-
-        if self.enemies_list:
-            if any(enemy[1] <= 590 for enemy in self.enemies_list):
-                self.checking_possibility_of_shot_at_drone_and_shot()
-            elif any(base[1] <= 590 for base in self.enemies_motherships_list):
-                self.checking_possibility_of_shot_at_mothership_and_shot()
-            else:
-                pass  # self.move_ahead()
-        else:
-            self.type = 'harvester'
 
     def on_stop_at_asteroid(self, asteroid):
         if self.type == 'defender':
@@ -200,10 +195,15 @@ class KochetovDrone(Drone):
 
     def on_load_complete(self):
         if self.type == 'harvester_first':
+            # if self.is_full:
+            #     self.move_at(self.my_mothership)
+            # else:
+            self.move_at(self.my_mothership)
+        elif self.type == 'harvest_near_base':
             if self.is_full:
                 self.move_at(self.my_mothership)
             else:
-                self.move_at(self.my_mothership)
+                self.harvest_near_base_action()
         else:
             if self.is_full:
                 self.move_at(self.my_mothership)
@@ -220,6 +220,12 @@ class KochetovDrone(Drone):
             else:
                 self.turn_to(self.target)
                 self.unload_to(mothership)
+        elif self.type == 'harvest_near_base':
+            if self.is_empty:
+                self.harvest_near_base_action()
+            else:
+                self.turn_to(self.target)
+                self.unload_to(mothership)
         else:
             self.turn_to(self.target)
             self.unload_to(mothership)
@@ -232,16 +238,10 @@ class KochetovDrone(Drone):
             self.on_stop_at_mothership_action_for_all_types(mothership=mothership)
 
     def on_unload_complete(self):
-        self.harvester_action()
-
-    def harvester_action(self):
-        """Логика роли 'harvester' """
-        if isinstance(self.target, Point):
-            self.check_new_target()
-        elif self.target.is_empty:
-            self.check_new_target()
+        if self.type == 'harvest_near_base':
+            self.harvest_near_base_action()
         else:
-            self.move_at(self.target)
+            self.harvester_action()
 
     def check_asteroid_for_harvesting(self):
         """Проверяем возможность сбора элириума с астероида"""
@@ -258,11 +258,11 @@ class KochetovDrone(Drone):
 
     def check_enemy_mothership_for_harvesting(self):
         """Проверяем возможность сбора элириума с вражеской базы"""
-        for die_em in self.get_enemies_motherships():
-            if die_em[0].is_empty:
+        for em in self.get_enemies_motherships():
+            if em[0].is_empty or em[0].is_alive:
                 continue
             else:
-                self.target = die_em[0]
+                self.target = em[0]
                 self.move_at(self.target)
                 break
 
@@ -287,6 +287,31 @@ class KochetovDrone(Drone):
         else:
             self.move_at(self.my_mothership)
 
+    def defender_action(self):
+        """Логика роли 'defender' """
+        self.enemies_list = self.get_enemies_list()
+        self.enemies_motherships_list = self.get_enemies_motherships()
+        self.die_enemies_motherships_list = self.get_die_enemies_motherships_list()
+
+        if self.enemies_list:
+            if any(enemy[1] <= 590 for enemy in self.enemies_list):
+                self.checking_possibility_of_shot_at_drone_and_shot()
+            elif any(base[1] <= 590 for base in self.enemies_motherships_list):
+                self.checking_possibility_of_shot_at_mothership_and_shot()
+            else:
+                pass
+        else:
+            self.type = 'harvester'
+
+    def harvester_action(self):
+        """Логика роли 'harvester' """
+        if isinstance(self.target, Point):
+            self.check_new_target()
+        elif self.target.is_empty:
+            self.check_new_target()
+        else:
+            self.move_at(self.target)
+
     def base_killer_action(self):
         """Логика роли 'base_killer' """
         if self.enemy.is_alive:
@@ -306,6 +331,24 @@ class KochetovDrone(Drone):
         else:
             self.type = 'harvester'
 
+    def harvest_near_base_action(self):
+        """Проверяем есть ли астероиды на расстоянии 200 от базы"""
+        for asteroid in self.asteroid_list:
+            if asteroid[1].is_empty or self.my_mothership.distance_to(asteroid[1]) > 450:  # 200
+                continue
+            elif asteroid[1] in self.asteroid_pick_list_near_base:
+                continue
+            else:
+                self.target = asteroid[1]
+                self.asteroid_pick_list_near_base.append(asteroid[1])
+                self.move_at(self.target)
+                break
+        else:
+            if self.is_empty:
+                self.on_born_more_2_team()
+            else:
+                self.move_at(self.my_mothership)
+
     def on_wake_up(self):
         if self.check_health():
             self.move_at(self.my_mothership)
@@ -321,6 +364,9 @@ class KochetovDrone(Drone):
 
             elif self.type == 'harvester_first':
                 self.harvester_first_action()
+
+            elif self.type == 'harvest_near_base':
+                self.harvest_near_base_action()
 
 
 drone_class = KochetovDrone
