@@ -1,484 +1,646 @@
 # -*- coding: utf-8 -*-avsivkov
-"""Модуль содержит класс дрона 'AvsivkovDrone', управляющий его поведением"""
+"""Модуль содержит класс дрона 'SivkovDrone', управляющий его поведением"""
 
-from astrobox.core import Drone
+from astrobox.core import Drone, MotherShip
 from robogame_engine.geometry import Point, Vector
 from astrobox.themes.default import MOTHERSHIP_HEALING_DISTANCE
 from robogame_engine.theme import theme
+from math import tan, sin, radians
 
 
-class AvsivkovDrone(Drone):
-    """Дрон-добытчик"""
-    identifier = {}
-    ore_reserves = []
+class SivkovDrone(Drone):
+    """Дрон"""
     total_drones = 0
-    total_reports = []
-    collection_is_over = False
-    number_of_participants = 0
-    tactic = None
-    enemy = None
-    target = None
-    shots_at_enemy = 0
-    enemy_bases = {}
-    front_position = 150
-    wait = 0
+    first_enemy_base = None
+    second_enemy_base = None
+    diagonal_enemy_base = None
     number_of_teams = None
     base_position = None
-    driller_role_available = True
+    ignore_list = []
+    attack_direction = None
+    position_handler = None
+    change_position = True
+    total_enemies = None
+    sector_available = False
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        AvsivkovDrone.total_drones += 1
-        self.serial_number = AvsivkovDrone.total_drones
-        self.asteroids_index = []
-        self.keys_to_asteroids = []
-        self.ore_of_asteroids = []
-        self.report = False
+        SivkovDrone.total_drones += 1
+        self.serial_number = SivkovDrone.total_drones
+        self.enemy = None
+        self.target = None
         self.role = None
         self.position = None
+        self.total_shots = 0
+        self.trouble = 0
+        self.retreat = False
+        self.fly_on_drone = False
 
     def on_born(self):
         """Начало деятельности дрона"""
         if self.serial_number == 1:
-            self._dispatcher(first_start=True)
-            if AvsivkovDrone.number_of_teams == 2:
-                AvsivkovDrone.collection_is_over = True
-                self._get_tactic()
-        else:
-            self._get_my_asteroid()
-        if AvsivkovDrone.number_of_teams != 2:
-            self.move_at(self.asteroids[self.asteroids_index[-1]])
-
-    def _dispatcher(self, first_start=False):
-        """Анализирует ситуацию и выдаёт цель"""
-        self.ore_of_asteroids = []
-        self.keys_to_asteroids = []
-        asteroids = []
-        for k, asteroid in enumerate(self.asteroids):
-            asteroids.append((self.distance_to(asteroid), k, asteroid.payload, asteroid.state.obj.id))
-        if first_start:
-            self._data_collection(asteroids)
-        if AvsivkovDrone.number_of_teams == 2 and self.distance_to(self.my_mothership) < 20 \
-                and theme.FIELD_WIDTH < theme.FIELD_HEIGHT:
-            asteroids.sort(reverse=True)
-        else:
-            asteroids.sort()
-        for _, k, payload, asteroid_id in asteroids:
-            self.keys_to_asteroids.append(asteroid_id)
-            self.ore_of_asteroids.append(payload)
-        self._data_synchronization()
-        self._create_route_sheet()
-
-    def _create_route_sheet(self):
-        """Выдаёт дрону астеройд"""
-        for i, ore_quantity in enumerate(self.ore_of_asteroids):
-            index = AvsivkovDrone.identifier[self.keys_to_asteroids[i]]
-            if sum(AvsivkovDrone.ore_reserves) == 0:
-                break
-            elif ore_quantity == 0:
-                continue
-            elif theme.FIELD_WIDTH > theme.FIELD_HEIGHT and self.asteroids[index].coord.y < theme.FIELD_HEIGHT / 2 \
-                    and AvsivkovDrone.total_drones > 1 and AvsivkovDrone.number_of_teams < 3 \
-                    and AvsivkovDrone.tactic == 'defense':
-                continue
-            else:
-                if ore_quantity > self.free_space:
-                    AvsivkovDrone.ore_reserves[index] -= self.free_space
-                else:
-                    AvsivkovDrone.ore_reserves[index] = 0
-                self.asteroids_index.append(index)
-                break
-
-    def _data_collection(self, asteroids):
-        """Собирает необходимые данные для координации дронов"""
-        AvsivkovDrone.ore_reserves = [asteroid[2] for asteroid in asteroids]
-        if AvsivkovDrone.number_of_teams == 2:
-            asteroids.sort(reverse=True)
-        else:
-            asteroids.sort()
-        for j, asteroid_data in enumerate(asteroids):
-            AvsivkovDrone.identifier[asteroid_data[3]] = asteroid_data[1]
-        for base in self.scene.motherships:
-            if base.team != self.team:
-                AvsivkovDrone.enemy_bases[base.team] = base.coord
-        AvsivkovDrone.number_of_teams = len(self.scene.drones) // AvsivkovDrone.total_drones
-        if self.my_mothership.coord.x == 90 and self.my_mothership.coord.y == 90:
-            AvsivkovDrone.base_position = ('left', 'down')
-        elif self.my_mothership.coord.y == 90 and self.my_mothership.coord.x != 90:
-            AvsivkovDrone.base_position = ('right', 'down')
-        elif self.my_mothership.coord.x == 90 and self.my_mothership.coord.y != 90:
-            AvsivkovDrone.base_position = ('left', 'up')
-        else:
-            AvsivkovDrone.base_position = ('right', 'up')
-
-    def _data_synchronization(self):
-        """Актуализирует данные для координации дронов"""
-        for i, ore in enumerate(self.ore_of_asteroids):
-            index = AvsivkovDrone.identifier[self.keys_to_asteroids[i]]
-            if ore < AvsivkovDrone.ore_reserves[index]:
-                AvsivkovDrone.ore_reserves[index] = ore
-            if ore > AvsivkovDrone.ore_reserves[index]:
-                self.ore_of_asteroids[i] = AvsivkovDrone.ore_reserves[index]
-
-    def _get_my_asteroid(self):
-        """Выдаёт дрону астеройд и собирает отчёт о завершении работы"""
-        if sum(AvsivkovDrone.ore_reserves):
-            self._dispatcher()
-            if not self.asteroids_index:
-                self._return_to_base()
-        else:
-            self._completion_of_work()
-
-    def _return_to_base(self):
-        """Возвращает дрона на базу"""
-        if self.distance_to(self.my_mothership) == 0:
-            self._completion_of_work()
-        else:
-            self.move_at(self.my_mothership)
-
-    def _completion_of_work(self):
-        """Дрон заканчивает работу"""
-        if not self.report:
-            self._create_report()
-        if len([drone for drone in self.scene.drones if drone.team == self.team and drone.is_alive]) \
-                == len(AvsivkovDrone.total_reports):
-            AvsivkovDrone.collection_is_over = True
-
-    def _create_report(self):
-        """Дрон сообщает, что он закончил работу"""
-        AvsivkovDrone.total_reports.append(True)
-        self.report = True
+            self._data_collection()
 
     def on_stop_at_asteroid(self, asteroid):
         """Дрон приземлился на астеройд"""
-        if not AvsivkovDrone.collection_is_over or self.role == 'driller':
-            self.load_from(asteroid)
+        if self.role == 'driller':
+            if self.fly_on_drone:
+                self.on_stop_at_point(self.target)
+            else:
+                self.target = None
+                self.load_from(asteroid)
+
+    def on_stop_at_point(self, target):
+        if isinstance(self.target, Drone) and self.target.payload:
+            self.load_from(self.target)
+            self.target = None
+            self.fly_on_drone = False
+
+    def game_step(self):
+        """Если больно бежим на базу"""
+        super().game_step()
+        if self.role != 'defender' and self.is_alive:
+            if self.health < 100:
+                self._retreat()
+            elif self._can_take:
+                self.target = None
+                self.role = 'collector'
+                self._tactic__robbery()
+            elif self.target and self.target.payload:
+                self._retreat_strategy()
+            else:
+                self.target = None
+        else:
+            if self.health < 30:
+                self._move(self.my_mothership)
+
+    def _retreat(self):
+        """Дрон отступает"""
+        self.retreat = True
+        if self.role != 'collector':
+            self.trouble += 1
+        self._move(self.my_mothership)
+
+    def _retreat_strategy(self):
+        """Логика дрона при отступлении"""
+        if self.trouble > 350:
+            self.trouble = 0
+            SivkovDrone.ignore_list.append(self.target.id)
+            self.target = None
+        elif self.target.id in SivkovDrone.ignore_list or not self.target.payload:
+            self.target = None
+        elif self.retreat:
+            if self.payload > 50:
+                self.target = None
+            elif self.health == 100:
+                self._move(self.target)
+            self.retreat = False
 
     def on_load_complete(self):
         """Загрузка руды завершена"""
-        if not AvsivkovDrone.collection_is_over or self.role == 'driller':
-            self.asteroids_index.pop(-1)
-            if self.free_space and sum(AvsivkovDrone.ore_reserves) and theme.FIELD_WIDTH < theme.FIELD_HEIGHT:
-                self._get_my_asteroid()
-                if self.asteroids_index:
-                    self.move_at(self.asteroids[self.asteroids_index[-1]])
-            else:
-                self.move_at(self.my_mothership)
+        if self.role == 'driller':
+            if self.free_space:
+                self._get_asteroid()
+                if self.target:
+                    self._move(self.target)
+            if not self.target or not self.free_space:
+                self._move(self.my_mothership)
 
     def on_stop_at_mothership(self, mothership):
         """Дрон приземлился на главный корабль"""
-        if self.payload:
-            self.unload_to(mothership)
-        else:
-            if not AvsivkovDrone.collection_is_over:
-                self._completion_of_work()
+        if self.role == 'driller':
+            if self.payload:
+                self.trouble = 0
+                self.unload_to(mothership)
+            elif self._can_take:
+                self.role = 'collector'
+                self._tactic__robbery()
+            elif not self.payload:
+                if self.target and (self.target.id in SivkovDrone.ignore_list or not self.target.payload):
+                    self.target = None
 
     def on_unload_complete(self):
         """Выгрузка руды завершена"""
-        if (3 >= AvsivkovDrone.total_drones <= len([drone for drone in self.scene.drones if drone.is_alive]) -
-            AvsivkovDrone.total_drones * 3 and AvsivkovDrone.number_of_teams != 2) \
-                or (AvsivkovDrone.number_of_teams == 2 and self.my_mothership.payload >= 100
-                    and AvsivkovDrone.total_drones < 3) \
-                or (AvsivkovDrone.number_of_teams == 3 and
-                    (AvsivkovDrone.total_drones > len([drone for drone in self.scene.drones
-                                                       if drone.team == self.team and drone.is_alive])
-                     or AvsivkovDrone.total_drones < 4 and self.my_mothership.payload >= 300)):
-            AvsivkovDrone.collection_is_over = True
-            if self.role == 'driller':
+        if self.role == 'driller':
+            self._get_asteroid()
+            if self.target:
+                self._move(self.target)
+            else:
                 self.role = 'defender'
-                self.get_position(position=2)
-                self.move_at(self.position)
-        elif not AvsivkovDrone.collection_is_over or AvsivkovDrone.number_of_teams == 2:
-            self._get_my_asteroid()
-            if self.asteroids_index:
-                self.move_at(self.asteroids[self.asteroids_index[-1]])
 
     def on_wake_up(self):
         """Дрон бездействует"""
-        if not AvsivkovDrone.collection_is_over or self.role == 'driller':
-            if self.asteroids_index:
-                self.move_at(self.asteroids[-1])
-            elif self.free_space and sum(AvsivkovDrone.ore_reserves):
-                self._get_my_asteroid()
-            elif self.distance_to(self.my_mothership) > 10:
-                self.move_at(self.my_mothership)
-            elif not self.report:
-                self._completion_of_work()
-            elif self.role == 'driller':
-                self.role = None
+        if self.role == 'driller':
+            if self.target:
+                if self.distance_to(self.target) < 10:
+                    self.load_from(self.target)
+                else:
+                    self._move(self.target)
+            elif not self.target:
+                self._get_asteroid()
+                if not self.target:
+                    self.role = 'defender'
+            else:
+                self._move(self.my_mothership)
         else:
-            if AvsivkovDrone.tactic == 'defense':
-                self._tactic__defense()
-            elif AvsivkovDrone.tactic == 'attack':
-                self._tactic__attack()
-            elif AvsivkovDrone.tactic == 'robbery':
-                self._tactic__robbery()
-            elif AvsivkovDrone.tactic == 'the_end':
-                pass
-            else:
-                self._get_tactic()
+            self._tactic__defense()
 
-    def _get_tactic(self):
-        """Определяет тактику действий для дронов"""
-        AvsivkovDrone.total_drones = len([drone for drone in self.scene.drones if drone.team == self.team
-                                          and drone.is_alive])
-        AvsivkovDrone.number_of_participants = 0
-        AvsivkovDrone.enemy = None
-        if AvsivkovDrone.total_drones < 3 or AvsivkovDrone.number_of_teams == 2:
-            if theme.FIELD_WIDTH > theme.FIELD_HEIGHT and AvsivkovDrone.tactic != 'attack' \
-                    and AvsivkovDrone.number_of_teams == 2 and AvsivkovDrone.total_drones > 3:
-                AvsivkovDrone.tactic = 'attack'
+    def _move(self, point):
+        """Моментальный поворот и движение к цели"""
+        if not isinstance(point, Point):
+            point = point.coord
+        self.vector = Vector.from_points(self.coord, point)
+        self.move_at(point)
+
+    def _data_collection(self):
+        """Собирает необходимые данные для координации дронов"""
+        SivkovDrone.base_position = get_bases_position(base=self.my_mothership)
+        self._get_position_handler()
+        SivkovDrone.number_of_teams = len(self.scene.drones) // SivkovDrone.total_drones
+        SivkovDrone.total_enemies = SivkovDrone.number_of_teams - 1
+        self._explore_enemy_position()
+        SivkovDrone.position_handler.get_available_sector(drone=self)
+
+    def _get_position_handler(self):
+        """Подбирает класс-обработчик позиций дронов для текущего полложения базы"""
+        if SivkovDrone.base_position == ('right', 'down'):
+            SivkovDrone.position_handler = PositionRightDown(mothership=self.my_mothership)
+        elif SivkovDrone.base_position == ('left', 'down'):
+            SivkovDrone.position_handler = PositionLeftDown(mothership=self.my_mothership)
+        elif SivkovDrone.base_position == ('left', 'up'):
+            SivkovDrone.position_handler = PositionLeftUp(mothership=self.my_mothership)
+        else:
+            SivkovDrone.position_handler = PositionRightUp(mothership=self.my_mothership)
+
+    def _explore_enemy_position(self):
+        """Собирает данные о расположении врагов"""
+        work_list = [(self.distance_to(base), base) for base in self.scene.motherships if self.team != base.team]
+        work_list.sort(key=lambda x: x[0])
+        if work_list[0][1].coord.y != self.my_mothership.coord.y:
+            SivkovDrone.first_enemy_base = work_list[0][1]
+        else:
+            SivkovDrone.second_enemy_base = work_list[0][1]
+        if SivkovDrone.number_of_teams < 4 and len(work_list) > 1:
+            if work_list[1][1].coord.x != self.my_mothership.coord.x \
+                    and work_list[1][1].coord.y != self.my_mothership.coord.y:
+                SivkovDrone.diagonal_enemy_base = work_list[1][1]
             else:
-                AvsivkovDrone.tactic = 'defense'
-        elif self.distance_to(self.my_mothership) < 20 or AvsivkovDrone.wait >= 30:
-            self._get_enemy()
-            if not AvsivkovDrone.enemy:
-                self._get_enemy()
-                if not AvsivkovDrone.enemy:
-                    AvsivkovDrone.tactic = 'robbery'
-            elif self._where_is_enemy() and AvsivkovDrone.tactic != 'attack' and AvsivkovDrone.number_of_teams == 4:
-                AvsivkovDrone.tactic = 'attack'
+                if SivkovDrone.first_enemy_base:
+                    SivkovDrone.second_enemy_base = work_list[1][1]
+                else:
+                    SivkovDrone.first_enemy_base = work_list[1][1]
+        else:
+            if len(work_list) > 1:
+                if SivkovDrone.first_enemy_base:
+                    SivkovDrone.second_enemy_base = work_list[1][1]
+                else:
+                    SivkovDrone.first_enemy_base = work_list[1][1]
+            if len(work_list) > 2:
+                SivkovDrone.diagonal_enemy_base = work_list[-1][1]
+        get_attack_direction()
+
+    def _get_asteroid(self):
+        """Выдаёт дрону астеройд"""
+        self.trouble = 0
+        work_list = [(self.distance_to(asteroid), asteroid) for asteroid in self.asteroids if asteroid.payload
+                     and self.position_handler.target_available(target=asteroid)]
+        work_list.sort(key=lambda x: x[0])
+        for asteroid in work_list:
+            if asteroid[1].payload == 0:
+                continue
+            elif asteroid[1].id in SivkovDrone.ignore_list:
+                continue
             else:
-                AvsivkovDrone.tactic = 'defense'
+                self.target = asteroid[1]
+                break
+        if not self.target:
+            crashed_drones = [(self.distance_to(drone), drone) for drone in self.scene.drones if not drone.is_alive
+                              and self.position_handler.target_available(target=drone) and drone.payload
+                              and drone.id not in SivkovDrone.ignore_list]
+            if crashed_drones:
+                crashed_drones.sort(key=lambda x: x[0])
+                self.target = crashed_drones[0][1]
+                self.fly_on_drone = True
 
     def _tactic__defense(self):
-        """Тактика обороны и грабежа"""
-        if self.role not in ['defender', 'collector', 'saboteur', 'driller', 'awaiting']:
-            AvsivkovDrone.number_of_participants += 1
-            if AvsivkovDrone.number_of_participants == 1 and AvsivkovDrone.total_drones > 1:
-                if AvsivkovDrone.total_drones < 3 or AvsivkovDrone.number_of_teams == 2:
-                    self.get_position(position=3)
-                else:
-                    self.get_position(position=1)
-                self.role = 'defender'
-            elif AvsivkovDrone.number_of_participants == 2 and AvsivkovDrone.total_drones > 2:
-                self.get_position(position=2)
-                self.role = 'defender'
-            else:
-                self.position = self.my_mothership
-                if AvsivkovDrone.number_of_teams == 2:
-                    self._launch_driller()
-                else:
-                    self.role = 'collector'
-                self.move_at(self.position)
+        """Тактика обороны"""
+        self._count_enemies()
+        SivkovDrone.position_handler.get_available_sector(drone=self)
+        if self.role not in ['defender', 'collector', 'driller']:
+            self.position = SivkovDrone.position_handler.get_position(position=self.serial_number)
+            self.role = 'defender'
+        elif self.serial_number in [4, 5] and self._are_asteroids_available() and not self._can_take:
+            self.role = 'driller'
         elif self.role == 'defender':
             if self.distance_to(self.position) > 5:
-                self.move_at(self.position)
-            elif AvsivkovDrone.enemy:
-                self.turn_to(AvsivkovDrone.enemy)
+                self._move(self.position)
+            elif self.serial_number == 3 and self.my_mothership.health < 1000 and SivkovDrone.change_position:
+                if SivkovDrone.attack_direction == 'up/down':
+                    SivkovDrone.attack_direction = 'left/right'
+                else:
+                    SivkovDrone.attack_direction = 'up/down'
+                SivkovDrone.change_position = False
+                self.position = SivkovDrone.position_handler.get_position(position=self.serial_number)
+            elif self._can_take and ((self.serial_number not in [1, 2] and self.my_mothership.health > 1500)
+                                     or self.serial_number not in [1, 2, 3]):
+                self.role = 'collector'
+                self._get_target()
+                self._move(self.target)
+            elif self.enemy and self._checking_the_trajectory_of_the_shot(enemy=self.enemy):
                 self._shoot()
             else:
+                self.enemy = None
                 self._get_enemy()
-                if not AvsivkovDrone.enemy:
-                    self._get_tactic()
         elif self.role == 'collector':
             self._tactic__robbery()
 
-    def _launch_driller(self):
-        """Запуск дрона бурильщика на сбор рессурсов"""
-        self.role = 'driller'
-        self._dispatcher()
-        self.position = self.asteroids[self.asteroids_index[-1]]
+    @property
+    def _can_take(self):
+        """Проверяет безопасно ли тащить рессурс с вражеской базы"""
+        if (SivkovDrone.first_enemy_base and (not self.danger_from_enemy_mothership(SivkovDrone.first_enemy_base)
+            and SivkovDrone.first_enemy_base.payload)) \
+                or (SivkovDrone.second_enemy_base and
+                    (not self.danger_from_enemy_mothership(SivkovDrone.second_enemy_base)
+                     and SivkovDrone.second_enemy_base.payload)):
+            return True
+        return False
 
-    def _tactic__attack(self):
-        """Тактика стремительного нападения"""
-        if AvsivkovDrone.tactic != 'attack' or self.health < 60:
-            self.move_at(self.my_mothership)
-        elif not self.role:
-            AvsivkovDrone.number_of_participants += 1
-            if AvsivkovDrone.number_of_participants == 1 and AvsivkovDrone.number_of_teams > 2:
-                self.role = 'collector'
-                self.get_position()
-            else:
-                if AvsivkovDrone.number_of_participants == 1:
-                    self.get_position()
-                self.role = 'soldier'
-            if theme.FIELD_WIDTH <= theme.FIELD_HEIGHT and AvsivkovDrone.number_of_teams > 2:
-                self.position = Point((theme.FIELD_WIDTH - 120 * AvsivkovDrone.total_drones) // 2 + 120 *
-                                      AvsivkovDrone.number_of_participants, AvsivkovDrone.front_position)
-            else:
-                self.position = Point(AvsivkovDrone.front_position,
-                                      (theme.FIELD_HEIGHT - 110 * AvsivkovDrone.total_drones) // 2 + 110 *
-                                      AvsivkovDrone.number_of_participants)
-        elif AvsivkovDrone.wait >= 30:
-            self._get_tactic()
-        elif self.role == 'collector':
-            self._tactic__robbery()
-        elif self.distance_to(self.my_mothership) < 50:
-            self.move_at(self.position)
-        elif not AvsivkovDrone.enemy:
-            self._get_enemy()
-            AvsivkovDrone.wait += 1
-        elif (len([drone for drone in self.scene.drones if drone.team != self.team and drone.is_alive]) == 3) \
-                and AvsivkovDrone.driller_role_available:
-            AvsivkovDrone.driller_role_available = False
-            self._launch_driller()
-        elif (theme.FIELD_WIDTH <= theme.FIELD_HEIGHT and AvsivkovDrone.base_position[1] == 'down'
-              and AvsivkovDrone.enemy.coord.y < AvsivkovDrone.front_position + 100) \
-                or (theme.FIELD_WIDTH <= theme.FIELD_HEIGHT and AvsivkovDrone.base_position[1] == 'up'
-                    and AvsivkovDrone.enemy.coord.y > AvsivkovDrone.front_position - 100) \
-                or (AvsivkovDrone.total_drones > len([drone for drone in self.scene.drones
-                                                      if drone.team == self.team and drone.is_alive])) \
-                or (theme.FIELD_WIDTH > theme.FIELD_HEIGHT and AvsivkovDrone.base_position[1] == 'left'
-                    and AvsivkovDrone.enemy.coord.x > AvsivkovDrone.front_position + 100) \
-                or (theme.FIELD_WIDTH > theme.FIELD_HEIGHT and AvsivkovDrone.base_position[1] == 'right'
-                    and AvsivkovDrone.enemy.coord.x > AvsivkovDrone.front_position - 100)\
-                or (len([drone for drone in self.scene.drones if drone.team != self.team and drone.is_alive]) == 1) \
-                or (theme.FIELD_HEIGHT >= theme.FIELD_WIDTH and AvsivkovDrone.base_position[1] == 'up'
-                    and self.front_position < theme.FIELD_HEIGHT / 2) \
-                or (theme.FIELD_HEIGHT >= theme.FIELD_WIDTH and AvsivkovDrone.base_position[1] == 'down'
-                    and self.front_position > theme.FIELD_HEIGHT / 2) \
-                or (theme.FIELD_HEIGHT < theme.FIELD_WIDTH and AvsivkovDrone.base_position[1] == 'left'
-                    and self.front_position > theme.FIELD_WIDTH / 2) \
-                or (theme.FIELD_HEIGHT < theme.FIELD_WIDTH and AvsivkovDrone.base_position[1] == 'right'
-                    and self.front_position < theme.FIELD_WIDTH / 2):
-            AvsivkovDrone.wait = 100
-            self._get_tactic()
-        elif theme.FIELD_WIDTH <= theme.FIELD_HEIGHT and self.coord.y != AvsivkovDrone.front_position:
-            self.position = Point(self.coord.x, AvsivkovDrone.front_position)
-            self.move_at(self.position)
-        elif theme.FIELD_WIDTH > theme.FIELD_HEIGHT and self.coord.x != AvsivkovDrone.front_position:
-            self.position = Point(AvsivkovDrone.front_position, self.coord.y)
-            self.move_at(self.position)
-        elif self.distance_to(AvsivkovDrone.enemy) > self.gun.shot_distance:
-            self._get_enemy()
-            if self.distance_to(AvsivkovDrone.enemy) > self.gun.shot_distance:
-                AvsivkovDrone.wait += 1
-                if AvsivkovDrone.wait >= 10:
-                    if theme.FIELD_HEIGHT >= theme.FIELD_WIDTH and AvsivkovDrone.base_position[1] == 'down':
-                        AvsivkovDrone.front_position += 30
-                    elif theme.FIELD_HEIGHT < theme.FIELD_WIDTH and AvsivkovDrone.base_position[0] == 'left':
-                        AvsivkovDrone.front_position += 30
-                    else:
-                        AvsivkovDrone.front_position -= 30
+    def _are_asteroids_available(self):
+        """Проверяет доступны ли астеройды с рудой"""
+        asteroids = [asteroid for asteroid in self.asteroids if asteroid.payload
+                     and self.position_handler.target_available(target=asteroid)
+                     and asteroid.id not in SivkovDrone.ignore_list]
+        crashed_drones = [drone for drone in self.scene.drones if not drone.is_alive and drone.payload
+                          and self.position_handler.target_available(target=drone)
+                          and drone.id not in SivkovDrone.ignore_list]
+        if (asteroids or crashed_drones) and self.role != 'collector':
+            return True
+        return False
+
+    def _checking_the_trajectory_of_the_shot(self, enemy):
+        """Проверяет не попадёт ли выстрел в союзника"""
+        if self.distance_to(enemy) > self.gun.shot_distance:
+            return False
+        vector_to_enemy = Vector.from_points(self.coord, enemy.coord)
+        for teammate in self.teammates:
+            if teammate.is_alive:
+                vector_to_teammate = Vector.from_points(self.coord, teammate.coord)
+                if vector_to_teammate.module < vector_to_enemy.module \
+                        or abs(vector_to_enemy.direction - vector_to_teammate.direction) < 180:
+                    degree = abs(vector_to_enemy.direction - vector_to_teammate.direction) / 2
+                    if (2 * vector_to_teammate.module * tan(radians(degree)) * sin(radians(90 - degree))) \
+                            < self.radius + 10:
+                        return False
         else:
-            self.turn_to(AvsivkovDrone.enemy)
-            AvsivkovDrone.wait = 0
-            self._shoot()
+            if self._all_teammates_at_home:
+                self._fire_adjustment(enemy=enemy)
+            else:
+                self.vector = vector_to_enemy
+            return True
+
+    def _count_enemies(self):
+        """Проверяет уменьшилось ли количество врагов"""
+        number_of_enemies = len([base for base in self.scene.motherships if base.team != self.team
+                                 and self.danger_from_enemy_mothership(base)])
+        if number_of_enemies < SivkovDrone.total_enemies:
+            if SivkovDrone.ignore_list:
+                SivkovDrone.ignore_list = []
+            SivkovDrone.total_enemies = number_of_enemies
+        if SivkovDrone.number_of_teams == 2 and not SivkovDrone.sector_available:
+            enemies = len([drone for drone in self.scene.drones if drone.team != self.team and drone.is_alive])
+            if len(self.teammates) + 1 - enemies >= 2:
+                SivkovDrone.sector_available = True
+                SivkovDrone.ignore_list = []
+
+    def _fire_adjustment(self, enemy):
+        """Добавляет небольшое отклонение при наведении на врага"""
+        if isinstance(enemy, MotherShip) and self.serial_number in [1, 2, 4, 5]:
+            self._drunk_shooter(enemy=enemy)
+        else:
+            correction = 40
+            enemy_base = [base for base in self.scene.motherships if base.team == enemy.team]
+            if enemy.coord.x - enemy_base[0].coord.x > 200:
+                x = enemy.coord.x - correction
+            elif enemy_base[0].coord.x - enemy.coord.x > 200:
+                x = enemy.coord.x + correction
+            else:
+                x = enemy.coord.x
+            if enemy.coord.y - enemy_base[0].coord.y > 200:
+                y = enemy.coord.y - correction
+            elif enemy_base[0].coord.y - enemy.coord.y > 200:
+                y = enemy.coord.y + correction
+            else:
+                y = enemy.coord.y
+            self.vector = Vector.from_points(self.coord, Point(x, y))
+
+    def _drunk_shooter(self, enemy):
+        """Стреляет не очевидным способом по главному кораблю"""
+        enemy_position = get_bases_position(enemy)
+        correction_x, correction_y = SivkovDrone.position_handler.get_correction()
+        if self.base_position[0] != enemy_position[0]:
+            if self.serial_number == 1:
+                self.vector = Vector.from_points(self.coord, Point(enemy.coord.x, enemy.coord.y - correction_y))
+            elif self.serial_number == 4:
+                self.vector = Vector.from_points(self.coord, Point(enemy.coord.x, enemy.coord.y + correction_y))
+        else:
+            if self.serial_number == 2:
+                self.vector = Vector.from_points(self.coord, Point(enemy.coord.x + correction_x, enemy.coord.y))
+            elif self.serial_number == 5:
+                self.vector = Vector.from_points(self.coord, Point(enemy.coord.x - correction_x, enemy.coord.y))
 
     def _tactic__robbery(self):
         """Сбор рессурсов (грабёж)"""
-        if AvsivkovDrone.tactic == 'robbery':
-            self._get_enemy()
-            if AvsivkovDrone.enemy:
-                AvsivkovDrone.tactic = None
-        if self.role != 'collector':
-            self.role = None
-        if not AvsivkovDrone.target:
+        if not self.target:
             self._get_target()
-            if not AvsivkovDrone.target:
-                if AvsivkovDrone.total_drones == 1:
-                    self.get_position(position=3)
-                    self.role = 'defender'
-                AvsivkovDrone.number_of_participants = 0
-                AvsivkovDrone.tactic = 'defense'
+            if not self.target:
+                self.role = 'defender'
+        elif self.my_mothership.health < 1000 and self.serial_number == 3:
+            self.role = 'defender'
+        elif self.payload and self.distance_to(self.my_mothership) < 20:
+            self.unload_to(self.my_mothership)
         elif self.distance_to(self.my_mothership) < 20:
-            if AvsivkovDrone.target.payload and AvsivkovDrone.target.is_alive:
-                self.move_at(AvsivkovDrone.target)
+            if self.target.payload:
+                self._move(self.target)
             else:
-                AvsivkovDrone.target = None
-        elif self.payload == 100 or not AvsivkovDrone.target.payload:
-            self.move_at(self.my_mothership)
-        elif self.distance_to(AvsivkovDrone.target) < 20 and self.free_space:
-            self.load_from(AvsivkovDrone.target)
+                self.target = None
+        elif self.payload == 100 or self.target.payload == 0:
+            self._move(self.my_mothership)
+        elif self.distance_to(self.target) < 20 and self.free_space:
+            self.load_from(self.target)
         else:
-            self.move_at(self.my_mothership)
-
-    def _where_is_enemy(self):
-        """Определяет насколько враги близко к нашей базе"""
-        enemy_coordinate = []
-        if AvsivkovDrone.base_position[1] == 'down':
-            enemies = [drone for drone in self.scene.drones if drone.team != self.team and drone.is_alive
-                       and drone.coord.y < theme.FIELD_HEIGHT - AvsivkovDrone.total_drones * 140]
-        else:
-            enemies = [drone for drone in self.scene.drones if drone.team != self.team and drone.is_alive
-                       and drone.coord.y > 0 + AvsivkovDrone.total_drones * 140]
-        for enemy in enemies:
-            vector = Vector.from_points(enemy.coord, AvsivkovDrone.enemy_bases[enemy.team])
-            if vector.module > 30:
-                enemy_coordinate.append(enemy.coord.y)
-        if enemy_coordinate or theme.FIELD_WIDTH - theme.FIELD_HEIGHT > 200:
-            return False
-        else:
-            return True
+            self._move(self.my_mothership)
 
     def _get_enemy(self):
-        """Определяет дрону врага"""
-        AvsivkovDrone.shots_at_enemy = 0
+        """Определяет дрону цель"""
+        self.total_shots = 0
+        self._get_enemy_drone()
+        if not self.enemy:
+            self._get_enemy_base()
+
+    def _get_enemy_base(self):
+        """Ищет подходящую вражескую базу"""
+        enemy_base = [(self.distance_to(base), base) for base in self.scene.motherships if
+                      base.team != self.team and base.is_alive]
+        if enemy_base:
+            enemy_base.sort(key=lambda x: x[0])
+            for base in enemy_base:
+                if self._checking_the_trajectory_of_the_shot(enemy=base[1]) and self._enemies_scanner(base=base[1]):
+                    self.enemy = base[1]
+                    break
+
+    def _get_enemy_drone(self):
+        """Ищет подходящего вражеского дрона"""
         enemies = [(self.distance_to(drone), drone) for drone in self.scene.drones if drone.team != self.team
                    and drone.is_alive]
-        enemy_base = [base for base in self.scene.motherships if base.team != self.team and base.is_alive]
         if enemies:
             enemies.sort(key=lambda x: x[0])
-        if len(enemies) <= 2 and AvsivkovDrone.number_of_teams == 2 and enemy_base \
-                and self.distance_to(enemy_base[-1]) < self.gun.shot_distance:
-            AvsivkovDrone.enemy = enemy_base[-1]
-        else:
             for enemy in enemies:
-                vector = Vector.from_points(enemy[1].coord, AvsivkovDrone.enemy_bases[enemy[1].team])
-                if vector.module > MOTHERSHIP_HEALING_DISTANCE or AvsivkovDrone.number_of_teams == 2:
-                    AvsivkovDrone.enemy = enemy[1]
+                base = [base for base in self.scene.motherships if base.team == enemy[1].team and base.is_alive]
+                if base:
+                    vector = Vector.from_points(enemy[1].coord, base[0].coord)
+                    if vector.module < MOTHERSHIP_HEALING_DISTANCE:
+                        continue
+                if self._checking_the_trajectory_of_the_shot(enemy=enemy[1]):
+                    self.enemy = enemy[1]
                     break
 
     def _get_target(self):
         """Определяет цель для сбора рессурса"""
-        enemy_bases = [(base.payload, base) for base in self.scene.motherships if base.team != self.team
-                       and base.payload and base.is_alive]
+        self.trouble = 0
+        enemy_bases = [(self.distance_to(base), base) for base in self.scene.motherships if base.team != self.team
+                       and base.payload and not self.danger_from_enemy_mothership(base)
+                       and base.id not in SivkovDrone.ignore_list]
         if enemy_bases:
-            if AvsivkovDrone.tactic == 'attack':
-                safe_way = []
-                for base in enemy_bases:
-                    if base[1].coord.x == self.my_mothership.coord.x or base[1].coord.y == self.my_mothership.coord.y:
-                        safe_way.append(base[1])
-                if safe_way:
-                    AvsivkovDrone.target = safe_way[0]
-            if not AvsivkovDrone.target:
-                enemy_bases.sort(reverse=True, key=lambda x: x[0])
-                AvsivkovDrone.target = enemy_bases[0][1]
-        else:
-            if AvsivkovDrone.tactic == 'robbery':
-                enemy_bases = [base for base in self.scene.motherships if base.team != self.team and base.payload]
-                if enemy_bases:
-                    AvsivkovDrone.target = enemy_bases[0]
-                else:
-                    AvsivkovDrone.tactic = 'the_end'
-
-    def get_position(self, position=None):
-        """Определяет координатную позицию дрону в зависимости от расположения базы"""
-        if AvsivkovDrone.tactic == 'attack':
-            if theme.FIELD_WIDTH > theme.FIELD_HEIGHT:
-                if AvsivkovDrone.base_position[0] == 'right':
-                    AvsivkovDrone.front_position = theme.FIELD_WIDTH - 150
-            elif AvsivkovDrone.base_position[1] == 'up':
-                AvsivkovDrone.front_position = theme.FIELD_HEIGHT - 150
-        elif AvsivkovDrone.tactic == 'defense':
-            if position == 1:
-                if AvsivkovDrone.base_position[1] == 'down':
-                    self.position = Point(self.my_mothership.coord.x, self.my_mothership.coord.y + 190)
-                if AvsivkovDrone.base_position[1] == 'up':
-                    self.position = Point(self.my_mothership.coord.x, self.my_mothership.coord.y - 190)
-            elif position == 2:
-                if AvsivkovDrone.base_position[0] == 'left':
-                    self.position = Point(self.my_mothership.coord.x + 190, self.my_mothership.coord.y)
-                if AvsivkovDrone.base_position[0] == 'right':
-                    self.position = Point(self.my_mothership.coord.x - 190, self.my_mothership.coord.y)
-            else:
-                if AvsivkovDrone.base_position[0] == 'left' and AvsivkovDrone.base_position[1] == 'down':
-                    self.position = Point(self.my_mothership.coord.x + 140, self.my_mothership.coord.y + 140)
-                if AvsivkovDrone.base_position[0] == 'right' and AvsivkovDrone.base_position[1] == 'down':
-                    self.position = Point(self.my_mothership.coord.x - 140, self.my_mothership.coord.y + 140)
-                if AvsivkovDrone.base_position[0] == 'left' and AvsivkovDrone.base_position[1] == 'up':
-                    self.position = Point(self.my_mothership.coord.x + 140, self.my_mothership.coord.y - 140)
-                if AvsivkovDrone.base_position[0] == 'right' and AvsivkovDrone.base_position[1] == 'up':
-                    self.position = Point(self.my_mothership.coord.x - 140, self.my_mothership.coord.y - 140)
+            self.target = enemy_bases[0][1]
 
     def _shoot(self):
         """Дрон делает выстрел"""
-        if AvsivkovDrone.enemy and AvsivkovDrone.enemy.is_alive and AvsivkovDrone.shots_at_enemy < 8:
-            AvsivkovDrone.shots_at_enemy += 1
-            self.gun.shot(AvsivkovDrone.enemy)
+        if SivkovDrone.number_of_teams == 2:
+            shots = 1
         else:
-            AvsivkovDrone.enemy = None
+            shots = 3
+        if self.enemy.is_alive and self.total_shots < shots:
+            self.total_shots += 1
+            self.gun.shot(self.enemy)
+        else:
+            self.enemy = None
             self._get_enemy()
 
-drone_class = AvsivkovDrone
+    @property
+    def _all_teammates_at_home(self):
+        """Проверяет все ли союзники находяться в пределах действия защиты от базы"""
+        total_drone = len([drone for drone in self.teammates if drone.is_alive])
+        drones_at_home = []
+        for teammate in self.teammates:
+            vector = Vector.from_points(teammate.coord, self.my_mothership.coord)
+            if vector.module < MOTHERSHIP_HEALING_DISTANCE:
+                drones_at_home.append(teammate)
+        if total_drone == len(drones_at_home):
+            return True
+        return False
+
+    def _enemies_scanner(self, base):
+        """Проверяет живы ли дроны, относящися к запрашиваемой базе"""
+        enemies = [drone for drone in self.scene.drones if drone.team == base.team and drone.is_alive]
+        if enemies:
+            return True
+        return False
+
+    def danger_from_enemy_mothership(self, base):
+        """Проверяет несёт ли команда, которой принадлежит база угрозу"""
+        if base and base.is_alive and self._enemies_scanner(base=base):
+            return True
+        return False
+
+
+def get_bases_position(base):
+    """Определяет в каком углу расположена база"""
+    if base.x == 90 and base.y == 90:
+        return 'left', 'down'
+    elif base.y == 90 and base.x != 90:
+        return 'right', 'down'
+    elif base.x == 90 and base.y != 90:
+        return 'left', 'up'
+    else:
+        return 'right', 'up'
+
+
+def get_attack_direction():
+    """Определяет позицию предполагаемого 'основного' врага"""
+    if SivkovDrone.first_enemy_base:
+        SivkovDrone.attack_direction = 'up/down'
+    else:
+        SivkovDrone.attack_direction = 'left/right'
+
+
+class PositionRightDown:
+    """Позиция правый нижний угол"""
+
+    def __init__(self, mothership):
+        self.available_x = None
+        self.available_y = None
+        self.mothership = mothership
+        self.correction = 78
+
+    def get_correction(self):
+        """Даёт корректировку методу _drunk_shooter"""
+        return -self.correction, self.correction
+
+    def target_available(self, target):
+        """Проверяет находиться ли цель в секторе для сбора рессурсов"""
+        if target.coord.x > self.available_x and target.coord.y < self.available_y:
+            return True
+        return False
+
+    def get_available_sector(self, drone):
+        """Определяет сектор для сбора рессурса"""
+        self.get_available_x(drone)
+        self.get_available_y(drone)
+
+    def get_available_y(self, drone):
+        if not SivkovDrone.danger_from_enemy_mothership(drone, SivkovDrone.diagonal_enemy_base) \
+                and not SivkovDrone.danger_from_enemy_mothership(drone, SivkovDrone.first_enemy_base):
+            self.available_y = theme.FIELD_HEIGHT
+        elif not SivkovDrone.danger_from_enemy_mothership(drone, SivkovDrone.first_enemy_base):
+            self.available_y = theme.FIELD_HEIGHT - 1 / 3 * theme.FIELD_HEIGHT
+        else:
+            self.available_y = theme.FIELD_HEIGHT - 1 / 2 * theme.FIELD_HEIGHT
+
+    def get_available_x(self, drone):
+        if not SivkovDrone.danger_from_enemy_mothership(drone, SivkovDrone.diagonal_enemy_base) \
+                and not SivkovDrone.danger_from_enemy_mothership(drone, SivkovDrone.second_enemy_base):
+            self.available_x = 0
+        elif not SivkovDrone.danger_from_enemy_mothership(drone, SivkovDrone.second_enemy_base):
+            self.available_x = theme.FIELD_WIDTH - 2 / 3 * theme.FIELD_WIDTH
+        else:
+            self.available_x = theme.FIELD_WIDTH - 2 / 3 * theme.FIELD_WIDTH if SivkovDrone.number_of_teams == 2 \
+                else theme.FIELD_WIDTH - 1 / 2 * theme.FIELD_WIDTH
+
+    def get_position(self, position):
+        """Определяет позицию дрона в обороне"""
+        if position == 1:
+            return Point(self.mothership.coord.x - 167, self.mothership.coord.y + 109)
+        elif position == 2:
+            return Point(self.mothership.coord.x - 109, self.mothership.coord.y + 167)
+        elif position == 3 and SivkovDrone.attack_direction == 'up/down':
+            return Point(self.mothership.coord.x - 30, self.mothership.coord.y + 197)
+        elif position == 3 and SivkovDrone.attack_direction == 'left/right':
+            return Point(self.mothership.coord.x - 197, self.mothership.coord.y + 30)
+        elif position == 4:
+            return Point(self.mothership.coord.x - 194, self.mothership.coord.y - 47)
+        elif position == 5:
+            return Point(self.mothership.coord.x + 47, self.mothership.coord.y + 194)
+
+
+class PositionLeftDown(PositionRightDown):
+    """Позиция левый нижний угол"""
+
+    def get_correction(self):
+        return self.correction, -self.correction
+
+    def target_available(self, target):
+        if SivkovDrone.number_of_teams == 2 and not SivkovDrone.sector_available:
+            if target.coord.x < self.available_x and 400 < target.coord.y < self.available_y:
+                return True
+            return False
+        else:
+            if target.coord.x < self.available_x and target.coord.y < self.available_y:
+                return True
+            return False
+
+    def get_available_x(self, drone):
+        if not SivkovDrone.danger_from_enemy_mothership(drone, SivkovDrone.diagonal_enemy_base) \
+                and not SivkovDrone.danger_from_enemy_mothership(drone, SivkovDrone.second_enemy_base):
+            self.available_x = theme.FIELD_WIDTH
+        elif not SivkovDrone.danger_from_enemy_mothership(drone, SivkovDrone.second_enemy_base):
+            self.available_x = theme.FIELD_WIDTH - 1 / 3 * theme.FIELD_WIDTH
+        else:
+            self.available_x = theme.FIELD_WIDTH - 1 / 3 * theme.FIELD_WIDTH if SivkovDrone.number_of_teams == 2 \
+                else theme.FIELD_WIDTH - 1 / 2 * theme.FIELD_WIDTH
+
+    def get_position(self, position):
+        if position == 1:
+            return Point(self.mothership.coord.x + 167, self.mothership.coord.y + 109)
+        elif position == 2:
+            return Point(self.mothership.coord.x + 109, self.mothership.coord.y + 167)
+        elif position == 3 and SivkovDrone.attack_direction == 'up/down':
+            return Point(self.mothership.coord.x + 30, self.mothership.coord.y + 197)
+        elif position == 3 and SivkovDrone.attack_direction == 'left/right':
+            return Point(self.mothership.coord.x + 197, self.mothership.coord.y + 30)
+        elif position == 4:
+            return Point(self.mothership.coord.x + 194, self.mothership.coord.y - 47)
+        elif position == 5:
+            return Point(self.mothership.coord.x - 47, self.mothership.coord.y + 194)
+
+
+class PositionLeftUp(PositionLeftDown):
+    """Позиция левый верхний угол"""
+
+    def get_correction(self):
+        return self.correction, self.correction
+
+    def target_available(self, target):
+        if target.coord.x < self.available_x and target.coord.y > self.available_y:
+            return True
+        return False
+
+    def get_available_y(self, drone):
+        if not SivkovDrone.danger_from_enemy_mothership(drone, SivkovDrone.diagonal_enemy_base) \
+                and not SivkovDrone.danger_from_enemy_mothership(drone, SivkovDrone.first_enemy_base):
+            self.available_y = 0
+        elif not SivkovDrone.danger_from_enemy_mothership(drone, SivkovDrone.first_enemy_base):
+            self.available_y = theme.FIELD_HEIGHT - 2 / 3 * theme.FIELD_HEIGHT
+        else:
+            self.available_y = theme.FIELD_HEIGHT - 1 / 2 * theme.FIELD_HEIGHT
+
+    def get_position(self, position):
+        if position == 1:
+            return Point(self.mothership.coord.x + 167, self.mothership.coord.y - 109)
+        elif position == 2:
+            return Point(self.mothership.coord.x + 109, self.mothership.coord.y - 167)
+        elif position == 3 and SivkovDrone.attack_direction == 'up/down':
+            return Point(self.mothership.coord.x + 30, self.mothership.coord.y - 197)
+        elif position == 3 and SivkovDrone.attack_direction == 'left/right':
+            return Point(self.mothership.coord.x + 197, self.mothership.coord.y - 30)
+        elif position == 4:
+            return Point(self.mothership.coord.x + 194, self.mothership.coord.y + 47)
+        elif position == 5:
+            return Point(self.mothership.coord.x - 47, self.mothership.coord.y - 194)
+
+
+class PositionRightUp(PositionRightDown):
+    """Позиция правый верхний угол"""
+
+    def get_correction(self):
+        return -self.correction, self.correction
+
+    def target_available(self, target):
+        if target.coord.x > self.available_x and target.coord.y > self.available_y:
+            return True
+        return False
+
+    def get_available_y(self, drone):
+        if not SivkovDrone.danger_from_enemy_mothership(drone, SivkovDrone.diagonal_enemy_base) \
+                and not SivkovDrone.danger_from_enemy_mothership(drone, SivkovDrone.first_enemy_base):
+            self.available_y = 0
+        elif not SivkovDrone.danger_from_enemy_mothership(drone, SivkovDrone.first_enemy_base):
+            self.available_y = theme.FIELD_HEIGHT - 2 / 3 * theme.FIELD_HEIGHT
+        else:
+            self.available_y = theme.FIELD_HEIGHT - 1 / 2 * theme.FIELD_HEIGHT
+
+    def get_position(self, position):
+        if position == 1:
+            return Point(self.mothership.coord.x - 167, self.mothership.coord.y - 109)
+        elif position == 2:
+            return Point(self.mothership.coord.x - 109, self.mothership.coord.y - 167)
+        elif position == 3 and SivkovDrone.attack_direction == 'up/down':
+            return Point(self.mothership.coord.x - 30, self.mothership.coord.y - 197)
+        elif position == 3 and SivkovDrone.attack_direction == 'left/right':
+            return Point(self.mothership.coord.x - 197, self.mothership.coord.y - 30)
+        elif position == 4:
+            return Point(self.mothership.coord.x - 194, self.mothership.coord.y + 47)
+        elif position == 5:
+            return Point(self.mothership.coord.x + 47, self.mothership.coord.y - 194)
+
+
+drone_class = SivkovDrone
