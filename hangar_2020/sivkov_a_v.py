@@ -257,11 +257,10 @@ class SivkovDrone(Drone):
     @property
     def _can_take(self):
         """Проверяет безопасно ли тащить рессурс с вражеской базы"""
-        if (SivkovDrone.first_enemy_base and (not self.danger_from_enemy_mothership(SivkovDrone.first_enemy_base)
-            and SivkovDrone.first_enemy_base.payload)) \
-                or (SivkovDrone.second_enemy_base and
-                    (not self.danger_from_enemy_mothership(SivkovDrone.second_enemy_base)
-                     and SivkovDrone.second_enemy_base.payload)):
+        if (SivkovDrone.first_enemy_base and not SivkovDrone.first_enemy_base.is_alive
+            and SivkovDrone.first_enemy_base.payload) \
+                or (SivkovDrone.second_enemy_base and not SivkovDrone.second_enemy_base.is_alive
+                    and SivkovDrone.second_enemy_base.payload):
             return True
         return False
 
@@ -384,7 +383,7 @@ class SivkovDrone(Drone):
         if enemy_base:
             enemy_base.sort(key=lambda x: x[0])
             for base in enemy_base:
-                if self._checking_the_trajectory_of_the_shot(enemy=base[1]) and self._enemies_scanner(base=base[1]):
+                if self._checking_the_trajectory_of_the_shot(enemy=base[1]):
                     self.enemy = base[1]
                     break
 
@@ -408,8 +407,7 @@ class SivkovDrone(Drone):
         """Определяет цель для сбора рессурса"""
         self.trouble = 0
         enemy_bases = [(self.distance_to(base), base) for base in self.scene.motherships if base.team != self.team
-                       and base.payload and not self.danger_from_enemy_mothership(base)
-                       and base.id not in SivkovDrone.ignore_list]
+                       and base.payload and not base.is_alive and base.id not in SivkovDrone.ignore_list]
         if enemy_bases:
             self.target = enemy_bases[0][1]
 
