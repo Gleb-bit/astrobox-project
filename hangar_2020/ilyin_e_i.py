@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 
 from astrobox.core import Drone, MotherShip
 from astrobox.themes.default import MOTHERSHIP_HEALING_DISTANCE
-from robogame_engine.geometry import Point
+from robogame_engine.geometry import Point, Vector
 from robogame_engine.states import StateTurning, StateMoving
 from robogame_engine.theme import theme
 
@@ -103,6 +103,9 @@ class IlyinDrone(Drone):
                 self.move_at(self.role.position)
 
     def move_at(self, target, speed=None):
+        if not isinstance(target, Point):
+            target = target.coord
+        self.vector = Vector.from_points(self.coord, target, module=1)
         if self.is_empty:
             self.empty_distance += self.distance_to(target)
         elif self.is_full:
@@ -113,6 +116,12 @@ class IlyinDrone(Drone):
 
     def on_hearbeat(self):
         self.role.act()
+
+    def turn_to(self, target, speed=None):
+        if not isinstance(target, Point):
+            target = target.coord
+        self.vector = Vector.from_points(self.coord, target, module=1)
+        super().turn_to(target, speed)
 
     def shoot(self, enemy):
         if not isinstance(self.state, (StateTurning, StateMoving)):
