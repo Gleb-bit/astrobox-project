@@ -356,9 +356,7 @@ class Collector(DroneRole):
         elirium_stors_as_targets = headquarters.get_elirium_stors_as_target(drone)
         free_elirium_stors = full_elirium_stors - elirium_stors_as_targets
         elirium_stor_as_target = headquarters.get_elirium_stor_as_target(drone, free_elirium_stors)
-        if (any([basa[0].payload - drone.mothership.payload > 400 for basa in headquarters.get_bases(drone)]) and
-                len(enemies <= 2)):
-            elirium_stor_as_target = max([basa[0] for basa in headquarters.get_bases(drone)], key=lambda x: x.payload)
+
         return elirium_stor_as_target
 
     def next_step(self, purpose):
@@ -635,11 +633,6 @@ class OkhotnikovFNDrone(Drone):
 
         action, target = self.actions[0]
         if action == "move":
-            if isinstance(target, Point):
-                vec = Vector.from_points(self.coord, target, module=1)
-            else:
-                vec = Vector.from_points(self.coord, target.coord, module=1)
-            self.vector = vec
             self._move_to(target)
             self.actions.pop(0)
 
@@ -657,12 +650,7 @@ class OkhotnikovFNDrone(Drone):
             self._next_action()
 
         elif action == "turn":
-            if isinstance(target, Point):
-                vec = Vector.from_points(self.coord, target, module=1)
-            else:
-                vec = Vector.from_points(self.coord, target.coord, module=1)
-            self.vector = vec
-            self.actions.pop(0)
+
             self.turn_to(target)
 
         elif action == "shoot":
