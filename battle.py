@@ -55,7 +55,7 @@ def players_choose():
 def run_battle(player_modules, speed=150, asteroids_count=50, drones_count=5, show_screen=False):
     scene = SpaceField(
         speed=speed,
-        field=(1200, 600),
+        field=(1200, 1200),
         asteroids_count=asteroids_count,
         can_fight=True,
         headless=not show_screen,
