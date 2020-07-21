@@ -87,7 +87,7 @@ class KhizhovDrone(Drone):
         max_id = len(self.scene.drones) // self.scene.teams_count
         near_aster = sorted(self.asteroids, key=lambda asteroid: self.distance_to(asteroid))
         near_aster = near_aster[:7]
-        self.vector = Vector.from_points(self.coord, self.center_map, module=1)
+        # self.vector = Vector.from_points(self.coord, self.center_map, module=1)
         vec = Vector.from_direction(self.direction, 250)
         self.first_coord = Point(x=int(self.x + vec.x), y=int(self.y + vec.y))
         coord_1 = [[-100, -100], [100, 100], [-250, -250], [250, 250], [-400, -400], [400, 400]]
@@ -141,9 +141,10 @@ class KhizhovDrone(Drone):
                 if target in self.near_aster:
                     self.near_aster.remove(target)
                 target = choice(self.near_aster)
-        vector_target = Vector.from_points(self.coord, target, module=1) if isinstance(target, Point) else \
-            Vector.from_points(self.coord, target.coord, module=1)
-        self.vector = vector_target
+        # vector_target = Vector.from_points(self.coord, target, module=1) if isinstance(target, Point) else\
+        #     Vector.from_points(self.coord, target.coord, module=1)
+        # self.vector = vector_target
+        self.turn_to(target)
         target_coord = target.coord if hasattr(target, 'coord') else target
         self.collect_stat(target_coord)
         super().move_at(target_coord)
@@ -186,7 +187,7 @@ class KhizhovDrone(Drone):
 
     def get_enemy_load_bases(self):
         return [base for base in self.scene.motherships if
-                base.team is not self.team and base.is_alive and base.payload > 0]
+                base.team is not self.team and not base.is_alive and base.payload > 0]
 
     def get_enemy_bases_alive(self):
         return [base for base in self.scene.motherships if base.team is not self.team and base.is_alive]
@@ -272,8 +273,10 @@ class KhizhovDrone(Drone):
     def pursue(self, target_coord):
         """Двигаемся немного вперед к цели"""
         vec1 = Vector.from_points(self.coord, target_coord, module=1)
-        self.vector = vec1
-        vec2 = Vector.from_direction(round(self.direction), 30)
+        while abs(self.direction - vec1.direction) < 5:
+            self.stop()
+            self.turn_to(target_coord)
+        vec2 = Vector.from_direction(round(self.direction), 20)
         new_coord = Point(round(int(self.x + vec2.x)), y=round(int(self.y + vec2.y)))
         self.task = (self.move_to, new_coord)
         self.next_action()
@@ -299,7 +302,8 @@ class KhizhovDrone(Drone):
             self.task = (self.turn_to, target)
             return self.next_action()
         if target.is_alive:
-            self.vector = vec
+            # self.vector = vec
+            self.turn_to(target)
             self.shot_count += 1
             self.gun.shot(target)
         else:
@@ -401,8 +405,8 @@ class KhizhovDrone(Drone):
         self.next_action()
 
     def on_hearbeat(self):
-        # if self.get_enemy_bases_alive():
-        #     self.scene._prev_endgame_state['countdown'] = 260
+        if self.get_enemy_bases_alive():
+            self.scene._prev_endgame_state['countdown'] = 260
         if self._sleep_countdown < 10:
             self.task = ()
             return self.next_action()
@@ -443,16 +447,16 @@ class KhizhovDrone(Drone):
         """Генерируем координаты по вертикали"""
         temp = []
         for x in range(range_x[0], range_x[1], 40):
-            for y in range(self.map_field[1] - 50, 50, -50):
+            for y in range(self.map_field[1]-50, 50, -50):
                 point = Point(x=round(int(x)), y=round(int(y)))
                 if all([500 > mate.distance_to(point) > 100 for mate in self.teammates]):
                     temp.append(point)
         return temp
 
     def on_wake_up(self):
-        print(f'{self.state}, последние 3 задачи:')
-        for task in self.last_task:
-            print(task)
+        # print(f'{self.state}, последние 3 задачи:')
+        # for task in self.last_task:
+        #     print(task)
         self.task = (self.move_to, choice(self.near_aster))
         self.next_action()
 
