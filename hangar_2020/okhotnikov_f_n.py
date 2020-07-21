@@ -650,7 +650,7 @@ class OkhotnikovFNDrone(Drone):
             self._next_action()
 
         elif action == "turn":
-
+            self.actions.pop(0)
             self.turn_to(target)
 
         elif action == "shoot":
