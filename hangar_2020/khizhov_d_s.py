@@ -163,11 +163,12 @@ class KhizhovDrone(Drone):
         self.next_action()
 
     def update_all_data(self):
-        if len(self.scene.motherships) == 1:
+        base_is_alive = [base for base in self.scene.motherships if base.is_alive]
+        if len(base_is_alive) == 1:
             dead_drone = [drone for drone in self.scene.drones if not drone.is_alive]
         else:
             dead_drone = [drone for drone in self.scene.drones if
-                          not drone.is_alive and drone.distance_to(drone.my_mothership) > 200]
+                          not drone.is_alive and drone.distance_to(drone.my_mothership) > 250]
         self.all_object.update(self.asteroids, dead_drone)
         self.near_aster = sorted(self.all_object, key=lambda asteroid: self.distance_to(asteroid))
         self.near_aster = self.near_aster[:3]
