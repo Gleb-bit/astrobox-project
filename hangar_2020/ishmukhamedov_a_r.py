@@ -202,16 +202,6 @@ class IshmukhamedovDrone(Drone):
     _teammates_targets: list = []
     except_targets: list = []
 
-    def move_at(self, target, speed=None):
-        if isinstance(target, Point):
-            vec = Vector.from_points(self.coord, target, module=1)
-        else:
-            self.target = target
-            vec = Vector.from_points(self.coord, target.coord, module=1)
-
-        self.vector = vec
-        super().move_at(target=target, speed=speed)
-
     @property
     def enemy(self):
         return self._enemy
