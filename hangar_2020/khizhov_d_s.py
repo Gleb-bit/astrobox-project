@@ -402,11 +402,6 @@ class KhizhovDrone(Drone):
         self.next_action()
 
     def on_hearbeat(self):
-        if self.get_enemy_bases_alive():
-            self.scene._prev_endgame_state['countdown'] = 260
-        if self._sleep_countdown < 10:
-            self.task = ()
-            return self.next_action()
         if self.meter_2 <= self.limit_health:
             self.task = (self.go_home, False)
             return self.next_action()
