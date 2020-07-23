@@ -209,7 +209,8 @@ class ZhukovDrone(Drone):
             self.position = 0
 
     def get_vector(self, vector_1, vector_2):
-        self.vector = Vector.from_points(vector_1, vector_2)
+        # self.vector = Vector.from_points(vector_1, vector_2)
+        self.turn_to(vector_2)
 
     def get_place_near(self, point, target, angle):
         """
