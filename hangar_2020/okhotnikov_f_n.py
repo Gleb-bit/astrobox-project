@@ -97,7 +97,7 @@ class Headquarters:
         Действия дрона при отсутствии цели
         :param drone: экземпляр класса OkhotnikovFNDrone
         """
-        drone.action = []
+        drone.actions = []
         drone.role.change_role()
         purpose = drone.role.next_purpose()
         if purpose:
@@ -347,7 +347,7 @@ class Collector(DroneRole):
         :param headquarters: экземпляр класса Headquarters
         :return: булевое значение необходимости поменять роль
         """
-        team_count = len(drone.scene. motherships)
+        team_count = len(drone.scene.motherships)
         count_asteroids = len(set(aster for aster in drone.asteroids))
         average_elirium_in_asteroid = (MAX_ASTEROID_ELERIUM + MIN_ASTEROID_ELERIUM) / 2
         difference_payload = average_elirium_in_asteroid * count_asteroids / team_count * 0.4
@@ -359,8 +359,8 @@ class Collector(DroneRole):
                 drone.have_gun):
             return True
 
-        if all([drone.mothership.payload - basa[0].payload > difference_payload for basa in
-                headquarters.get_bases(drone)]):
+        if (all([drone.mothership.payload - basa[0].payload > difference_payload for basa in enemies_bases]) and
+                enemies_bases):
             return True
 
         if len([drone for drone in drone.headquarters.drones if drone.is_alive]) < alive_teammates:
