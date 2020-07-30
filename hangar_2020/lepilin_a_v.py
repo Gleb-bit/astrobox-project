@@ -550,4 +550,4 @@ class Protector(Hunter):
         return new_position
 
 
-drone_class = LepilinDron()
+drone_class = LepilinDron
