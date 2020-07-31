@@ -184,7 +184,6 @@ class LepilinDron(Drone):
             return
         if len(self.my_alive_teammates) <= 3 and len(self.enemy_list) < 4 \
                 and len(self.asteroids_with_payload) > 1:  #seeker
-            print('тут')
             self.seeker_act()
         elif not self.enemy_list and not self.dead_loot:  #collector
             self.collector_act()
