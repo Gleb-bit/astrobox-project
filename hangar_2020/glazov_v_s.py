@@ -8,6 +8,7 @@ from robogame_engine import GameObject
 from robogame_engine.geometry import Point, Vector
 from robogame_engine.theme import theme
 
+
 class GlazovDrone(Drone):
     my_team = []
 
@@ -33,18 +34,16 @@ class GlazovDrone(Drone):
     def on_born(self):
         self.my_team.append(self)
         self.my_number = len(self.my_team)
-        if self.my_mothership.coord.x <= 100 and self.my_mothership.coord.y <= 100:
-            self.start_destination = Point(self.my_mothership.coord.x + self.destinations[self.my_number]['x'],
-                                           self.my_mothership.coord.y + self.destinations[self.my_number]['y'])
-        if self.my_mothership.coord.x <= 100 and self.my_mothership.coord.y > 100:
-            self.start_destination = Point(self.my_mothership.coord.x + self.destinations[self.my_number]['x'],
-                                           self.my_mothership.coord.y - self.destinations[self.my_number]['y'])
-        if self.my_mothership.coord.x > 100 and self.my_mothership.coord.y <= 100:
-            self.start_destination = Point(self.my_mothership.coord.x - self.destinations[self.my_number]['x'],
-                                           self.my_mothership.coord.y + self.destinations[self.my_number]['y'])
-        if self.my_mothership.coord.x > 100 and self.my_mothership.coord.y > 100:
-            self.start_destination = Point(self.my_mothership.coord.x - self.destinations[self.my_number]['x'],
-                                           self.my_mothership.coord.y - self.destinations[self.my_number]['y'])
+        coord = self.my_mothership.coord
+        destination = self.destinations[self.my_number]
+        if coord.x <= 100 and coord.y <= 100:
+            self.start_destination = Point(coord.x + destination['x'], coord.y + destination['y'])
+        if coord.x <= 100 and coord.y > 100:
+            self.start_destination = Point(coord.x + destination['x'], coord.y - destination['y'])
+        if coord.x > 100 and coord.y <= 100:
+            self.start_destination = Point(coord.x - destination['x'], coord.y + destination['y'])
+        if coord.x > 100 and coord.y > 100:
+            self.start_destination = Point(coord.x - destination['x'], coord.y - destination['y'])
 
         if self.my_number <= 1:
             self.job = Worker(self)
@@ -56,13 +55,10 @@ class GlazovDrone(Drone):
     def on_hearbeat(self):
         if self.no_enemies:
             self.job = Worker(self)
-
         if self.health <= 70:
             self.go_healing()
-
         elif self.health >= 95 and self.condition == 'wounded':
             self.job.return_after_healing()
-
         self.job.doing_heartbeat()
 
     def go_healing(self):
@@ -181,7 +177,6 @@ class Worker(Job):
             self.unit.load_from(mothership)
 
     def on_stop_at_point(self, target):
-
         dead_drones = [drone for drone in self.unit.scene.drones if not drone.is_alive and not drone.is_empty]
         for drone in dead_drones:
             if drone.near(target): self.unit.load_from(drone)
@@ -253,13 +248,11 @@ class Fighter(Job):
     def __init__(self, unit: GlazovDrone):
         super().__init__(unit)
         self.enemies_on_born = self.count_enemies()
-        self.used = set()
         self.condition = 'normal'
         self.target = None
         self.ready = False
         self.start_destination = None
         self.enemy_count = None
-        self.one_time_move = False
 
     def after_born(self):
         soldier = self.unit
@@ -278,39 +271,35 @@ class Fighter(Job):
     def fight(self):
         soldier = self.unit
         soldier.target = self.get_target()
-        # if not soldier.target.is_alive:
-        #     soldier.target = self.get_target()
 
         if not soldier.destination:
             soldier.destination = self.get_place_for_attack(soldier, soldier.target)
 
         if self.enemies_on_born >= 10 and self.enemy_count >= 4:
-            # print(self.enemies_on_born, self.enemy_count)
-
             if not self.friendly_fire(soldier.target):
                 soldier.gun.shot(soldier.target)
-            soldier.target = self.get_target()
-            soldier.turn_to(soldier.target)
+            self.turn_to_target(soldier)
 
         elif self.enemies_on_born == 5 and self.enemy_count > 2:
             if not self.friendly_fire(soldier.target):
                 soldier.gun.shot(soldier.target)
-            soldier.target = self.get_target()
-            soldier.turn_to(soldier.target)
+            self.turn_to_target(soldier)
         elif self.enemies_on_born == 5 and self.enemy_count == 2:
             if soldier.my_number == 1:
                 soldier.no_enemies = True
             if not self.friendly_fire(soldier.target):
-
                 soldier.gun.shot(soldier.target)
-            soldier.target = self.get_target()
-            soldier.turn_to(soldier.target)
+            self.turn_to_target(soldier)
 
         else:
             if soldier.my_number == 1:
                 soldier.no_enemies = True
             soldier.target = self.get_target()
             self.finish_them()
+
+    def turn_to_target(self, soldier):
+        soldier.target = self.get_target()
+        soldier.turn_to(soldier.target)
 
     def fighter_attack(self):
         soldier = self.unit
@@ -362,7 +351,6 @@ class Fighter(Job):
         for i in range(int(self.unit.distance_to(enemy))):
             rab = math.sqrt((int(enemy.coord.x) - int(self.unit.coord.x)) ** 2 +
                             (int(enemy.coord.y) - int(self.unit.coord.y)) ** 2)
-
             k = i / rab
             c_x = int(self.unit.coord.x) + (int(enemy.coord.x) - int(self.unit.coord.x)) * k
             c_y = int(self.unit.coord.y) + (int(enemy.coord.y) - int(self.unit.coord.y)) * k
@@ -458,5 +446,6 @@ class Fighter(Job):
             soldier.target = None
             soldier.destination = None
             return
+
 
 drone_class = GlazovDrone
