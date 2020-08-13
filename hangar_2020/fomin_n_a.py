@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from random import randint
 
 from astrobox.core import Drone, MotherShip
 from astrobox.themes.default import FIELD_HEIGHT, FIELD_WIDTH
@@ -9,7 +10,8 @@ class FominDrone(Drone):
     SAFE_DISTANCE = 85
     CENTER_X = FIELD_WIDTH // 2
     CENTER_Y = FIELD_HEIGHT // 2
-    OFFSET = [(70, -200), (-50, -100), (-140, -140), (-150, -40), (-260, 70)]
+    OFFSET = [(70, -200), (-140, -140), (-260, 70)]
+    # OFFSET = [(70, -200), (-50, -100), (-140, -140), (-150, -40), (-260, 70)]
     # OFFSET = [(70, -200), (-50, -100), (-150, -150),
     #           (-CENTER_X + SAFE_DISTANCE, -FIELD_HEIGHT // 2 + SAFE_DISTANCE * 2),
     #           (-CENTER_X + SAFE_DISTANCE, -FIELD_HEIGHT + SAFE_DISTANCE * 1.5),
@@ -125,10 +127,10 @@ class FominDrone(Drone):
     def defend_strategy(self):
         try:
             # self.target_object, self.dist_to_object, self.type = self._get_all_targets()
-            if self in self.my_team[:2]:
-                self.target_object, self.dist_to_object, self.type = self._get_all_targets()
-            else:
+            if self in self.my_team[3:]:
                 self.target_object, self.dist_to_object, self.type = self._get_asteroids()
+            else:
+                self.target_object, self.dist_to_object, self.type = self._get_all_targets()
 
         except TypeError:
             self.target_object = None
