@@ -9,11 +9,12 @@ class FominDrone(Drone):
     SAFE_DISTANCE = 85
     CENTER_X = FIELD_WIDTH // 2
     CENTER_Y = FIELD_HEIGHT // 2
-    OFFSET = [(70, -200), (-50, -100), (-150, -150),
-              (-CENTER_X + SAFE_DISTANCE, -FIELD_HEIGHT // 2 + SAFE_DISTANCE * 2),
-              (-CENTER_X + SAFE_DISTANCE, -FIELD_HEIGHT + SAFE_DISTANCE * 1.5),
-              (-CENTER_X + SAFE_DISTANCE, -FIELD_HEIGHT // 2 + SAFE_DISTANCE),
-              (-CENTER_X + SAFE_DISTANCE, SAFE_DISTANCE // 2)]
+    OFFSET = [(70, -200), (-50, -100), (-140, -140), (-150, -40), (-260, 70)]
+    # OFFSET = [(70, -200), (-50, -100), (-150, -150),
+    #           (-CENTER_X + SAFE_DISTANCE, -FIELD_HEIGHT // 2 + SAFE_DISTANCE * 2),
+    #           (-CENTER_X + SAFE_DISTANCE, -FIELD_HEIGHT + SAFE_DISTANCE * 1.5),
+    #           (-CENTER_X + SAFE_DISTANCE, -FIELD_HEIGHT // 2 + SAFE_DISTANCE),
+    #           (-CENTER_X + SAFE_DISTANCE, SAFE_DISTANCE // 2)]
     START_COORD = []
     CENTER_COORD = []
     NEW_COORD = []
@@ -89,6 +90,16 @@ class FominDrone(Drone):
             return all_enemies[0]
         return None
 
+    def _get_asteroids(self):
+
+        asteroids = [(asteroid, self.distance_to(asteroid), 'collect') for asteroid in self.scene.asteroids
+                     if not asteroid.is_empty]
+        asteroids.sort(key=lambda x: x[1])
+
+        if asteroids:
+            return asteroids[0]
+        return None
+
     def move_to(self, target):
         self.turn_to(target)
         self.move_at(target)
@@ -100,7 +111,7 @@ class FominDrone(Drone):
                 self.shoot(target)
 
         else:
-            if self.count_enemies <= len(self.my_team) and len(FominDrone.NEW_COORD) != len(self.my_team):
+            if self.count_enemies <= 3 and len(FominDrone.NEW_COORD) != len(self.my_team):
                 coord = FominDrone.CENTER_COORD[self.my_team.index(self)]
                 position = Point(coord[0], coord[1])
                 if position not in FominDrone.NEW_COORD:
@@ -113,7 +124,11 @@ class FominDrone(Drone):
 
     def defend_strategy(self):
         try:
-            self.target_object, self.dist_to_object, self.type = self._get_all_targets()
+            # self.target_object, self.dist_to_object, self.type = self._get_all_targets()
+            if self in self.my_team[:2]:
+                self.target_object, self.dist_to_object, self.type = self._get_all_targets()
+            else:
+                self.target_object, self.dist_to_object, self.type = self._get_asteroids()
 
         except TypeError:
             self.target_object = None
@@ -183,3 +198,6 @@ class FominDrone(Drone):
 
     def on_wake_up(self):
         self.defend_strategy()
+
+
+drone_class = FominDrone
