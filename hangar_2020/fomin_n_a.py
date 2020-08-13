@@ -183,3 +183,6 @@ class FominDrone(Drone):
 
     def on_wake_up(self):
         self.defend_strategy()
+
+
+drone_class = FominDrone
