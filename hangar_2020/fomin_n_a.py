@@ -2,7 +2,7 @@
 from random import randint
 
 from astrobox.core import Drone, MotherShip
-from astrobox.themes.default import FIELD_HEIGHT, FIELD_WIDTH
+from astrobox.themes.default import FIELD_HEIGHT, FIELD_WIDTH, MOTHERSHIP_HEALING_DISTANCE
 from robogame_engine.geometry import Point
 
 
@@ -10,18 +10,13 @@ class FominDrone(Drone):
     SAFE_DISTANCE = 85
     CENTER_X = FIELD_WIDTH // 2
     CENTER_Y = FIELD_HEIGHT // 2
-    OFFSET = [(70, -200), (-140, -140), (-260, 70)]
-    # OFFSET = [(70, -200), (-50, -100), (-140, -140), (-150, -40), (-260, 70)]
-    # OFFSET = [(70, -200), (-50, -100), (-150, -150),
-    #           (-CENTER_X + SAFE_DISTANCE, -FIELD_HEIGHT // 2 + SAFE_DISTANCE * 2),
-    #           (-CENTER_X + SAFE_DISTANCE, -FIELD_HEIGHT + SAFE_DISTANCE * 1.5),
-    #           (-CENTER_X + SAFE_DISTANCE, -FIELD_HEIGHT // 2 + SAFE_DISTANCE),
-    #           (-CENTER_X + SAFE_DISTANCE, SAFE_DISTANCE // 2)]
+    OFFSET = [(70, -200), (-50, -130), (-140, -140), (-160, -50), (-160, 40),
+              (-FIELD_WIDTH + 180, 30), (-10, -FIELD_HEIGHT + 150)]
     START_COORD = []
     CENTER_COORD = []
     NEW_COORD = []
 
-    limit_health = 55
+    limit_health = 62
     my_team = []
 
     def __init__(self):
@@ -89,48 +84,57 @@ class FominDrone(Drone):
         all_enemies.extend(asteroids)
 
         if all_enemies:
-            return all_enemies[0]
+            return all_enemies
         return None
 
-    def _get_asteroids(self):
+    def is_crossfire(self, target):
+        crossfire = []
+        for teammate in self.my_team:
+            if teammate != self:
+                x, y = teammate.coord.x, teammate.coord.y
+                x1, y1 = self.coord.x, self.coord.y
+                x2, y2 = target.coord.x, target.coord.y
 
-        asteroids = [(asteroid, self.distance_to(asteroid), 'collect') for asteroid in self.scene.asteroids
-                     if not asteroid.is_empty]
-        asteroids.sort(key=lambda x: x[1])
+                dx1 = x2 - x1
+                dy1 = y2 - y1
+                dx = x - x1
+                dy = y - y1
+                S = int(dx1 * dy - dx * dy1)
+                ab = (dx1 * dx1 + dy1 * dy1) ** 0.5
+                h = int(abs(S / ab))
 
-        if asteroids:
-            return asteroids[0]
-        return None
+                if h < self.safe_distance * 0.45:
+                    crossfire.append(True)
+                else:
+                    crossfire.append(False)
+
+        return any(crossfire)
 
     def move_to(self, target):
         self.turn_to(target)
         self.move_at(target)
 
     def fire_action(self, target, distance):
-
-        if isinstance(target, MotherShip):
-            if target:
-                self.shoot(target)
-
-        else:
-            if self.count_enemies <= 3 and len(FominDrone.NEW_COORD) != len(self.my_team):
-                coord = FominDrone.CENTER_COORD[self.my_team.index(self)]
-                position = Point(coord[0], coord[1])
-                if position not in FominDrone.NEW_COORD:
-                    self.curr_position = position
-                    FominDrone.NEW_COORD.append(position)
-                    self.move_to(position)
-            elif target:
-                self.turn_to(target)
-                self.shoot(target)
+        if self.count_enemies <= 2 and len(FominDrone.NEW_COORD) != len(self.my_team):
+            coord = FominDrone.CENTER_COORD[self.my_team.index(self)]
+            position = Point(coord[0], coord[1])
+            if position not in FominDrone.NEW_COORD:
+                self.curr_position = position
+                FominDrone.NEW_COORD.append(position)
+                self.move_to(position)
+        elif target:
+            self.turn_to(target)
+            self.shoot(target)
 
     def defend_strategy(self):
         try:
-            # self.target_object, self.dist_to_object, self.type = self._get_all_targets()
-            if self in self.my_team[3:]:
-                self.target_object, self.dist_to_object, self.type = self._get_asteroids()
+            targets = self._get_all_targets()
+            for target in targets:
+                if not self.is_crossfire(target[0]) and target[-1] == 'fire':
+                    self.target_object, self.dist_to_object, self.type = target
+                    break
             else:
-                self.target_object, self.dist_to_object, self.type = self._get_all_targets()
+                self.target_object, self.dist_to_object, self.type = targets[0]
 
         except TypeError:
             self.target_object = None
@@ -138,7 +142,8 @@ class FominDrone(Drone):
             self.move_to(self.my_mothership)
 
         else:
-            if self.health < self.limit_health:
+            if (self.health < self.limit_health
+                    and self.distance_to(self.my_mothership) > MOTHERSHIP_HEALING_DISTANCE + 100):
                 self.move_to(self.my_mothership)
                 return
 
