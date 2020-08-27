@@ -213,7 +213,7 @@ class PestovDrone(Drone):
                 if drone not in self.my_team and self.near(drone) and not drone.is_alive:
                     self.load_from(drone)
 
-            if self.count_dead() >= 3 and self.count_enemies() >= len(self.__class__.my_team):
+            if self.count_dead() >= 3 and self.count_enemies() >= 5 - self.count_dead():
                 self.change_role(GUARDIAN)
                 self.retreat()
 
@@ -274,7 +274,7 @@ class PestovDrone(Drone):
             #     else:
             #         self.move_to_mothership()
 
-            if self.count_dead() >= 3 and self.count_enemies() >= len(self.__class__.my_team):
+            if self.count_dead() >= 3 and self.count_enemies() >= 5 - self.count_dead():
                 self.change_role(GUARDIAN)
                 self.retreat()
 
@@ -292,7 +292,7 @@ class PestovDrone(Drone):
 
             if not self.enemies_alive():
                 self.change_role(HARVESTER)
-            elif self.count_enemies() < len(self.__class__.my_team):
+            elif self.count_enemies() < 5 - self.count_dead():
                 self.change_role(FIGHTER)
 
     def count_enemies(self):
