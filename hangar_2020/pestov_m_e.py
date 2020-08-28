@@ -85,12 +85,6 @@ class PestovDrone(Drone):
         if isinstance(self.role, Harvester):
             self.role.on_load_complete()
 
-    def make_route(self, max_payload):
-        if isinstance(self.role, Harvester):
-            self.role.make_route(max_payload)
-        else:
-            raise RoleError('make_route: Только сборщик может собирать ресурсы')
-
     def on_stop_at_mothership(self, mothership):
         """Действие при возвращении на базу"""
         self.turn_to(self.previous_target)  # да, бессмысленно, но главное, что развернется на ~180 градусов
@@ -138,40 +132,6 @@ class PestovDrone(Drone):
         self.target = self.my_mothership
         self.next_target = None
         self.move_at(self.target)
-
-    def move_to_the_closest_asteroid(self):
-        """Двигаться к ближайшему астероиду"""
-        if isinstance(self.role, Harvester):
-            self.role.move_to_the_closest_asteroid()
-        else:
-            raise RoleError('move_to_the_closest_asteroid: Только сборщик может собирать ресурсы')
-
-    def intercept_asteroid(self):
-        """
-        Попытка перехватить цель у другого дрона,
-        если этот дрон находится ближе к цели.
-        """
-        if isinstance(self.role, Harvester):
-            self.role.intercept_asteroid()
-        else:
-            raise RoleError('intercept_asteroid: Только сборщик может собирать ресурсы')
-
-    def get_the_closest_asteroid(self):
-        """
-        Выбор ближайшего к дрону астероида.
-        В первую очередь выбираются богатые элериумом астероиды.
-        """
-        if isinstance(self.role, Harvester):
-            return self.role.get_the_closest_asteroid()
-        else:
-            raise RoleError('get_the_closest_asteroid: Только сборщик может собирать ресурсы')
-
-    def get_next_asteroid(self):
-        """Выбрать ближайший к текущей цели астероид"""
-        if isinstance(self.role, Harvester):
-            return self.role.get_next_asteroid()
-        else:
-            raise RoleError('get_next_asteroid: Только сборщик может собирать ресурсы')
 
     def game_step(self):
         super().game_step()
@@ -510,17 +470,17 @@ class Harvester(Role):
         elif self.unit.next_target:
             self.unit.target = self.unit.next_target
             max_payload = SUFFICIENT_PAYLOAD - self.unit.payload
-            self.unit.make_route(max_payload)
+            self.make_route(max_payload)
             self.unit.move_at(self.unit.target)
         else:
             try:
-                self.unit.intercept_asteroid()
+                self.intercept_asteroid()
             except CantInterceptException:
-                self.unit.move_to_the_closest_asteroid()
+                self.move_to_the_closest_asteroid()
 
     def make_route(self, max_payload):
         if self.unit.target.payload < max_payload:
-            self.unit.next_target = self.unit.get_next_asteroid()
+            self.unit.next_target = self.get_next_asteroid()
             if self.unit.next_target:
                 self.unit.__class__.unavailable_asteroids.append(self.unit.next_target)
         else:
@@ -528,16 +488,16 @@ class Harvester(Role):
 
     def try_to_depart(self):
         """Отправление с базы"""
-        self.unit.move_to_the_closest_asteroid()
+        self.move_to_the_closest_asteroid()
         if self.unit.target == self.unit.my_mothership:
             self.unit.waiting = True
 
     def move_to_the_closest_asteroid(self):
         """Двигаться к ближайшему астероиду"""
-        self.unit.target = self.unit.get_the_closest_asteroid()
+        self.unit.target = self.get_the_closest_asteroid()
         if self.unit.target:
             self.unit.__class__.unavailable_asteroids.append(self.unit.target)
-            self.unit.make_route(SUFFICIENT_PAYLOAD)
+            self.make_route(SUFFICIENT_PAYLOAD)
             self.unit.move_at(self.unit.target)
         else:
             self.unit.target = self.unit.my_mothership
@@ -562,10 +522,10 @@ class Harvester(Role):
             if drone_distance_pair == closest_drone:
                 self.unit.previous_target = Point(self.unit.x, self.unit.y)
                 self.unit.__class__.unavailable_asteroids.remove(asteroid)
-                self.unit.move_to_the_closest_asteroid()
+                self.move_to_the_closest_asteroid()
                 coords = Point(drone_distance_pair[0].x, drone_distance_pair[0].y)
                 drone_distance_pair[0].previous_target = coords
-                drone_distance_pair[0].move_to_the_closest_asteroid()
+                drone_distance_pair[0].role.move_to_the_closest_asteroid()
                 break
         else:
             raise CantInterceptException
