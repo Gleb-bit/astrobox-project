@@ -79,15 +79,11 @@ class PestovDrone(Drone):
         """Действие при встрече с астероидом"""
         if isinstance(self.role, Harvester):
             self.role.on_stop_at_asteroid(asteroid)
-        else:
-            pass
 
     def on_load_complete(self):
         """Действие при завершении загрузки элериума"""
         if isinstance(self.role, Harvester):
             self.role.on_load_complete()
-        else:
-            pass
 
     def make_route(self, max_payload):
         if isinstance(self.role, Harvester):
@@ -119,8 +115,6 @@ class PestovDrone(Drone):
         """Действие при завершении разгрузки дрона"""
         if isinstance(self.role, Harvester):
             self.try_to_depart()
-        else:
-            raise RoleError('on_unload_complete: Только сборщик может собирать ресурсы')
 
     def try_to_depart(self):
         """Отправление с базы"""
