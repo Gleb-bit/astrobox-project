@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-avsivkov
+# -*- coding: utf-8 -*-
 """Модуль содержит логику поведения дрона 'SivkovDrone'"""
 
 from astrobox.core import Drone, MotherShip
@@ -15,7 +15,7 @@ BOTTOM_LINE_HEALTH_FOR_PEACEFUL_SHIP = 100
 BOTTOM_LINE_HEALTH_FOR_WARSHIP = 30
 NUMBER_OF_UNSUCCESSFUL_ATTEMPTS = 75
 SUFFICIENT_SHIP_LOADING = 50
-REQUIRED_NUMBER_OF_ENEMY_ACTIVITY_CHECKS = 60
+REQUIRED_NUMBER_OF_ENEMY_ACTIVITY_CHECKS = 25
 NUMBER_SHOTS_BEFORE_CHANGE_ENEMY = 3
 MAXIMUM_NUMBER_OF_ENEMIES_TO_START_COLLECTING = 7
 CORECTION_SHOTS_FOR_ATTACK_MOTHERSHIP = 78
@@ -26,7 +26,7 @@ AVAILABLE_SECTOR__ONE_NEAREST_TEAM_DISABLED = 1 / 2
 AVAILABLE_SECTOR__TWO_NEAREST_TEAM_ACTIVE = 1 / 3
 
 # Тактика атаки
-NUMBER_SHOTS_BEFORE_CHANGE_ENEMY__TACTIC_ASSAULT = 50
+NUMBER_SHOTS_BEFORE_CHANGE_ENEMY__TACTIC_ASSAULT = 15
 MINIMUM_STAGE_HEIGHT_FOR_SUCCESS = 700
 SECTOR_TO_SELECT_THE_ENEMY = (90, 300)
 MINIMAL_COORDINATE_NEAR_MOTHERSHIP = 192
@@ -217,7 +217,8 @@ class SivkovDrone(Drone):
         SivkovDrone.base_position = get_bases_position(base=self.my_mothership)
         self._get_position_handler()
         SivkovDrone.number_of_teams = len(self.scene.drones) // SivkovDrone.total_drones
-        SivkovDrone.total_enemies = SivkovDrone.number_of_teams - 1
+        SivkovDrone.total_enemies = len([drone for drone in self.scene.drones if drone.team != self.team
+                                         and drone.is_alive])
         self._explore_enemy_position()
         SivkovDrone.position_handler.get_available_sector(drone=self)
 
@@ -370,6 +371,31 @@ class SivkovDrone(Drone):
             elif self.serial_number == 5:
                 self.turn_to(Point(enemy.coord.x - correction_x, enemy.coord.y))
 
+    def checking_enemy_activity(self):
+        """Проверяет активность вражеских команд"""
+        enemies = [drone for drone in self.scene.drones if drone.is_alive and drone.team != self.team]
+        if enemies:
+            self._analysis_of_the_situation(enemies)
+
+    def _analysis_of_the_situation(self, enemies):
+        """Увеличивает значение или сбрасывает счётчик активности врагов"""
+        work_list = []
+        for enemy in enemies:
+            enemy_base = [base for base in self.scene.motherships if base.team == enemy.team]
+            vector = Vector.from_points(enemy.coord, enemy_base[0].coord)
+            if vector.module < MOTHERSHIP_HEALING_DISTANCE and enemy_base[0].is_alive:
+                continue
+            else:
+                work_list.append(enemy)
+        flag = True
+        if SivkovDrone.first_enemy_base.health < SivkovDrone.checking_enemy_bases_health:
+            flag = False
+        SivkovDrone.checking_enemy_bases_health = SivkovDrone.first_enemy_base.health
+        if not work_list and flag:
+            SivkovDrone.no_active_enemies += 1
+        else:
+            SivkovDrone.no_active_enemies = 0
+
 
 class Tactic(ABC):
 
@@ -394,7 +420,7 @@ class TacticDefense(Tactic):
             self._checking_defense()
         self._count_enemies()
         if SivkovDrone.number_of_teams == 4:
-            self._checking_enemy_activity()
+            self.drone.checking_enemy_activity()
         SivkovDrone.position_handler.get_available_sector(drone=self.drone)
         if self.drone.payload:
             self.drone.move_at(self.drone.my_mothership)
@@ -438,11 +464,10 @@ class TacticDefense(Tactic):
 
     def _count_enemies(self):
         """Проверяет уменьшилось ли количество врагов"""
-        number_of_enemies = len([base for base in self.drone.scene.motherships if base.team != self.drone.team
-                                 and self.drone.danger_from_enemy_mothership(base=base)])
+        number_of_enemies = len([drone for drone in self.drone.scene.drones if drone.team != self.drone.team
+                                 and drone.is_alive])
         if number_of_enemies < SivkovDrone.total_enemies:
-            if SivkovDrone.ignore_list:
-                SivkovDrone.ignore_list = []
+            SivkovDrone.ignore_list = []
             SivkovDrone.total_enemies = number_of_enemies
         if SivkovDrone.number_of_teams == 2 and not SivkovDrone.sector_available:
             enemies = len(
@@ -450,31 +475,6 @@ class TacticDefense(Tactic):
             if len(self.drone.teammates) + 1 - enemies >= NUMERICAL_SUPERIORITY__TWO_TEAM:
                 SivkovDrone.sector_available = True
                 SivkovDrone.ignore_list = []
-
-    def _checking_enemy_activity(self):
-        """Проверяет активность вражеских команд"""
-        enemies = [drone for drone in self.drone.scene.drones if drone.is_alive and drone.team != self.drone.team]
-        if enemies:
-            self._analysis_of_the_situation(enemies)
-
-    def _analysis_of_the_situation(self, enemies):
-        """Увеличивает значение или сбрасывает счётчик активности врагов"""
-        work_list = []
-        for enemy in enemies:
-            enemy_base = [base for base in self.drone.scene.motherships if base.team == enemy.team]
-            vector = Vector.from_points(enemy.coord, enemy_base[0].coord)
-            if vector.module < MOTHERSHIP_HEALING_DISTANCE and enemy_base[0].is_alive:
-                continue
-            else:
-                work_list.append(enemy)
-        flag = True
-        if SivkovDrone.first_enemy_base.health < SivkovDrone.checking_enemy_bases_health:
-            flag = False
-        SivkovDrone.checking_enemy_bases_health = SivkovDrone.first_enemy_base.health
-        if not work_list and flag:
-            SivkovDrone.no_active_enemies += 1
-        else:
-            SivkovDrone.no_active_enemies = 0
 
     @property
     def _can_drill_asteroids(self):
@@ -596,6 +596,7 @@ class TacticAssault(Tactic):
     """Тактика атаки"""
 
     def run(self):
+        self.drone.checking_enemy_activity()
         self._command_check()
         if self.is_it_time_to_change_the_enemy:
             SivkovDrone.shots_at_enemy = 0
@@ -606,7 +607,8 @@ class TacticAssault(Tactic):
             self._get_general_enemy()
             if not SivkovDrone.one_enemy:
                 self._get_enemy_base_or_last_drones()
-        elif SivkovDrone.one_enemy and self.drone.enemy != SivkovDrone.one_enemy:
+        elif SivkovDrone.one_enemy and self.drone.enemy != SivkovDrone.one_enemy \
+                or self.drone.distance_to(self.drone.enemy) <= (self.drone.gun.shot_distance - 100):
             self.drone.enemy = SivkovDrone.one_enemy
             if SivkovDrone.attack_direction == 'up/down':
                 self.drone.position = SivkovDrone.position_handler.get_position_attack(
@@ -683,7 +685,7 @@ class TacticAssault(Tactic):
         if abs(self.drone.direction - vector.direction) <= 5 and self.drone.checking_the_trajectory_of_the_shot(
                 enemy=self.drone.enemy):
             self.drone.gun.shot(self.drone.enemy)
-            SivkovDrone.shots_at_enemy += 1
+        SivkovDrone.shots_at_enemy += 1
 
 
 class TacticRobbery(Tactic):
