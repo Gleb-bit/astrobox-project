@@ -15,6 +15,7 @@ BOTTOM_LINE_HEALTH_FOR_PEACEFUL_SHIP = 100
 BOTTOM_LINE_HEALTH_FOR_WARSHIP = 30
 NUMBER_OF_UNSUCCESSFUL_ATTEMPTS = 75
 SUFFICIENT_SHIP_LOADING = 50
+ADVANCE_RADIUS_MOTHERSHIP_ZONE = 100
 REQUIRED_NUMBER_OF_ENEMY_ACTIVITY_CHECKS = 25
 NUMBER_SHOTS_BEFORE_CHANGE_ENEMY = 3
 MAXIMUM_NUMBER_OF_ENEMIES_TO_START_COLLECTING = 7
@@ -22,8 +23,8 @@ CORECTION_SHOTS_FOR_ATTACK_MOTHERSHIP = 78
 DISTANCE_ENEMY_TO_MOTHERSHIP__FOR_PREEMPTION_SHOT = 200
 PREEMPTION_SHOT = 25
 SAFE_ZONE_FOR_COLLECTING = 250
-AVAILABLE_SECTOR__ONE_NEAREST_TEAM_DISABLED = 1 / 2
-AVAILABLE_SECTOR__TWO_NEAREST_TEAM_ACTIVE = 1 / 3
+AVAILABLE_SECTOR__ONE_NEAREST_TEAM_DISABLED = 1
+AVAILABLE_SECTOR__TWO_NEAREST_TEAM_ACTIVE = 0.8
 
 # Тактика атаки
 NUMBER_SHOTS_BEFORE_CHANGE_ENEMY__TACTIC_ASSAULT = 15
@@ -35,10 +36,10 @@ DISTANCE_FOR_FIRST_DRONE = 47
 CORRECTION_TO_THE_POSITION_OF_THE_OUTERMOST_SHIPS = 10
 
 # При игре один на один
-AVAILABLE_SECTOR__TWO_TEAM__START = 2 / 3
+AVAILABLE_SECTOR__TWO_TEAM__START = 0.9
 NUMBER_SHOTS_BEFORE_CHANGE_ENEMY__TWO_TEAM = 1
 NUMERICAL_SUPERIORITY__TWO_TEAM = 2
-SHELLING_SECTOR__TWO_TEAM = 350
+SHELLING_SECTOR__TWO_TEAM = 1 / 3
 
 # Позиция x для дронов в тактике защиты (положение 1: левый нижний угол)
 POSITION_ONE = 167
@@ -69,7 +70,6 @@ class SivkovDrone(Drone):
     shots_at_enemy = 0
     victim = None
     targets = []
-    checking_enemy_bases_health = 2000
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -262,9 +262,8 @@ class SivkovDrone(Drone):
         """Выдаёт дрону астеройд"""
         self.trouble = 0
         if self.first_flight:
-            work_list = [(self.distance_to(asteroid), asteroid) for asteroid in self.asteroids if asteroid.payload
-                         and not self.position_handler.target_available(target=asteroid)]
-
+            work_list = [(self.distance_to(asteroid), asteroid) for asteroid in self.asteroids if asteroid.payload]
+            # and not self.position_handler.target_available(target=asteroid)]
         else:
             work_list = [(self.distance_to(asteroid), asteroid) for asteroid in self.asteroids if asteroid.payload
                          and self.position_handler.target_available(target=asteroid)]
@@ -383,15 +382,12 @@ class SivkovDrone(Drone):
         for enemy in enemies:
             enemy_base = [base for base in self.scene.motherships if base.team == enemy.team]
             vector = Vector.from_points(enemy.coord, enemy_base[0].coord)
-            if vector.module < MOTHERSHIP_HEALING_DISTANCE and enemy_base[0].is_alive:
+            if vector.module < (MOTHERSHIP_HEALING_DISTANCE + ADVANCE_RADIUS_MOTHERSHIP_ZONE) \
+                    and enemy_base[0].is_alive:
                 continue
             else:
                 work_list.append(enemy)
-        flag = True
-        if SivkovDrone.first_enemy_base.health < SivkovDrone.checking_enemy_bases_health:
-            flag = False
-        SivkovDrone.checking_enemy_bases_health = SivkovDrone.first_enemy_base.health
-        if not work_list and flag:
+        if not work_list:
             SivkovDrone.no_active_enemies += 1
         else:
             SivkovDrone.no_active_enemies = 0
@@ -1076,7 +1072,7 @@ class PositionDown(Position):
         return False
 
     def _checking_target_for_two_teams_y(self, target):
-        if SHELLING_SECTOR__TWO_TEAM < target.coord.y < self.available_y:
+        if theme.FIELD_HEIGHT * SHELLING_SECTOR__TWO_TEAM < target.coord.y < self.available_y:
             return True
         return False
 
