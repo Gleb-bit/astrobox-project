@@ -422,7 +422,9 @@ class IshmukhamedovDrone(Drone):
             return Point(x, y)
         else:
             points = self.commander.get_attack_points(center=Point(x, y), radius=36, size=distance)
-            return points[0]
+            if (points):
+                return points[0]
+            return Point(x, y)
 
     def find_closest_enemy(self):
 
