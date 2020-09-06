@@ -1,17 +1,17 @@
-##### Рейтинг по состоянию на 31.08.2020
+##### Рейтинг по состоянию на 06.09.2020
 
 Позиция|Имя команды|Рейтинг
 ---|---|---:
-1|OkhotnikovFNDrone|974
-2|LepilinDron|928
-3|SivkovDrone|887
-4|IlyinDrone|825
-5|PestovDrone|743
-6|DevastatorDrone|720
-7|GlazovDrone|714
-8|KochetovDrone|700
-9|KhizhovDrone|601
-10|SurkovaDrone|548
-11|IshmukhamedovDrone|513
-12|FominDrone|490
-13|ZhukovDrone|460
+1|SivkovDrone|950
+2|OkhotnikovFNDrone|926
+3|LepilinDron|918
+4|IlyinDrone|857
+5|PestovDrone|738
+6|DevastatorDrone|713
+7|GlazovDrone|706
+8|KochetovDrone|663
+9|KhizhovDrone|594
+10|SurkovaDrone|553
+11|IshmukhamedovDrone|528
+12|ZhukovDrone|476
+13|FominDrone|476
