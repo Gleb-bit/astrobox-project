@@ -520,4 +520,4 @@ class Turret(Role):
         return 'Turret'
 
 
-drone_class = KovalevDrone()
+drone_class = KovalevDrone
