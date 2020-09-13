@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 import math
 from random import shuffle
-
 from astrobox.core import Drone
 import logging
 from astrobox.themes.default import MOTHERSHIP_HEALING_DISTANCE
@@ -45,7 +44,8 @@ class KovalevDrone(Drone):
         self.role.on_load_complete()
 
     def on_stop_at_mothership(self, mothership):
-        self.role.on_stop_at_mothership(mothership)
+        if self.cargo.payload > 0:
+            self.unload_to(mothership)
 
     def on_unload_complete(self):
         self.role.on_unload_complete()
@@ -102,14 +102,13 @@ class Role:
 
     def __init__(self, drone):
         self.drone = drone
-        self.enemy_motherships = []
-        self.enemy_dead_motherships = []
         self.enemies = []
+        self.enemy_motherships = []
+        self.asteroids = []
         self.dead_enemies = []
-        self.allies_alive = []
+        self.enemy_dead_motherships = []
         self.overall_points_with_elerium = []
         self.safe_points_with_elerium = []
-        self.asteroids = []
 
     def on_born(self):
         pass
@@ -173,49 +172,98 @@ class Role:
         self.drone.gun.shot(target)
 
     def get_position_near_mothership(self):
-        if (self.drone.my_mothership.coord.x == 90 and self.drone.my_mothership.coord.y == 90) \
-                or (self.drone.my_mothership.coord.x >= 1110 and self.drone.my_mothership.coord.y >= 510):
-            angles = [-110, -115, 0, 115, 110]
-            koefs = [1, 0.4, 0, 0.4, 1]
-        else:
-            angles = [110, 115, 0, -115, -110]
-            koefs = [1, 0.4, 0, 0.4, 1]
+        base = self.drone.my_mothership.coord
+        koefs = []
+        angles = []
         if theme.FIELD_WIDTH > theme.FIELD_HEIGHT:
-            if (self.drone.my_mothership.coord.x == 90 and self.drone.my_mothership.coord.y == 90) \
-                    or (self.drone.my_mothership.coord.x >= 1110 and self.drone.my_mothership.coord.y >= 510):
+            koefs = [0.5, 0.2, 0.3, 0.7, 1]
+            if (base.x == 90 and base.y == 90) or (base.x != 90 and base.y != 90):
                 angles = [-110, -120, 100, 130, 140]
-                koefs = [0.5, 0.2, 0.3, 0.6, 1]
             else:
                 angles = [110, 120, -120, -120, -135]
-                koefs = [0.5, 0.2, 0.3, 0.7, 1]
+        elif theme.FIELD_WIDTH == theme.FIELD_HEIGHT:
+            koefs = [1, 0.4, 0, 0.4, 1]
+            if (base.x == 90 and base.y == 90) or (base.x != 90 and base.y != 90):
+                angles = [-110, -115, 0, 115, 110]
+            else:
+                angles = [110, 115, 0, -115, -110]
         elif theme.FIELD_WIDTH < theme.FIELD_HEIGHT:
-            if (self.drone.my_mothership.coord.x == 90 and self.drone.my_mothership.coord.y == 90) \
-                    or (self.drone.my_mothership.coord.x >= 1110 and self.drone.my_mothership.coord.y >= 510):
+            koefs = [0.7, 0.3, 0.1, 0.5, 0.9]
+            if (base.x == 90 and base.y == 90) or (base.x != 90 and base.y != 90):
                 angles = [110, 100, -100, -120, -130]
-                koefs = [0.7, 0.3, 0.1, 0.5, 0.9]
             else:
                 angles = [-110, -100, 100, 120, 130]
-                koefs = [0.7, 0.3, 0.1, 0.5, 0.9]
         center_field = Point(theme.FIELD_WIDTH // 2, theme.FIELD_HEIGHT // 2)
-        first_vec = Vector.from_points(self.drone.my_mothership.coord, center_field)
-        first_dist = first_vec.module
-        first_koef = 1 / first_dist
-        norm_vec = Vector(first_vec.x * first_koef * 0.8, first_vec.y * first_koef * 0.8)
-        vec_position = norm_vec * MOTHERSHIP_HEALING_DISTANCE
-        central_position = Point(self.drone.my_mothership.coord.x + vec_position.x,
-                                 self.drone.my_mothership.coord.y + vec_position.y)
-        second_vec = Vector.from_points(central_position, center_field)
-        second_dist = second_vec.module
-        second_koef = 1 / second_dist
-        norm_second_vec = Vector(second_vec.x * second_koef * koefs[self.drone.drone_number],
-                                 second_vec.y * second_koef * koefs[self.drone.drone_number])
-        final_vec = norm_second_vec * MOTHERSHIP_HEALING_DISTANCE
-        final_vec.rotate(angles[self.drone.drone_number])
-        final_position = Point(central_position.x + final_vec.x,
-                               central_position.y + final_vec.y)
+        central_position = self._get_position_from_points(base, center_field, 0.8, None)
+        drone_koef = koefs[self.drone.drone_number]
+        drone_angle = angles[self.drone.drone_number]
+        final_position = self._get_position_from_points(central_position, center_field, drone_koef, drone_angle)
         return final_position
 
+    @staticmethod
+    def _get_position_from_points(first_point, second_point, koef, angle):
+        vec = Vector.from_points(first_point, second_point)
+        dist = vec.module
+        first_koef = 1 / dist
+        norm_vec = Vector(vec.x * first_koef * koef, vec.y * first_koef * koef)
+        vec_position = norm_vec * MOTHERSHIP_HEALING_DISTANCE
+        if angle:
+            vec_position.rotate(angle)
+        position = Point(first_point.x + vec_position.x, first_point.y + vec_position.y)
+        return position
+
+    def get_asteroids_with_elerium(self):
+        """
+        Метод формирует список астероидов с элериумом и сортирует его по расстоянию до дрона
+        """
+        self.asteroids = [[asteroid, self.drone.distance_to(asteroid)] for asteroid in self.drone.asteroids
+                          if asteroid.counter > 0]
+        self.asteroids.sort(key=lambda x: x[1])
+
+    def get_dead_enemies_motherships(self):
+        """
+        Метод формирует список уничтоженных материнских кораблей противника и сортирует его по расстоянию до дрона
+        """
+        self.enemy_dead_motherships = [[mothership, self.drone.distance_to(mothership)]
+                                       for mothership in self.drone.scene.motherships
+                                       if mothership != self.drone.my_mothership and not mothership.is_alive
+                                       and mothership.cargo.payload > 0]
+        self.enemy_dead_motherships.sort(key=lambda x: x[1])
+
+    def get_dead_enemies(self):
+        """
+        Метод формирует список уничтоженных дронов противника и сортирует его по расстоянию до дрона
+        """
+        self.dead_enemies = [[enemy, self.drone.distance_to(enemy)] for enemy in self.drone.scene.drones
+                             if enemy.team != self.drone.team and not enemy.is_alive and enemy.cargo.payload > 0]
+        self.dead_enemies.sort(key=lambda x: x[1])
+
+    def get_safe_points_to_harvest(self):
+        """
+        Метод формирует список безопасных точек для сбора ресурсов и сортирует его по расстоянию до дрона
+        """
+        self.safe_points_with_elerium = [[point[0], self.drone.distance_to(point[0])] for point in
+                                         self.overall_points_with_elerium
+                                         if point[0].distance_to(self.drone.my_mothership) < self.drone.attack_range]
+        self.safe_points_with_elerium.sort(key=lambda x: x[1])
+
+    def get_overall_points_to_harvest(self):
+        """
+        Метод формирует список всех доступных точек для сбора ресурсов и сортирует его по расстоянию до дрона
+        """
+        self.get_dead_enemies()
+        self.get_dead_enemies_motherships()
+        self.get_asteroids_with_elerium()
+        self.overall_points_with_elerium = list(self.asteroids + self.dead_enemies + self.enemy_dead_motherships)
+        self.overall_points_with_elerium.sort(key=lambda x: x[1])
+
     def change_the_role(self, role, drone):
+        """
+        :param role: необходимая роль
+        :param drone: дрон
+        Метод изменяет роль дрона
+        """
+        self.get_overall_points_to_harvest()
         self.drone.role = role(drone)
         self.drone.role.on_born()
 
@@ -252,67 +300,11 @@ class Harvester(Role):
     def on_unload_complete(self):
         self.drone.target = self.get_point()
         self._update_drones_targets()
-        self.drone.move_at(self.drone.target)
-
-    def _get_asteroids_with_elerium(self):
-        """
-        Метод формирует список астероидов с элериумом и сортирует его по расстоянию до дрона
-        """
-        self.asteroids = [[asteroid, self.drone.distance_to(asteroid)] for asteroid in self.drone.asteroids
-                          if asteroid.counter > 0]
-        self.asteroids.sort(key=lambda x: x[1])
-
-    def _get_dead_enemies_motherships(self):
-        """
-        Метод формирует список уничтоженных материнских кораблей противника и сортирует его по расстоянию до дрона
-        """
-        self.enemy_dead_motherships = [[mothership, self.drone.distance_to(mothership)]
-                                       for mothership in self.drone.scene.motherships
-                                       if mothership != self.drone.my_mothership and not mothership.is_alive
-                                       and mothership.cargo.payload > 0]
-        self.enemy_dead_motherships.sort(key=lambda x: x[1])
-
-    def _get_dead_enemies(self):
-        """
-        Метод формирует список уничтоженных дронов противника и сортирует его по расстоянию до дрона
-        """
-        self.dead_enemies = [[enemy, self.drone.distance_to(enemy)] for enemy in self.drone.scene.drones
-                             if enemy.team != self.drone.team and not enemy.is_alive and enemy.cargo.payload > 0]
-        self.dead_enemies.sort(key=lambda x: x[1])
-
-    def _get_safe_points_to_harvest(self, nearest_enemy):
-        """
-        Метод формирует список безопасных точек для сбора ресурсов и сортирует его по расстоянию до дрона
-        """
-        self.safe_points_with_elerium = [[point[0], self.drone.distance_to(point[0])] for point in
-                                         self.overall_points_with_elerium
-                                         if point[0].distance_to(nearest_enemy) > self.drone.attack_range]
-        self.safe_points_with_elerium.sort(key=lambda x: x[1])
-
-    def _get_overall_points_to_harvest(self):
-        """
-        Метод формирует список всех доступных точек для сбора ресурсов и сортирует его по расстоянию до дрона
-        """
-        self._get_dead_enemies()
-        self._get_dead_enemies_motherships()
-        self._get_asteroids_with_elerium()
-        self.overall_points_with_elerium = list(self.asteroids + self.dead_enemies + self.enemy_dead_motherships)
-        self.overall_points_with_elerium.sort(key=lambda x: x[1])
-
-    def _get_nearest_point_to_harvest(self):
-        self.get_enemies()
-        self.get_enemies_motherships()
-        enemy_mothership = None
-        if len(self.enemy_motherships) > 0:
-            enemy_mothership = self.enemy_motherships[0]
-        nearest_point = self.drone.my_mothership
-        if enemy_mothership and self.enemies and self.overall_points_with_elerium:
-            self._get_safe_points_to_harvest(self.enemies[0][0])
-            if self.safe_points_with_elerium:
-                nearest_point = self.safe_points_with_elerium[0][0]
-        elif not self.enemies and self.overall_points_with_elerium:
-            nearest_point = self.overall_points_with_elerium[0][0]
-        return nearest_point
+        self.get_safe_points_to_harvest()
+        if self.safe_points_with_elerium:
+            self.drone.move_at(self.safe_points_with_elerium[0][0])
+        else:
+            self.change_the_role(Turret, self.drone)
 
     def on_stop_at_target(self, target):
         if target:
@@ -321,21 +313,12 @@ class Harvester(Role):
             else:
                 self.drone.target = self.get_point()
                 self.drone.on_stop_at_asteroid(self.drone.target)
+        else:
+            self.on_stop()
 
     def on_stop(self):
         self.drone.target = self.get_point()
         self.drone.move_at(self.drone.target)
-
-    def _update_drones_targets(self):
-        """
-        Обновляет цели для всех живых дронов в команде
-        :return: None
-        """
-        for drone in self.drone.my_team:
-            if isinstance(drone.role, Harvester) and drone.is_alive:
-                if not drone.cargo.is_full:
-                    drone.target = drone.role.get_point()
-                    drone.move_at(drone.target)
 
     def get_point(self):
         """
@@ -346,18 +329,55 @@ class Harvester(Role):
         расстояния от сборщика, возвращает оптимальную цель для сбора.
         :return: obj; type of obj = astrobox.core.MotherShip or astrobox.core.Asteroid or astrobox.core.Drone
         """
-        self._get_overall_points_to_harvest()
-        nearest_point = self.drone.my_mothership
         if not self.drone.cargo.is_full:
+            self.get_overall_points_to_harvest()
             nearest_point = self._get_nearest_point_to_harvest()
             if nearest_point == self.drone.my_mothership:
-                if self.enemies or self.enemy_motherships:
-                    self.change_the_role(Destructor, self.drone)
-                else:
+                if self.enemies:
+                    if self.drone.cargo.payload == 0:
+                        if len(self.enemies) < ((len(self.drone.scene.teams) - 1) * 3):
+                            self.change_the_role(Destructor, self.drone)
+                        else:
+                            self.change_the_role(Turret, self.drone)
+                elif not self.enemies and not self.enemy_motherships and not self.overall_points_with_elerium:
                     self.drone.print_statistics(for_team=True)
             return nearest_point
         else:
-            return nearest_point
+            return self.drone.my_mothership
+
+    def _get_nearest_point_to_harvest(self):
+        """
+        Определение ближайшей точки для сбора ресурсов
+        :return: оптимальная точка с ресурсами или материнский корабль
+        """
+        self.get_enemies()
+        self.get_enemies_motherships()
+        nearest_point = self.drone.my_mothership
+        if self.drone.meter_2 < self.drone.limit_health:
+            nearest_point = self.drone.my_mothership
+        else:
+            if self.enemies and self.overall_points_with_elerium:
+                if len(self.enemies) > 10 and self.drone.my_mothership.payload < 500:
+                    nearest_point = self.overall_points_with_elerium[0][0]
+                else:
+                    self.get_safe_points_to_harvest()
+                    if self.safe_points_with_elerium:
+                        nearest_point = self.safe_points_with_elerium[0][0]
+            elif not self.enemies and self.overall_points_with_elerium:
+                nearest_point = self.overall_points_with_elerium[0][0]
+            if self.drone.meter_2 < self.drone.limit_health:
+                nearest_point = self.drone.my_mothership
+        return nearest_point
+
+    def _update_drones_targets(self):
+        """
+        Обновляет цели для всех живых дронов в команде
+        :return: None
+        """
+        for drone in self.drone.my_team:
+            if isinstance(drone.role, Harvester) and drone.is_alive:
+                drone.target = drone.role.get_point()
+                drone.move_at(drone.target)
 
     def __str__(self):
         return 'Harvester'
@@ -377,10 +397,10 @@ class Destructor(Role):
     def get_place_near(point, target, angle):
         """
         Расчет места рядом с point с отклонением angle от цели target
-        :param point:
-        :param target:
-        :param angle:
-        :return: new place point
+        :param point: исходная точка
+        :param target: предполагаемая цель
+        :param angle: угол отклонения
+        :return: точка недалеко от цели
         """
         vec = Vector(point.x - target.x, point.y - target.y)
         vec.rotate(angle)
@@ -422,7 +442,7 @@ class Destructor(Role):
         """
         Находит и возвращает валидную точку, которую можно занять для атаки цели
         :param target: цель атаки
-        :return:
+        :return: оптимальную(нет) точку рядом с врагом
         """
         if isinstance(target, GameObject):
             vec = Vector.from_points(target.coord, self.drone.coord)
@@ -447,6 +467,10 @@ class Destructor(Role):
         return Point(theme.FIELD_WIDTH // 2, theme.FIELD_HEIGHT // 2)
 
     def _attack_or_retreat(self, enemy):
+        """
+        :param enemy: ближайший противник
+        Дрон думает, что ему делать, стрелять, занять позицию для  стрельбы или отступить
+        """
         if self.drone.meter_2 < self.drone.limit_health:
             self.drone.move_at(self.drone.my_mothership)
         else:
@@ -454,9 +478,6 @@ class Destructor(Role):
                     and self.drone.distance_to(self.drone.my_mothership) > 30 \
                     and not self._ally_on_fire(enemy):
                 self.attack_the_target(enemy)
-                self.allies_alive = [ally for ally in self.drone.my_team if ally.is_alive]
-                if len(self.allies_alive) <= 2:
-                    self.change_the_role(Turret, self.drone)
             else:
                 self._get_position_to_attack(enemy)
 
@@ -468,8 +489,17 @@ class Destructor(Role):
         self.get_enemies()
         self.get_enemies_motherships()
         if self.enemies:
-            nearest_enemy = self.get_nearest_enemy()
-            self._attack_or_retreat(nearest_enemy)
+            self.get_overall_points_to_harvest()
+            self.get_safe_points_to_harvest()
+            if self.safe_points_with_elerium:
+                self.change_the_role(Harvester, self.drone)
+            allies_alive = [ally for ally in self.drone.my_team if ally.is_alive]
+            if len(allies_alive) <= len(self.enemies) / (len(self.drone.scene.teams) - 1) \
+                    and self.enemy_motherships:
+                self.change_the_role(Turret, self.drone)
+            else:
+                nearest_enemy = self.get_nearest_enemy()
+                self._attack_or_retreat(nearest_enemy)
         elif not self.enemies and self.enemy_motherships:
             nearest_enemy = self.enemy_motherships[0]
             self._attack_or_retreat(nearest_enemy)
@@ -477,6 +507,16 @@ class Destructor(Role):
             self.change_the_role(Harvester, self.drone)
 
     def on_stop(self):
+        if self.drone.coord.x == self.drone.my_mothership.x and self.drone.coord.y == self.drone.my_mothership.y \
+                and self.drone.cargo.payload > 0:
+            self.drone.unload_to(self.drone.my_mothership)
+        else:
+            self.on_stop_at_target(target=None)
+
+    def on_unload_complete(self):
+        self.on_stop_at_target(target=None)
+
+    def on_load_complete(self):
         self.on_stop_at_target(target=None)
 
     def on_stop_at_asteroid(self, asteroid):
@@ -499,22 +539,29 @@ class Turret(Role):
             self.drone.move_at(target)
 
     def on_stop_at_target(self, target):
-        self.allies_alive = [ally for ally in self.drone.my_team if ally.is_alive]
+        allies_alive = [ally for ally in self.drone.my_team if ally.is_alive]
         nearest_enemy = self.get_nearest_enemy()
-        if self.enemies:
-            if len(self.allies_alive) > 2:
-                if len(self.enemies) <= 3:
-                    self.take_the_roles(destructors=4, harvesters=1, turrets=0)
+        if nearest_enemy:
             if self.drone.distance_to(nearest_enemy) < self.drone.attack_range + 100:
                 self.attack_the_target(nearest_enemy)
             else:
-                self.drone.turn_to(nearest_enemy)
+                self.get_overall_points_to_harvest()
+                self.get_safe_points_to_harvest()
+                if self.safe_points_with_elerium:
+                    self.change_the_role(Harvester, self.drone)
+                elif len(self.enemies) < len(allies_alive):
+                    self.change_the_role(Destructor, self.drone)
+                else:
+                    self.drone.turn_to(nearest_enemy)
 
     def on_stop_at_asteroid(self, asteroid):
         self.on_stop_at_target(target=asteroid)
 
     def on_stop(self):
         self.on_stop_at_target(target=None)
+
+    def on_unload_complete(self):
+        self.on_born()
 
     def __str__(self):
         return 'Turret'
