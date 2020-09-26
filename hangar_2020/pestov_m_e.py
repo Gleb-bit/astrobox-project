@@ -118,6 +118,9 @@ class PestovDrone(Drone):
             raise RoleError('try_to_depart: Только сборщик может собирать ресурсы')
 
     def on_wake_up(self):  # совершенно не понимаю, в какой момент вызывается этот метод, но он явно важен
+        # TODO - В этом метде ошибка такого типа:
+        #  [ERROR]: PestovDrone:8: Exception at obj(8, p(1071.9,278.5) v(147.5,1.3)) event EventWakeUp handle: obj(8, p(1071.9,278.5) v(147.5,1.3)) is not in list
+        return
         if isinstance(self.role, Harvester):
             self.try_to_depart()
         elif isinstance(self.role, Fighter):

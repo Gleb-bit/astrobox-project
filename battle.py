@@ -4,6 +4,7 @@ import logging
 import os
 import random
 import sys
+from collections import OrderedDict
 from pprint import pprint
 
 import settings
@@ -60,6 +61,7 @@ def run_battle(player_modules, speed=150, asteroids_count=50, drones_count=5, sh
         can_fight=True,
         headless=not show_screen,
     )
+    scene._Scene__teams = OrderedDict()
     drones_teams = {}
     drones_paths = {}
     for i, team_module in enumerate(player_modules):
