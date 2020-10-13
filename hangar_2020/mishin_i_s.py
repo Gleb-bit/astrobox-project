@@ -240,4 +240,4 @@ class MishinDrone(Drone):
                 return mothership
 
 
-drone_class = MishinDrone()
+drone_class = MishinDrone
