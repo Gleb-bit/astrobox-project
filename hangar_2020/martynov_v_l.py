@@ -43,6 +43,7 @@ class MartynovDrone(Drone):
             'alive_motherships': 0,
             'enemy_drones_on_mothership': 0,
             'alive_teammates': 0,
+            'collector':0
 
         }
 
@@ -79,29 +80,21 @@ class MartynovDrone(Drone):
         Защищаем, если противников больше, чем живых союзников
         """
 
-        self.dict_analytic['alive_teammates'] = len([drone for drone in self.teammates if drone.is_alive])
-        alive_enemy = self.dict_analytic['alive_drones'] + self.dict_analytic['alive_motherships']
-        collect_from = (
-                self.dict_analytic['dead_full_drones']
-                + self.dict_analytic['dead_full_motherships']
-                + self.dict_analytic['asteroid']
-        )
+        all_on_mothership, alive_enemy, collect_from = self._prepare_analityc()
+
+
+        if self.near(self.mothership):
+            if not self.is_empty:
+                self.unload_to(self.mothership)
 
         if self.distance_to(self.mothership) < 150 and self.act_mode == 'attack':
             self.act_mode = 'defender'
         elif self.dict_analytic['alive_drones'] > self.dict_analytic['alive_teammates']:
-            self.act_mode = 'defender'
-            self.debug(f'collect_or_attack 1 => self.act_mode: defender')
+            self._deffend_or_collect(all_on_mothership=all_on_mothership)
+
         elif alive_enemy \
-                and self.dict_analytic['enemy_drones_on_mothership'] == self.dict_analytic['alive_drones']:
-            if collect_from:
-                self.act_mode = 'collect'
-            elif not self.is_empty:
-                self.act_mode = 'back'
-            elif self.dict_analytic['alive_motherships']:
-                self.act_mode = 'attack'
-            else:
-                self.act_mode = 'defender'
+                and all_on_mothership:
+            self._if_all_enemy_on_motherships(collect_from)
         elif alive_enemy != 0:
             self.act_mode = 'attack'
         elif collect_from:
@@ -111,6 +104,48 @@ class MartynovDrone(Drone):
             self.debug(f'collect_or_attack 1 => self.act_mode: back')
             self.act_mode = 'back'
 
+    def _deffend_or_collect(self, all_on_mothership):
+        if self.target_to_shoot and self.target_to_collect and \
+                self.distance_to_mother(self.target_to_shoot[0]) * 0.7 > self.distance_to_mother(
+            self.target_to_collect[0]) and all_on_mothership:
+            self.act_mode = 'collect'
+
+        self.act_mode = 'defender'
+        self.debug(f'collect_or_attack 1 => self.act_mode: defender')
+
+    def _if_all_enemy_on_motherships(self, collect_from):
+        if collect_from:
+            self.act_mode = 'collect'
+        elif not self.is_empty:
+            self.act_mode = 'back'
+        elif self.dict_analytic['alive_motherships']:
+            self.act_mode = 'attack'
+        else:
+            self.act_mode = 'defender'
+
+    def distance_to_mother(self, other):
+        """
+            The distance to other points
+        """
+        return math.sqrt((self.mothership.coord.x - other.x) ** 2 + (self.mothership.coord.y - other.y) ** 2)
+
+    def _prepare_analityc(self):
+        self.dict_analytic['alive_teammates'] = len([drone for drone in self.teammates if drone.is_alive])
+        alive_enemy = self.dict_analytic['alive_drones'] + self.dict_analytic['alive_motherships']
+        collect_from = (
+                self.dict_analytic['dead_full_drones']
+                + self.dict_analytic['dead_full_motherships']
+                + self.dict_analytic['asteroid']
+        )
+
+        self.dict_analytic['collector'] = len([
+            drone for drone in self.teammates
+            if drone.is_alive and drone.act_mode == 'collect'])
+        self.dict_analytic['collector'] += 1 if self.act_mode == 'collect' else 0
+
+        all_on_mothership = self.dict_analytic['enemy_drones_on_mothership'] == self.dict_analytic['alive_drones']
+
+        return all_on_mothership, alive_enemy, collect_from
 
     def on_stop_at_asteroid(self, asteroid):
         self.next_action()
@@ -244,9 +279,9 @@ class MartynovDrone(Drone):
             if abs(vec.direction - self.direction) >= 7:
                 self.turn_to(self.target_to_shoot[0])
 
-            if self.distance_to(self.target_to_shoot[0]) <= self.gun.shot_distance:
-                if self.teammates_on_attack_line():
-                    self.gun.shot(self.target_to_shoot[0])
+            # if self.distance_to(self.target_to_shoot[0]) <= self.gun.shot_distance:
+            if self.teammates_on_attack_line():
+                self.gun.shot(self.target_to_shoot[0])
 
     def teammates_on_attack_line(self):
         """
@@ -543,7 +578,7 @@ class MartynovDrone(Drone):
                and drone.is_alive is True
         ]
         self.dict_analytic['alive_drones'] = len(choice_drones)
-        enemy_drones_on_mothership = [drone for drone in choice_drones if drone[4] <= 200]
+        enemy_drones_on_mothership = [drone for drone in choice_drones if drone[4] <= 250]
         self.dict_analytic['enemy_drones_on_mothership'] = len(enemy_drones_on_mothership)
         # Ближайший противник
 
@@ -640,48 +675,48 @@ class MartynovDrone(Drone):
         self.debug(f'_collect_analytics 1 => '
                      f'добавлено астероидов для сбора: {self.dict_analytic["asteroid"]}')
 
-        if len(self.choice_collect) == 0:
-            # Отбираем мёртвые базы с fullness > 0
-            another_mothership = [
-                [
-                    mothership,
-                    self.distance_to(mothership),
-                    mothership.payload,
-                    'mothership',
-                ] for mothership in self.scene.motherships
-                if mothership != self.mothership
-                   and mothership.is_alive is False
-                   and mothership.payload > 0
-            ]
+        # if len(self.choice_collect) == 0:
+        # Отбираем мёртвые базы с fullness > 0
+        another_mothership = [
+            [
+                mothership,
+                self.distance_to(mothership),
+                mothership.payload,
+                'mothership',
+            ] for mothership in self.scene.motherships
+            if mothership != self.mothership
+               and mothership.is_alive is False
+               and mothership.payload > 0
+        ]
 
-            self.dict_analytic['dead_full_motherships'] = len(another_mothership)
+        self.dict_analytic['dead_full_motherships'] = len(another_mothership)
 
-            self.choice_collect.extend(another_mothership)
-            self.debug(f'_collect_analytics 1 => '
-                         f'добавлено матерей для сбора: {self.dict_analytic["dead_full_motherships"]}')
-            # Сортируем исходя из дистанции
-            self.choice_collect = sorted(self.choice_collect, key=lambda x: x[1])
+        self.choice_collect.extend(another_mothership)
+        self.debug(f'_collect_analytics 1 => '
+                     f'добавлено матерей для сбора: {self.dict_analytic["dead_full_motherships"]}')
+        # Сортируем исходя из дистанции
+        self.choice_collect = sorted(self.choice_collect, key=lambda x: x[1])
 
-        if len(self.choice_collect) == 0:
-            # Отбираем мёртвых дронов с fullness > 0
-            another_drones = [
-                [
-                    drone,
-                    self.distance_to(drone),
-                    drone.payload,
-                    'drone',
-                ] for drone in self.scene.drones
-                if drone != self
-                   and drone.is_alive is False
-                   and drone.payload > 0
-            ]
+        # if len(self.choice_collect) == 0:
+        # Отбираем мёртвых дронов с fullness > 0
+        another_drones = [
+            [
+                drone,
+                self.distance_to(drone),
+                drone.payload,
+                'drone',
+            ] for drone in self.scene.drones
+            if drone != self
+               and drone.is_alive is False
+               and drone.payload > 0
+        ]
 
-            self.dict_analytic['dead_full_drones'] = len(another_drones)
-            self.debug(
-                f'_collect_analytics 1 => добавлено дронов для сбора: {self.dict_analytic["dead_full_drones"]}')
-            self.choice_collect.extend(another_drones)
-            self.debug(f'_collect_analytics 1 => '
-                         f'всего объектов для сбора: {len(self.choice_collect)}')
+        self.dict_analytic['dead_full_drones'] = len(another_drones)
+        self.debug(
+            f'_collect_analytics 1 => добавлено дронов для сбора: {self.dict_analytic["dead_full_drones"]}')
+        self.choice_collect.extend(another_drones)
+        self.debug(f'_collect_analytics 1 => '
+                     f'всего объектов для сбора: {len(self.choice_collect)}')
         self.near_collect(self.choice_collect)
 
     def _elerium_gathering(self):
@@ -743,6 +778,3 @@ class MartynovDrone(Drone):
         ]
         self.debug(f'_asteroid_target_team 1 => астероиды у союзников: {asteroid_target}')
         return asteroid_target
-
-
-drone_class = MartynovDrone
