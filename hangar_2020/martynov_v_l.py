@@ -1,4 +1,3 @@
-import logging
 import math
 
 from astrobox.core import Drone
@@ -6,17 +5,6 @@ from astrobox.themes.default import MOTHERSHIP_HEALING_DISTANCE
 from robogame_engine.geometry import Point, Vector
 from robogame_engine.theme import theme
 
-delay = 0
-
-log = logging.getLogger('martynov_log')
-log.setLevel(level=logging.INFO)
-
-log_path = 'martynov_log.log'
-
-file_handler = logging.FileHandler(log_path, encoding='utf8')
-file_handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
-file_handler.setLevel(level=logging.DEBUG)
-log.addHandler(file_handler)
 
 
 
@@ -28,7 +16,6 @@ class MartynovDrone(Drone):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        log.info('Лог создан 2')
         self.target_to_collect = list()
         self.target_to_shoot = list()
         self.act_mode = 'collect'
@@ -43,20 +30,9 @@ class MartynovDrone(Drone):
             'alive_motherships': 0,
             'enemy_drones_on_mothership': 0,
             'alive_teammates': 0,
-            'collector':0
+            'collector': 0
 
         }
-
-    def _sum_distance(self, target):
-        """
-        считаем пройденную дистанцию Дроном в одном из состояний загрузки
-        """
-        if self.is_full:
-            self.distance_loaded += self.distance_to(target)
-        elif self.is_empty:
-            self.distance_unloaded += self.distance_to(target)
-        else:
-            self.distance_partly_loaded += self.distance_to(target)
 
 
     def move_at(self, target, speed=None):
@@ -64,15 +40,10 @@ class MartynovDrone(Drone):
         добавляем к методу move_at() основного класса подсчёт дистанции
         """
         super().move_at(target, speed=speed)
-        self._sum_distance(target)
 
     def on_born(self):
-        self.debug(f'on_born 1 => action_analytics')
         self.action_analytics()
-        self.debug(f'on_born 2 => collect_or_attack')
         self.collect_or_attack()
-        self.logger.addHandler(file_handler)
-        self.debug(f"I'm borning {self.id}")
 
     def collect_or_attack(self):
         """
@@ -81,7 +52,6 @@ class MartynovDrone(Drone):
         """
 
         all_on_mothership, alive_enemy, collect_from = self._prepare_analityc()
-
 
         if self.near(self.mothership):
             if not self.is_empty:
@@ -98,10 +68,8 @@ class MartynovDrone(Drone):
         elif alive_enemy != 0:
             self.act_mode = 'attack'
         elif collect_from:
-            self.debug(f'collect_or_attack 5 => self.act_mode: collect')
             self.act_mode = 'collect'
         elif alive_enemy == 0 and collect_from == 0:
-            self.debug(f'collect_or_attack 1 => self.act_mode: back')
             self.act_mode = 'back'
 
     def _deffend_or_collect(self, all_on_mothership):
@@ -111,7 +79,6 @@ class MartynovDrone(Drone):
             self.act_mode = 'collect'
 
         self.act_mode = 'defender'
-        self.debug(f'collect_or_attack 1 => self.act_mode: defender')
 
     def _if_all_enemy_on_motherships(self, collect_from):
         if collect_from:
@@ -181,24 +148,19 @@ class MartynovDrone(Drone):
             self.target_to_shoot = list()
             self.point_to = None
             self.choice_collect = list()
-            self.debug(f'wandering_in_space 1 => Дрона нет в живых.')
             return False
         # Возврат на базу, если жизней менее или равно 50%
         elif self.health < 70:
             self.point_to = self.mothership
             self.act_mode = 'back'
-            self.debug(f'wandering_in_space 2 => self.act_mode = back')
             return True
 
         else:
             # Если можем, то блуждаем
-            self.debug(f'wandering_in_space 3 => Жив и действует')
             return True
 
     def next_action(self):
-        self.debug(f'Привет, я дрон {self}')
         if self.is_alive:
-            self.debug(f'on_heartbeat 1 => action_analytics')
             self.action_analytics()
             self.collect_or_attack()
 
@@ -206,23 +168,15 @@ class MartynovDrone(Drone):
         if self.wandering_in_space():
 
             if self.act_mode == 'collect':
-                self.debug(f'on_heartbeat 2 => space_collect_from')
                 self.space_collect_from()
             # Если закончились ресурсы на астероидах, то аттачим
             elif self.act_mode == 'attack':
-                self.debug(f'on_heartbeat 3 => space_enemy_attack')
                 self.space_enemy_attack()
 
-            elif self.act_mode == 'mother_attack':
-                self.debug(f'on_heartbeat 3 => space_enemy_attack')
-                self.space_enemy_mother_attack()
-
             elif self.act_mode == 'defender':
-                self.debug(f'on_heartbeat 3 => space_enemy_attack')
                 self.defend_my_base()
 
             elif self.act_mode == 'back':
-                self.debug(f'on_heartbeat 5 => return_to_base')
                 self.return_to_base()
 
             self.check_game_over()
@@ -233,7 +187,6 @@ class MartynovDrone(Drone):
     def space_enemy_attack(self):
 
         if self.point_to is None:
-            self.debug(f'space_enemy_attack 1 => _get_near_point + _get_places_near_enemy')
             self.point_to = self._get_near_point(self, self._get_places_near_enemy())
 
         self._attack_move_or_turn()
@@ -241,22 +194,17 @@ class MartynovDrone(Drone):
         vec = Vector.from_points(self.coord, self.target_to_shoot[0].coord)
         if abs(vec.direction - self.direction) < 10:
             if self.teammates_on_attack_line():
-                self.debug(f'space_enemy_attack 5 => gun.shot')
                 self.gun.shot(self.target_to_shoot[0])
             else:
-                self.debug(f'space_enemy_attack 6 => _get_near_point + _get_places_near_enemy')
                 self.move_at(self.point_to)
 
     def _attack_move_or_turn(self):
         if not self.near(self.point_to):
-            self.debug(f'space_enemy_attack 2 => move_at')
             self.move_at(self.point_to)
         elif self.distance_to(self.target_to_shoot[0]) >= self.gun.shot_distance:
-            self.debug(f'space_enemy_attack 3 => _get_near_point + _get_places_near_enemy')
             self.point_to = self._get_near_point(self, self._get_places_near_enemy())
             self.move_at(self.point_to)
         else:
-            self.debug(f'space_enemy_attack 4 => turn_to')
             self.turn_to(self.target_to_shoot[0])
 
     def defend_my_base(self):
@@ -338,7 +286,6 @@ class MartynovDrone(Drone):
 
             point_list.append(Point(point_x, point_y))
 
-        self.debug(f'_get_places_near_enemy нашли токчи рядом с дроном противником')
         return point_list
 
     def _get_near_point(self, team_object, all_point_list):
@@ -362,7 +309,6 @@ class MartynovDrone(Drone):
                         ]
 
         choice_point.sort(key=lambda x_point: team_object.distance_to(x_point))
-        self.debug(f'_get_near_point 1 => выбрал {choice_point[0]} из точек {choice_point}.')
 
         return choice_point[0] if choice_point else False
 
@@ -403,7 +349,6 @@ class MartynovDrone(Drone):
 
             point_list.append(Point(point_x, point_y))
 
-        self.debug(f'_get_places_near_mothership нашли токчи рядом с матерью')
         return point_list
 
     def check_game_over(self):
@@ -421,12 +366,10 @@ class MartynovDrone(Drone):
         """
 
         if self.near(self.mothership):
-            self.debug(f'return_to_base 1 => return')
             if not self.is_empty:
                 self.unload_to(self.mothership)
 
         else:
-            self.debug(f'return_to_base 2 => move_at {self.mothership}')
             self.move_at(self.mothership)
 
     def space_collect_from(self):
@@ -439,7 +382,6 @@ class MartynovDrone(Drone):
             # Не пустой - собираем
             if not self.target_to_collect[0].is_empty:
 
-                self.debug(f'on_stop_at_asteroid => load_from {self.target_to_collect[0]}')
                 self.load_from(self.target_to_collect[0])
 
                 self._collect_if_transition()
@@ -458,14 +400,12 @@ class MartynovDrone(Drone):
 
     def _collect_if_is_empty(self):
         if not self.choice_collect:
-            self.debug('on_load_complete, choice_collect is None')
             self.point_to = self.mothership
             self.move_at(self.point_to)
         else:
             self.target_to_collect = [self.mothership, 0, 0, 'self.mothership'] \
                 if self.is_full else self.choice_collect[0]
 
-            self.debug('on_load_complete', self.target_to_collect)
             self.point_to = self.target_to_collect[0]
             self.move_at(self.point_to)
 
@@ -473,27 +413,22 @@ class MartynovDrone(Drone):
         if self._transition:
             # Выбор, на астероид или на базу
             next_target = self._elerium_gathering()
-            self.debug(f'space_collect_from 1 => turn_to {next_target[0]}')
             self.turn_to(next_target[0])
         else:
             # Если полный трюм, меняем маршрут в полёте и летим разгружаться
             if self.is_full:
                 self.point_to = self.mothership
-                self.debug(f'space_collect_from_asteroid 2 => move_at {self.point_to}')
                 self.move_at(self.point_to)
             else:
                 if self.target_to_collect[2] > 0:
                     self.point_to = self.target_to_collect[0]
-                    self.debug(f'space_collect_from_asteroid 3 => move_at {self.point_to}')
                     self.move_at(self.point_to)
                     # Если есть ресурс в трюме, НО задача атаковать, то сбрасываем отвозим.
                 else:
                     # Если у нашей цели закончился элириум
-                    self.debug(f'space_collect_from_asteroid 4 => move_to_new_asteroid')
                     self.move_to_new_asteroid()
 
     def _collect_if_at_mothership(self):
-        self.debug(f'on_stop_at_mothership')
         # Дрон не пустой - отдаём матери
         if not self.is_empty:
             self.unload_to(self.mothership)
@@ -501,11 +436,8 @@ class MartynovDrone(Drone):
                 self.turn_to(self.target_to_collect[0])
         else:
             # Если дрон пустой, летим к следующей цели
-            if not self.choice_collect:
-                self.debug('on_unload_complete, choice_collect is None')
-            else:
+            if self.choice_collect:
                 self.target_to_collect = self.choice_collect[0]
-                self.debug('on_unload_complete', self.target_to_collect)
                 self.point_to = self.target_to_collect[0]
                 self.move_at(self.point_to)
 
@@ -519,7 +451,6 @@ class MartynovDrone(Drone):
         return self.distance_to(obj) <= self.radius / 10
 
     def _enemy_mother_analytics(self):
-        self.debug('Выбираем мать для атаки!')
 
         # Матеря с защитой
         mothers_defend = {}
@@ -553,13 +484,9 @@ class MartynovDrone(Drone):
                     or not self.target_to_shoot[0].is_alive
                     or self.distance_to(self.target_to_shoot[0]) > self.gun.shot_distance * 0.7
             ):
-                self.debug(f'_enemy_drone_analytics 1 => near_enemy {choice_motherships}')
                 self.near_enemy(choice_motherships)
-            else:
-                self.debug(f'_enemy_drone_analytics 2 => near_enemy не поменялась {self.target_to_shoot}')
         else:
             self.target_to_shoot = None
-            self.debug(f'_enemy_drone_analytics 3 => Нет Матерей для атаки!')
 
     def _enemy_drone_analytics(self):
         """
@@ -597,13 +524,9 @@ class MartynovDrone(Drone):
                     or not self.target_to_shoot[0].is_alive
                     or self.distance_to(self.target_to_shoot[0]) > self.gun.shot_distance * shot_dist_koef
             ):
-                self.debug(f'_enemy_drone_analytics 1 => near_enemy {choice_drones}')
                 self.near_enemy(choice_drones)
-            else:
-                self.debug(f'_enemy_drone_analytics 2 => near_enemy не поменялась {self.target_to_shoot}')
         else:
             self.target_to_shoot = None
-            self.debug(f'_enemy_drone_analytics 3 => Нет дронов для атаки!')
 
     def near_enemy(self, object_list):
         """
@@ -613,16 +536,13 @@ class MartynovDrone(Drone):
         """
 
         if not object_list:
-            self.debug('Враг не найден.')
             self.target_to_shoot.clear()
-            self.debug(f'near_enemy 1 => Объект не найден. Очищаю список объектов для атаки.')
         else:
             object_list.sort(key=lambda x: x[1])
             new_target_to_shoot = object_list[0]
             # Если новая цель, то выбираем точку для атаки.
             if new_target_to_shoot != self.target_to_shoot:
                 self.target_to_shoot = new_target_to_shoot
-            self.debug(f'near_enemy 2 => Враг найден {self.target_to_shoot}, точка для атаки {self.point_to}')
 
     def near_collect(self, object_list):
         """
@@ -632,27 +552,19 @@ class MartynovDrone(Drone):
         """
 
         if not object_list:
-            self.debug('Объект не найден.')
             self.target_to_collect.clear()
-            self.debug(f'near_collect 1 => Объект не найден. Очищаю список объектов для сбора.')
         else:
             object_list.sort(key=lambda x: x[1])
             self.target_to_collect = object_list[0]
-            self.debug(f'near_collect 2 => Объект найден.')
 
     def action_analytics(self):
-        self.debug(f'action_analytics 1 => _enemy_drone_analytics.')
         self._enemy_drone_analytics()
 
         if not self.target_to_shoot \
                 or self.dict_analytic['enemy_drones_on_mothership'] == self.dict_analytic['alive_drones']:
-            self.debug(f'action_analytics 2 => _enemy_mother_analytics.')
             self._enemy_mother_analytics()
 
-
-        self.debug(f'action_analytics 3 => _collect_analytics.')
         self._collect_analytics()
-        self.debug(f'action_analytics 3 => collect_or_attack.')
 
     def _collect_analytics(self):
         # Анализируем, с кого можно фармануть
@@ -673,10 +585,7 @@ class MartynovDrone(Drone):
         ]
 
         self.dict_analytic['asteroid'] = len(self.choice_collect)
-        self.debug(f'_collect_analytics 1 => '
-                     f'добавлено астероидов для сбора: {self.dict_analytic["asteroid"]}')
 
-        # if len(self.choice_collect) == 0:
         # Отбираем мёртвые базы с fullness > 0
         another_mothership = [
             [
@@ -693,12 +602,10 @@ class MartynovDrone(Drone):
         self.dict_analytic['dead_full_motherships'] = len(another_mothership)
 
         self.choice_collect.extend(another_mothership)
-        self.debug(f'_collect_analytics 1 => '
-                     f'добавлено матерей для сбора: {self.dict_analytic["dead_full_motherships"]}')
+
         # Сортируем исходя из дистанции
         self.choice_collect = sorted(self.choice_collect, key=lambda x: x[1])
 
-        # if len(self.choice_collect) == 0:
         # Отбираем мёртвых дронов с fullness > 0
         another_drones = [
             [
@@ -713,11 +620,9 @@ class MartynovDrone(Drone):
         ]
 
         self.dict_analytic['dead_full_drones'] = len(another_drones)
-        self.debug(
-            f'_collect_analytics 1 => добавлено дронов для сбора: {self.dict_analytic["dead_full_drones"]}')
+
         self.choice_collect.extend(another_drones)
-        self.debug(f'_collect_analytics 1 => '
-                     f'всего объектов для сбора: {len(self.choice_collect)}')
+
         self.near_collect(self.choice_collect)
 
     def _elerium_gathering(self):
@@ -736,7 +641,6 @@ class MartynovDrone(Drone):
                 next_target = self._get_my_asteroid()
             else:
                 next_target = [self.mothership, 0]
-        self.debug(f'_elerium_gathering 1 => next_target: {next_target}')
         return next_target
 
     def _get_my_asteroid(self):
@@ -749,16 +653,13 @@ class MartynovDrone(Drone):
         else:
             # Флажок, есть ли в наличии астероиды с ресурсами
             self.attack_mode = 'attack' if sorted_asteroid is None else 'collect'
-            self.debug(f'_get_my_asteroid 1 => нет астероидов переключил self.attack_mode: {self.attack_mode}')
 
     def _choice_near_object(self):
         # Ближайшие к self
         if len(self.choice_collect) > 0:
             first_target = self.choice_collect[0]
-            self.debug(f'_choice_near_object 1 => Ближайший объект для сбора: {first_target[0]}')
             return first_target[0]
         else:
-            self.debug(f'_choice_near_object 2 => Ближайший объект для сбора: {None}')
             return None
 
     def move_to_new_asteroid(self):
@@ -766,7 +667,6 @@ class MartynovDrone(Drone):
         self.target_to_collect = list() if not self.choice_collect else self.choice_collect[0]
         if self.target_to_collect:
             self.point_to = self.target_to_collect[0]
-            self.debug(f'move_to_new_asteroid 1 => move_at: {self.point_to}')
             self.move_at(self.point_to)
 
     def _asteroid_target_team(self):
@@ -777,7 +677,7 @@ class MartynovDrone(Drone):
             if team_ship.target_to_collect
                and team_ship.is_alive
         ]
-        self.debug(f'_asteroid_target_team 1 => астероиды у союзников: {asteroid_target}')
         return asteroid_target
+
 
 drone_class = MartynovDrone
