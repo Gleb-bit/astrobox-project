@@ -15,7 +15,7 @@ log_path = 'martynov_log.log'
 
 file_handler = logging.FileHandler(log_path, encoding='utf8')
 file_handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
-file_handler.setLevel(level=logging.ERROR)
+file_handler.setLevel(level=logging.DEBUG)
 log.addHandler(file_handler)
 
 
@@ -201,6 +201,7 @@ class MartynovDrone(Drone):
             self.debug(f'on_heartbeat 1 => action_analytics')
             self.action_analytics()
             self.collect_or_attack()
+
         # Действуем, только если живы
         if self.wandering_in_space():
 
@@ -226,7 +227,7 @@ class MartynovDrone(Drone):
 
             self.check_game_over()
 
-    def on_heartbeat(self):
+    def on_hearbeat(self):
         self.next_action()
 
     def space_enemy_attack(self):
@@ -778,3 +779,5 @@ class MartynovDrone(Drone):
         ]
         self.debug(f'_asteroid_target_team 1 => астероиды у союзников: {asteroid_target}')
         return asteroid_target
+
+drone_class = MartynovDrone
