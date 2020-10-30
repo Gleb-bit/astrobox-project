@@ -9,10 +9,7 @@ from robogame_engine.theme import theme
 
 
 class MartynovDrone(Drone):
-    distance_loaded = 0
-    distance_unloaded = 0
-    distance_partly_loaded = 0
-    end_game = 0
+
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -126,13 +123,6 @@ class MartynovDrone(Drone):
     def on_unload_complete(self):
         self.next_action()
 
-    def print_my_statistic(self):
-        print('-' * 35)
-        print(f'Статистика по полётам всех MartynovDrone:\n'
-              f'Летали загруженными полностью: {self.distance_loaded},\n'
-              f'Летали загруженными НЕполностью: {self.distance_partly_loaded},\n'
-              f'Летали пустыми: {self.distance_unloaded}')
-        print('-' * 35)
 
     def on_wake_up(self):
         self.act_mode = 'defender' if self.act_mode is None else self.act_mode
@@ -179,7 +169,6 @@ class MartynovDrone(Drone):
             elif self.act_mode == 'back':
                 self.return_to_base()
 
-            self.check_game_over()
 
     def on_hearbeat(self):
         self.next_action()
@@ -351,13 +340,6 @@ class MartynovDrone(Drone):
 
         return point_list
 
-    def check_game_over(self):
-        whats_going_on = sum([value for key, value in self.dict_analytic.items()])
-        if whats_going_on and self.near(self.mothership):
-            MartynovDrone.end_game += 1
-
-        if self.end_game == len(self.teammates) + 1:
-            self.print_my_statistic()
 
     def return_to_base(self):
         """
