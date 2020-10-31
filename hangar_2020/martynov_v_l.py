@@ -6,10 +6,7 @@ from robogame_engine.geometry import Point, Vector
 from robogame_engine.theme import theme
 
 
-
-
 class MartynovDrone(Drone):
-
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -30,7 +27,6 @@ class MartynovDrone(Drone):
             'collector': 0
 
         }
-
 
     def move_at(self, target, speed=None):
         """
@@ -54,7 +50,11 @@ class MartynovDrone(Drone):
             if not self.is_empty:
                 self.unload_to(self.mothership)
 
-        if self.distance_to(self.mothership) < 150 and self.act_mode == 'attack':
+        if self.act_mode != 'collect' and not self.is_empty:
+            self.act_mode = 'back'
+            self.move_at(self.mothership)
+
+        elif self.distance_to(self.mothership) < 150 and self.act_mode == 'attack':
             self.act_mode = 'defender'
         elif self.dict_analytic['alive_drones'] > self.dict_analytic['alive_teammates']:
             self._deffend_or_collect(all_on_mothership=all_on_mothership)
@@ -123,7 +123,6 @@ class MartynovDrone(Drone):
     def on_unload_complete(self):
         self.next_action()
 
-
     def on_wake_up(self):
         self.act_mode = 'defender' if self.act_mode is None else self.act_mode
 
@@ -168,7 +167,6 @@ class MartynovDrone(Drone):
 
             elif self.act_mode == 'back':
                 self.return_to_base()
-
 
     def on_hearbeat(self):
         self.next_action()
@@ -339,7 +337,6 @@ class MartynovDrone(Drone):
             point_list.append(Point(point_x, point_y))
 
         return point_list
-
 
     def return_to_base(self):
         """
