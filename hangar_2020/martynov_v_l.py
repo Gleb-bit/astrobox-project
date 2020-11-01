@@ -6,10 +6,7 @@ from robogame_engine.geometry import Point, Vector
 from robogame_engine.theme import theme
 
 
-
-
 class MartynovDrone(Drone):
-
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -30,7 +27,6 @@ class MartynovDrone(Drone):
             'collector': 0
 
         }
-
 
     def move_at(self, target, speed=None):
         """
@@ -54,7 +50,12 @@ class MartynovDrone(Drone):
             if not self.is_empty:
                 self.unload_to(self.mothership)
 
-        if self.distance_to(self.mothership) < 150 and self.act_mode == 'attack':
+        if self.act_mode != 'collect' and not self.is_empty:
+            self.act_mode = 'back'
+            self.move_at(self.mothership)
+
+        elif self.distance_to(self.mothership) < 150 \
+                and (self.act_mode == 'back' or self.dict_analytic['alive_drones'] > 0):
             self.act_mode = 'defender'
         elif self.dict_analytic['alive_drones'] > self.dict_analytic['alive_teammates']:
             self._deffend_or_collect(all_on_mothership=all_on_mothership)
@@ -82,7 +83,7 @@ class MartynovDrone(Drone):
             self.act_mode = 'collect'
         elif not self.is_empty:
             self.act_mode = 'back'
-        elif self.dict_analytic['alive_motherships']:
+        elif self.dict_analytic['alive_motherships'] != 0:
             self.act_mode = 'attack'
         else:
             self.act_mode = 'defender'
@@ -122,7 +123,6 @@ class MartynovDrone(Drone):
 
     def on_unload_complete(self):
         self.next_action()
-
 
     def on_wake_up(self):
         self.act_mode = 'defender' if self.act_mode is None else self.act_mode
@@ -169,7 +169,6 @@ class MartynovDrone(Drone):
             elif self.act_mode == 'back':
                 self.return_to_base()
 
-
     def on_hearbeat(self):
         self.next_action()
 
@@ -203,8 +202,7 @@ class MartynovDrone(Drone):
         :return:
         """
 
-        if not self.point_to or self.distance_to(self.mothership) < MOTHERSHIP_HEALING_DISTANCE * 0.9:
-            self.point_to = self._get_near_point(self, self._get_places_near_mothership())
+        self.point_to = self._get_near_point(self, self._get_places_near_mothership())
 
         if self.point_to and not self.near(self.point_to):
             self.move_at(self.point_to)
@@ -217,7 +215,6 @@ class MartynovDrone(Drone):
             if abs(vec.direction - self.direction) >= 7:
                 self.turn_to(self.target_to_shoot[0])
 
-            # if self.distance_to(self.target_to_shoot[0]) <= self.gun.shot_distance:
             if self.teammates_on_attack_line():
                 self.gun.shot(self.target_to_shoot[0])
 
@@ -339,7 +336,6 @@ class MartynovDrone(Drone):
             point_list.append(Point(point_x, point_y))
 
         return point_list
-
 
     def return_to_base(self):
         """
