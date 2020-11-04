@@ -11,6 +11,7 @@ class MartynovDrone(Drone):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.target_to_collect = list()
+        self.my_near_enemy = None
         self.target_to_shoot = list()
         self.act_mode = 'collect'
         self.gun_activated = False
@@ -54,10 +55,10 @@ class MartynovDrone(Drone):
             self.act_mode = 'back'
             self.move_at(self.mothership)
 
-        elif self.distance_to(self.mothership) < 150 \
+        elif self.distance_to(self.mothership) < 5 \
                 and (self.act_mode == 'back' or self.dict_analytic['alive_drones'] > 0):
             self.act_mode = 'defender'
-        elif self.dict_analytic['alive_drones'] > self.dict_analytic['alive_teammates']:
+        elif self.dict_analytic['alive_drones'] >= self.dict_analytic['alive_teammates']:
             self._deffend_or_collect(all_on_mothership=all_on_mothership)
 
         elif alive_enemy \
@@ -71,12 +72,22 @@ class MartynovDrone(Drone):
             self.act_mode = 'back'
 
     def _deffend_or_collect(self, all_on_mothership):
-        if self.target_to_shoot and self.target_to_collect and \
-                self.distance_to_mother(self.target_to_shoot[0]) * 0.7 > self.distance_to_mother(
-            self.target_to_collect[0]) and all_on_mothership:
-            self.act_mode = 'collect'
+        # Проверяет дистанцию от ближайшего врага до ближайшего астероида
+        if self.my_near_enemy:
+            can_i_take = (
+                    self.distance_object_to_object(self.mothership, self.my_near_enemy[0])
+                    - self.distance_object_to_object(self.mothership, self.target_to_collect[0])
+                    > self.my_near_enemy[0].gun.shot_distance * 0.8)
+        else:
+            can_i_take = True
 
-        self.act_mode = 'defender'
+        if self.my_near_enemy \
+                and self.target_to_collect \
+                and can_i_take \
+                and all_on_mothership:
+            self.act_mode = 'collect'
+        else:
+            self.act_mode = 'defender'
 
     def _if_all_enemy_on_motherships(self, collect_from):
         if collect_from:
@@ -88,11 +99,11 @@ class MartynovDrone(Drone):
         else:
             self.act_mode = 'defender'
 
-    def distance_to_mother(self, other):
+    def distance_object_to_object(self, first, second):
         """
             The distance to other points
         """
-        return math.sqrt((self.mothership.coord.x - other.x) ** 2 + (self.mothership.coord.y - other.y) ** 2)
+        return math.sqrt((first.coord.x - second.x) ** 2 + (first.coord.y - second.y) ** 2)
 
     def _prepare_analityc(self):
         self.dict_analytic['alive_teammates'] = len([drone for drone in self.teammates if drone.is_alive])
@@ -484,7 +495,7 @@ class MartynovDrone(Drone):
                and drone.is_alive is True
         ]
         self.dict_analytic['alive_drones'] = len(choice_drones)
-        enemy_drones_on_mothership = [drone for drone in choice_drones if drone[4] <= 250]
+        enemy_drones_on_mothership = [drone for drone in choice_drones if drone[4] <= 350]
         self.dict_analytic['enemy_drones_on_mothership'] = len(enemy_drones_on_mothership)
         # Ближайший противник
 
@@ -517,10 +528,10 @@ class MartynovDrone(Drone):
             self.target_to_shoot.clear()
         else:
             object_list.sort(key=lambda x: x[1])
-            new_target_to_shoot = object_list[0]
+            self.my_near_enemy = object_list[0]
             # Если новая цель, то выбираем точку для атаки.
-            if new_target_to_shoot != self.target_to_shoot:
-                self.target_to_shoot = new_target_to_shoot
+            if  self.my_near_enemy != self.target_to_shoot:
+                self.target_to_shoot =  self.my_near_enemy
 
     def near_collect(self, object_list):
         """
