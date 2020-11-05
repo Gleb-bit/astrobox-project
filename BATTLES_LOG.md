@@ -1,7 +1,8 @@
-##### Результаты соревнований с 01.10.2020 по 01.11.2020
+##### Результаты соревнований с 05.10.2020 по 05.11.2020
 
 Дата сражения | Продолжительность (шагов игры) | Первый результат | Второй результат | Третий результат | Четвертый результат
 --- | --- | --- | --- | --- | ---
+2020-11-05 21:25:02 | 17001 | 102 - MartynovDrone | 0 - GlazovDrone /dead/ | 0 - DevastatorDrone /dead/ | 0 - VorobyevDrone /dead/
 2020-11-01 18:52:22 | 17001 | 100 - SurkovaDrone /dead/ | 0 - FominDrone | 0 - IshmukhamedovDrone /dead/ | 0 - KhizhovDrone /dead/
 2020-11-01 18:51:17 | 17001 | 0 - ZhukovDrone /dead/ | 0 - IshmukhamedovDrone /dead/ | 0 - SurkovaDrone /dead/ | 0 - KhizhovDrone /dead/
 2020-11-01 18:50:14 | 17001 | 459 - KochetovDrone /dead/ | 0 - SurkovaDrone /dead/ | 0 - IshmukhamedovDrone /dead/ | 0 - ZhukovDrone /dead/
@@ -67,4 +68,3 @@
 2020-10-12 18:12:46 | 3393 | 377 - LepilinDron /dead/ | 366 - IlyinDrone /dead/ | 200 - OkhotnikovFNDrone /dead/ | 0 - PestovDrone /dead/
 2020-10-12 18:11:50 | 17001 | 475 - SivkovDrone /dead/ | 355 - OkhotnikovFNDrone /dead/ | 245 - IlyinDrone /dead/ | 200 - PestovDrone /dead/
 2020-10-12 18:10:35 | 17001 | 422 - LepilinDron /dead/ | 400 - OkhotnikovFNDrone /dead/ | 383 - SivkovDrone /dead/ | 344 - IlyinDrone /dead/
-2020-10-12 18:09:23 | 17001 | 646 - SivkovDrone | 494 - OkhotnikovFNDrone /dead/ | 259 - LepilinDron /dead/ | 0 - IlyinDrone /dead/

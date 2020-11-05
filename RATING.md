@@ -1,4 +1,4 @@
-##### Рейтинг по состоянию на 01.11.2020
+##### Рейтинг по состоянию на 05.11.2020
 
 Позиция|Имя команды|Рейтинг
 ---|---|---:
@@ -10,11 +10,11 @@
 6|AllaberdinDrone|760
 7|PestovDrone|750
 8|MishinDrone|750
-9|GlazovDrone|744
-10|KochetovDrone|658
-11|MartynovDrone|646
-12|DevastatorDrone|628
-13|VorobyevDrone|544
+9|GlazovDrone|727
+10|MartynovDrone|700
+11|KochetovDrone|658
+12|DevastatorDrone|615
+13|VorobyevDrone|547
 14|KhizhovDrone|543
 15|SurkovaDrone|480
 16|IshmukhamedovDrone|434
