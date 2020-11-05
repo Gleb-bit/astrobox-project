@@ -25,7 +25,8 @@ class MartynovDrone(Drone):
             'alive_motherships': 0,
             'enemy_drones_on_mothership': 0,
             'alive_teammates': 0,
-            'collector': 0
+            'collector': 0,
+            'greed_count':0
 
         }
 
@@ -81,10 +82,15 @@ class MartynovDrone(Drone):
         else:
             can_i_take = True
 
+        # # Атакуем, если есть астероиды
+        # if self.dict_analytic['greed_count'] > 0:
+        #     can_i_take = True
+
+
         if self.my_near_enemy \
                 and self.target_to_collect \
-                and can_i_take \
-                and all_on_mothership:
+                and can_i_take:
+                # and all_on_mothership:
             self.act_mode = 'collect'
         else:
             self.act_mode = 'defender'
@@ -612,7 +618,25 @@ class MartynovDrone(Drone):
 
         self.choice_collect.extend(another_drones)
 
+        self._collect_greed()
+
         self.near_collect(self.choice_collect)
+
+    def _collect_greed(self):
+        """
+        Добавил немного жадности дронам.
+        """
+        greed_is_bad = list()
+        for asteroid in self.choice_collect:
+            for drone in self.scene.drones:
+                if drone.is_alive and drone not in self.teammates:
+                    if self.distance_object_to_object(drone, asteroid[0]) <= drone.gun.shot_distance:
+                        break
+                    else:
+                        if asteroid not in greed_is_bad :
+                            greed_is_bad.append(asteroid)
+                            self.dict_analytic['greed_count'] += 1
+        self.choice_collect = greed_is_bad or self.choice_collect
 
     def _elerium_gathering(self):
         """
