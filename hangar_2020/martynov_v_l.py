@@ -77,7 +77,7 @@ class MartynovDrone(Drone):
             can_i_take = (
                     self.distance_object_to_object(self.mothership, self.my_near_enemy[0])
                     - self.distance_object_to_object(self.mothership, self.target_to_collect[0])
-                    > self.my_near_enemy[0].gun.shot_distance * 0.8)
+                    > self.gun.shot_distance * 0.8)
         else:
             can_i_take = True
 
