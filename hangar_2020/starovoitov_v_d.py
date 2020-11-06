@@ -7,7 +7,6 @@ from astrobox.core import MotherShip
 from robogame_engine.geometry import Vector, Point
 from robogame_engine.theme import theme
 
-from starovoitov_drone.collector_scenario import CleanerCollector
 
 logging.basicConfig(filename="my_dist_drone.log", filemode="w", level=logging.INFO)
 
@@ -893,4 +892,4 @@ class StarovoitovDrone(DroneAction):
             self.strategy = MiddleCollector(self)
 
 
-drone_class = StarovoitovDrone()
+drone_class = StarovoitovDrone
