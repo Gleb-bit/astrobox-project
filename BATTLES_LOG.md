@@ -2,6 +2,25 @@
 
 Дата сражения | Продолжительность (шагов игры) | Первый результат | Второй результат | Третий результат | Четвертый результат
 --- | --- | --- | --- | --- | ---
+2020-11-08 18:11:59 | 17001 | 0 - FominDrone | 0 - SurkovaDrone /dead/ | 0 - IshmukhamedovDrone /dead/ | 0 - ZhukovDrone /dead/
+2020-11-08 18:11:04 | 8566 | 0 - ZhukovDrone /dead/ | 0 - SurkovaDrone /dead/ | 0 - IshmukhamedovDrone /dead/ | 0 - KhizhovDrone /dead/
+2020-11-08 18:10:29 | 17001 | 200 - KochetovDrone /dead/ | 0 - IshmukhamedovDrone /dead/ | 0 - SurkovaDrone /dead/ | 0 - ZhukovDrone /dead/
+2020-11-08 18:09:21 | 8803 | 1573 - KhizhovDrone /dead/ | 0 - SurkovaDrone /dead/ | 0 - IshmukhamedovDrone /dead/ | 0 - ZhukovDrone /dead/
+2020-11-08 18:08:42 | 17001 | 500 - DevastatorDrone /dead/ | 100 - KhizhovDrone /dead/ | 100 - KochetovDrone /dead/ | 0 - SurkovaDrone
+2020-11-08 18:07:41 | 17001 | 200 - DevastatorDrone /dead/ | 100 - KhizhovDrone /dead/ | 0 - VorobyevDrone /dead/ | 0 - SurkovaDrone
+2020-11-08 18:06:36 | 17001 | 400 - StarovoitovDrone /dead/ | 0 - KochetovDrone /dead/ | 0 - KhizhovDrone /dead/ | 0 - SurkovaDrone /dead/
+2020-11-08 18:05:36 | 17001 | 100 - GlazovDrone /dead/ | 100 - DevastatorDrone /dead/ | 100 - KochetovDrone | 0 - StarovoitovDrone /dead/
+2020-11-08 18:04:22 | 17001 | 202 - IlyinDrone /dead/ | 200 - DevastatorDrone /dead/ | 100 - KochetovDrone | 0 - MartynovDrone
+2020-11-08 18:01:49 | 17001 | 400 - DmitrievaDrone /dead/ | 267 - IlyinDrone /dead/ | 200 - DevastatorDrone /dead/ | 100 - GlazovDrone /dead/
+2020-11-08 18:00:27 | 1833 | 400 - IlyinDrone | 200 - GlazovDrone /dead/ | 200 - PestovDrone /dead/ | 0 - DevastatorDrone /dead/
+2020-11-08 17:59:56 | 14967 | 1198 - MishinDrone /dead/ | 0 - IlyinDrone /dead/ | 0 - GlazovDrone /dead/ | 0 - StarovoitovDrone /dead/
+2020-11-08 17:58:53 | 16085 | 200 - PestovDrone /dead/ | 200 - IlyinDrone /dead/ | 0 - GlazovDrone /dead/ | 0 - StarovoitovDrone /dead/
+2020-11-08 17:57:38 | 17001 | 500 - StarovoitovDrone /dead/ | 0 - AllaberdinDrone /dead/ | 0 - IlyinDrone /dead/ | 0 - GlazovDrone /dead/
+2020-11-08 17:56:23 | 16300 | 556 - KovalevDrone /dead/ | 0 - IlyinDrone /dead/ | 0 - OkhotnikovFNDrone /dead/ | 0 - PestovDrone /dead/
+2020-11-08 17:55:12 | 13900 | 772 - SivkovDrone /dead/ | 484 - OkhotnikovFNDrone /dead/ | 217 - KovalevDrone /dead/ | 0 - AllaberdinDrone /dead/
+2020-11-08 17:54:07 | 17001 | 551 - OkhotnikovFNDrone /dead/ | 446 - SivkovDrone /dead/ | 274 - LepilinDron /dead/ | 245 - IlyinDrone /dead/
+2020-11-08 17:52:44 | 17001 | 490 - OkhotnikovFNDrone /dead/ | 463 - SivkovDrone | 429 - LepilinDron /dead/ | 200 - IlyinDrone /dead/
+2020-11-08 17:51:42 | 3465 | 496 - OkhotnikovFNDrone /dead/ | 412 - SivkovDrone /dead/ | 336 - KovalevDrone | 248 - LepilinDron /dead/
 2020-11-08 17:44:30 | 17001 | 402 - IlyinDrone /dead/ | 382 - DmitrievaDrone | 300 - DevastatorDrone /dead/ | 0 - KochetovDrone
 2020-11-08 17:43:04 | 17001 | 500 - DmitrievaDrone | 100 - GlazovDrone /dead/
 2020-11-06 22:45:26 | 17001 | 282 - IlyinDrone /dead/ | 100 - DevastatorDrone /dead/ | 0 - StarovoitovDrone /dead/ | 0 - KochetovDrone
