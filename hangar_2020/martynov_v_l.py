@@ -630,7 +630,7 @@ class MartynovDrone(Drone):
         for asteroid in self.choice_collect:
             for drone in self.scene.drones:
                 if drone.is_alive and drone not in self.teammates:
-                    if self.distance_object_to_object(drone, asteroid[0]) <= drone.gun.shot_distance:
+                    if self.distance_object_to_object(drone, asteroid[0]) <= drone.gun.shot_distance*0.75:
                         break
                     else:
                         if asteroid not in greed_is_bad :
