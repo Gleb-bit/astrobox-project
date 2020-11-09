@@ -271,8 +271,8 @@ class MartynovDrone(Drone):
             point_x = point_dir.x + start_vector.x
             point_y = point_dir.y + start_vector.y
 
-            if (theme.FIELD_WIDTH - self.radius >= point_x >= self.radius) \
-                    and (theme.FIELD_HEIGHT - self.radius >= point_y >= self.radius):
+            if (theme.FIELD_WIDTH >= point_x >= 0) \
+                    and (theme.FIELD_HEIGHT >= point_y >= 0):
                 directions_list.append(direction)
 
         start = 0
@@ -334,8 +334,8 @@ class MartynovDrone(Drone):
             point_x = point_dir.x + start_vector.x
             point_y = point_dir.y + start_vector.y
 
-            if (theme.FIELD_WIDTH - self.radius >= point_x >= self.radius) \
-                    and (theme.FIELD_HEIGHT - self.radius >= point_y >= self.radius):
+            if (theme.FIELD_WIDTH >= point_x >= 0) \
+                    and (theme.FIELD_HEIGHT >= point_y >= 0):
                 directions_list.append(direction)
 
         start = 0
