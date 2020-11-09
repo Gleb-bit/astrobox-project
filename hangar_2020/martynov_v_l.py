@@ -60,8 +60,7 @@ class MartynovDrone(Drone):
                 and (self.act_mode == 'back' or self.dict_analytic['alive_drones'] > 0):
             self.act_mode = 'defender'
         elif self.dict_analytic['alive_drones'] >= self.dict_analytic['alive_teammates']:
-            # self._deffend_or_collect(all_on_mothership=all_on_mothership)
-            self._deffend_or_collect()
+            self._deffend_or_collect(all_on_mothership=all_on_mothership)
 
         elif alive_enemy \
                 and all_on_mothership:
@@ -73,13 +72,12 @@ class MartynovDrone(Drone):
         elif alive_enemy == 0 and collect_from == 0:
             self.act_mode = 'back'
 
-    def _deffend_or_collect(self):
+    def _deffend_or_collect(self, all_on_mothership):
         # Проверяет дистанцию от ближайшего врага до ближайшего астероида
         if self.my_near_enemy:
             can_i_take = (
-                    # self.distance_object_to_object(self.mothership, self.my_near_enemy[0])
-                    # - self.distance_object_to_object(self.mothership, self.target_to_collect[0])
-                    self.distance_object_to_object(self.target_to_collect[0], self.my_near_enemy[0])
+                    self.distance_object_to_object(self.mothership, self.my_near_enemy[0])
+                    - self.distance_object_to_object(self.mothership, self.target_to_collect[0])
                     > self.gun.shot_distance * 0.8)
         else:
             can_i_take = True
@@ -548,26 +546,11 @@ class MartynovDrone(Drone):
         :return:
         """
 
-        available_collect_target = list()
-
-        for target in object_list:
-            for drone in self.scene.drones:
-                if drone not in self.teammates:
-                    obj_distance = self.distance_object_to_object(target[0], drone)
-                    if obj_distance > self.gun.shot_distance and target not in available_collect_target:
-                        available_collect_target.append(target)
-                        break
-
-
-
         if not object_list:
             self.target_to_collect.clear()
-        elif available_collect_target:
-            available_collect_target.sort(key=lambda x: x[1])
-            self.target_to_collect = available_collect_target[0]
-        # else:
-        #     object_list.sort(key=lambda x: x[1])
-        #     self.target_to_collect = object_list[0]
+        else:
+            object_list.sort(key=lambda x: x[1])
+            self.target_to_collect = object_list[0]
 
     def action_analytics(self):
         self._enemy_drone_analytics()
@@ -593,7 +576,7 @@ class MartynovDrone(Drone):
                 'asteroid',
             ] for asteroid in self.asteroids
             if asteroid.payload > 0
-               # and asteroid not in asteroid_target
+               and asteroid not in asteroid_target
         ]
 
         self.dict_analytic['asteroid'] = len(self.choice_collect)
@@ -647,7 +630,7 @@ class MartynovDrone(Drone):
         for asteroid in self.choice_collect:
             for drone in self.scene.drones:
                 if drone.is_alive and drone not in self.teammates:
-                    if self.distance_object_to_object(drone, asteroid[0]) <= drone.gun.shot_distance:
+                    if self.distance_object_to_object(drone, asteroid[0]) <= drone.gun.shot_distance*0.75:
                         break
                     else:
                         if asteroid not in greed_is_bad :
