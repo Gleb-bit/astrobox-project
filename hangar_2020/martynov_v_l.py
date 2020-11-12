@@ -593,7 +593,7 @@ class MartynovDrone(Drone):
                 'asteroid',
             ] for asteroid in self.asteroids
             if asteroid.payload > 0
-               # and asteroid not in asteroid_target
+               and asteroid not in asteroid_target
         ]
 
         self.dict_analytic['asteroid'] = len(self.choice_collect)
