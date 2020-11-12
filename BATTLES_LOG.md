@@ -1,7 +1,8 @@
-##### Результаты соревнований с 08.10.2020 по 08.11.2020
+##### Результаты соревнований с 12.10.2020 по 12.11.2020
 
 Дата сражения | Продолжительность (шагов игры) | Первый результат | Второй результат | Третий результат | Четвертый результат
 --- | --- | --- | --- | --- | ---
+2020-11-12 21:07:56 | 17001 | 589 - StarovoitovDrone /dead/ | 391 - PestovDrone /dead/ | 100 - DevastatorDrone /dead/ | 0 - KhizhovDrone /dead/
 2020-11-08 18:11:59 | 17001 | 0 - FominDrone | 0 - SurkovaDrone /dead/ | 0 - IshmukhamedovDrone /dead/ | 0 - ZhukovDrone /dead/
 2020-11-08 18:11:04 | 8566 | 0 - ZhukovDrone /dead/ | 0 - SurkovaDrone /dead/ | 0 - IshmukhamedovDrone /dead/ | 0 - KhizhovDrone /dead/
 2020-11-08 18:10:29 | 17001 | 200 - KochetovDrone /dead/ | 0 - IshmukhamedovDrone /dead/ | 0 - SurkovaDrone /dead/ | 0 - ZhukovDrone /dead/
@@ -86,4 +87,3 @@
 2020-10-12 18:18:32 | 17001 | 998 - KochetovDrone | 0 - KhizhovDrone /dead/ | 0 - SurkovaDrone /dead/ | 0 - IshmukhamedovDrone /dead/
 2020-10-12 18:17:20 | 17001 | 536 - KovalevDrone /dead/ | 200 - DevastatorDrone /dead/ | 100 - KhizhovDrone /dead/ | 100 - KochetovDrone
 2020-10-12 18:16:11 | 17001 | 400 - KovalevDrone /dead/ | 164 - GlazovDrone | 100 - KhizhovDrone /dead/ | 100 - KochetovDrone
-2020-10-12 18:14:42 | 4323 | 500 - KovalevDrone | 172 - PestovDrone /dead/ | 100 - KochetovDrone | 0 - KhizhovDrone /dead/
