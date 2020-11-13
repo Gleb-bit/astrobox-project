@@ -31,12 +31,12 @@ class DroneAction(Drone):
         self.target_payload_at_first = 0
 
     def load_from(self, source):
-        logging.info('load')
+        logging.info(f'load, {self}')
         super().load_from(source)
         self.strategy.load_from(source)
 
     def unload_to(self, target):
-        logging.info('unload')
+        logging.info(f'unload, {self}')
         super().unload_to(target)
         self.strategy.unload_to(target)
 
@@ -52,7 +52,7 @@ class DroneAction(Drone):
         super().move_at(target, speed)
 
     def move_at_with_stop(self, target):
-        logging.info('move with stop')
+        logging.info(f'move with stop, {self}')
         if self.distance_to(target) > 100:
             new_target = self.get_near_point(point=target.coord, x_distance=0.1)
             self.move_at(new_target)
@@ -76,19 +76,19 @@ class DroneAction(Drone):
         return [ship for ship in self.scene.motherships if ship is not self.my_mothership and ship.is_alive]
 
     def on_stop_at_asteroid(self, asteroid):
-        logging.info('stop at asteroid')
+        logging.info(f'stop at asteroid, {self}')
         self.strategy.on_stop_at_asteroid(asteroid)
 
     def on_load_complete(self):
-        logging.info('load complete')
+        logging.info(f'load complete, {self}')
         self.strategy.on_load_complete()
 
     def on_stop_at_mothership(self, mothership):
-        logging.info('stop at mothership')
+        logging.info(f'stop at mothership, {self}')
         self.strategy.on_stop_at_mothership(mothership)
 
     def on_stop_at_point(self, target):
-        logging.info('stop at point')
+        logging.info(f'stop at point, {self}')
         self.strategy.on_stop_at_point(target)
 
     def on_stop(self):
@@ -98,7 +98,7 @@ class DroneAction(Drone):
         self.strategy.on_wake_up()
 
     def on_unload_complete(self):
-        logging.info('unload complete')
+        logging.info(f'unload complete, {self}')
         self.strategy.on_unload_complete()
 
     def fast_turning_to(self, point):
@@ -187,21 +187,22 @@ class DroneAction(Drone):
         if self.distance_to(self.mothership) > 200 and self.limit_health != 80:
             logging.info(f"Changing healing_limit to 80, {self}")
             self.limit_health = 80
-        elif self.distance_to(self.mothership) < 200 and self.limit_health != 50:
-            logging.info(f"Changing healing_limit to 50, {self}")
-            self.limit_health = 50
+        elif self.distance_to(self.mothership) < 200 and self.limit_health != 40:
+            logging.info(f"Changing healing_limit to 40, {self}")
+            self.limit_health = 40
 
     def damage_taken(self, damage=0):
+        if self.health > 28:
+            logging.info(f"damage_taken, {self}")
+        else:
+            logging.info(f"dead, {self}")
         self.healing_limits()
         if self.coord != self.guard_coord or not self.near(self.mothership):
             if self.health - damage < self.limit_health:
                 if self.distance_to(self.mothership) > 200:
                     self.move_at_position_near_base()
                 else:
-                    for drone in self.teammates:
-                        if self.near(drone):
-                            self.move_at(self.mothership)
-                            break
+                    self.move_at(self.mothership)
         super().damage_taken(damage)
 
     def move_at_position_near_base(self):
@@ -235,10 +236,9 @@ class Scenario:
 class Hunter(Scenario):
     def __init__(self, drone):
         super().__init__(drone)
-        self.counter = 0
 
     def start(self):
-        logging.info(f"Hunter, {self.drone}")
+        logging.info(f"Hunter start, {self.drone}")
         super().start()
 
     def get_new_asteroid(self):
@@ -305,11 +305,11 @@ class Hunter(Scenario):
     def shoot_avoid_damage(self):
         enemy = self.try_to_resolve_healing_problem()
         if not enemy:
+            logging.info(f"Hunter changing strategy, {self.drone}")
             return
         if enemy is not None and enemy.is_alive:
-            if enemy is False or enemy is None:
-                print("saDas")
             point_to_shoot = self.coord_to_shoot(enemy)
+            logging.info(f"Hunter aim to shoot, {self.drone}")
             if self.ready_and_in_position(enemy, point_to_shoot) and self.drone.fast_turning_to(point_to_shoot):
                 logging.info(f"Hunter shooting, {self.drone}")
                 self.drone.gun.shot(point_to_shoot)
@@ -317,45 +317,57 @@ class Hunter(Scenario):
             self.drone.enemy = self.choose_enemy_or_ship()
 
     def try_to_resolve_healing_problem(self):
+        logging.info(f'Hunter try_to_resolve_healing_problem, {self.drone}')
         enemy = self.choose_enemy_or_ship()
         self.drone.point = self.drone.coord
         self.drone.enemy = enemy
         if isinstance(enemy, Drone) and enemy.mothership.is_alive and enemy.is_alive:
             if self.winner():
-                self.drone.strategy = WinnerStrategy(self.drone)
+                logging.info(f'winner, {self.drone}')
+                self.drone.strategy = WinnerWaiter(self.drone)
                 self.drone.strategy.start()
                 return False
             elif self.drone.health < self.drone.limit_health:
+                logging.info(f'health problem, {self.drone}')
                 self.drone.move_at_position_near_base()
                 return False
             elif self.far_from_enemies_object:
+                logging.info(f'far_from_enemies_object, {self.drone}')
                 self.drone.strategy = SafeCollector(self.drone)
                 self.drone.strategy.start()
                 return False
             elif self.need_defend():
+                logging.info(f'need_defend, {self.drone}')
                 self.drone.strategy = SafeWaiter(self.drone)
                 self.drone.strategy.start()
                 return False
             elif self.ships_without_drones and self.neighborhood and enemy.distance_to(self.drone) > 650:
+                logging.info(f'ships_without_drone, {self.drone}')
                 self.drone.strategy = SafeBaseDestroyer(self.drone)
                 self.drone.strategy.start()
                 return False
             elif self.attack_weak_enemy_base(enemy) and len(self.drone.enemies) < 7:
+                logging.info(f'attack_weak_enemy_base, {self.drone}')
                 if 90 < enemy.distance_to(enemy.mothership) < 200:
+                    logging.info(f'Hunter decided attack enemy mothership, {self.drone}')
                     return self.attack_week_base(enemy)
                 else:
+                    logging.info(f'Hunter decided attack enemy, {self.drone}')
                     return enemy
             elif enemy.distance_to(self.drone.mothership) < 800:
+                logging.info(f'distance_to_mothership < 800, {self.drone}')
                 return self.try_to_be_not_honest(enemy)
             elif self.time_to_waite():
+                logging.info(f'time_to_waite, {self.drone}')
                 self.drone.strategy = SafeWaiter(self.drone)
                 self.drone.strategy.start()
                 return False
+        logging.info(f'Hunter decided attack enemy, {self.drone}')
         return enemy
 
     def attack_week_base(self, enemy):
         vector_to_shoot = Vector.from_points(self.drone.coord, enemy.mothership.coord)
-        if self.calculation_if_can_damage(enemy.coord, vector_to_shoot, 200, angle_coefficient=10 * 580):
+        if self.calculation_if_can_damage(enemy.coord, vector_to_shoot, 200, angle_coefficient=5 * 580):
             point = self.calculate_point_to_damage_base(enemy)
             if point:
                 self.drone.point = point
@@ -372,8 +384,6 @@ class Hunter(Scenario):
     def need_defend(self, counter=0):
         if self.drone.enemies:
             for drone in self.drone.enemies:
-                if drone[0] is None:
-                    print('dronecyka')
                 if drone[0].distance_to(self.drone.mothership) < 750:
                     counter += 1
             if counter >= 4:
@@ -418,7 +428,8 @@ class Hunter(Scenario):
     def try_to_be_not_honest(self, enemy):
         vector_to_enemy = Vector.from_points(self.drone.coord, enemy.coord)
         delta_angle = math.fabs(180 - vector_to_enemy.direction - enemy.direction)
-        if self.drone.near(self.drone.guard_coord) or delta_angle < 10:
+        delta_angle = math.fabs(360 - delta_angle) if delta_angle > 180 else delta_angle
+        if self.drone.distance_to(self.drone.mothership) < 200 or delta_angle > 10:
             return enemy
         else:
             self.drone.strategy = SafeWaiter(self.drone)
@@ -428,7 +439,7 @@ class Hunter(Scenario):
     @property
     def far_from_enemies_object(self):
         far_from_enemies_object = SafeCollector(self.drone).get_new_asteroid
-        if not far_from_enemies_object or self.drone.distance_to(far_from_enemies_object) > 1000:
+        if far_from_enemies_object is None:
             return False
         else:
             return True
@@ -485,13 +496,13 @@ class Hunter(Scenario):
             if self.drone.get_distance_from_points(point, drone.point) < 90:
                 return True
         vector_to_shoot = Vector.from_points(point, enemy.mothership.coord)
-        if self.calculation_if_can_damage(enemy.coord, vector_to_shoot, 20, angle_coefficient=10 * 580):
+        if self.calculation_if_can_damage(enemy.coord, vector_to_shoot, 20, angle_coefficient=5 * 580):
             return True
 
     def check_distance(self, point_to_shoot, enemy):
         shot_distance = 690 if isinstance(enemy, MotherShip) else 620
         if self.drone.distance_to(point_to_shoot) > shot_distance:
-            self.drone.point = self.drone.get_near_point(point=enemy.coord, x_distance=0.1)
+            self.drone.point = self.drone.get_near_point(point=enemy.coord, x_distance=0.051)
             return False
         else:
             return True
@@ -503,6 +514,7 @@ class Hunter(Scenario):
             self.drone.move_at(self.drone.point)
             return False
         elif self.drone.gun.can_shot:
+            self.drone.fast_turning_to(point_to_shoot)
             logging.info(f"Hunter in position and ready, {self.drone}")
             return True
         else:
@@ -534,7 +546,7 @@ class Hunter(Scenario):
                     self.can_damage_team_or_base(point_to_shoot, check_list, dist_rec, angle_rec)
         return True if point_changed else False
 
-    def calculation_if_can_damage(self, mate_coord, vector_to_shot, close_distance, angle_coefficient=15 * 580):
+    def calculation_if_can_damage(self, mate_coord, vector_to_shot, close_distance, angle_coefficient=1580):
         self_coord = self.drone.point
         self_coord, mate_coord = self.drone.check_on_points_errors(self_coord, mate_coord)
         if self_coord is None or mate_coord is None:
@@ -576,7 +588,6 @@ class Hunter(Scenario):
 
     def coord_to_shoot(self, enemy):
         if enemy.is_moving:
-
             if enemy.target is None or not hasattr(enemy.target, 'coord'):
                 point_to_shoot = self.determine_point_to_shoot_from_vector(e_coord=enemy.coord, e_vector=enemy.vector)
             else:
@@ -604,27 +615,35 @@ class Hunter(Scenario):
 class SafeWaiter(Hunter):
     def start(self):
         logging.info(f"SafeWaiter start, {self.drone}")
+        self.drone.move_at_position_near_base()
         super().start()
 
     def shoot_avoid_damage(self):
-        logging.info(f"SafeWaiter shooting, {self.drone}")
+        logging.info(f"SafeWaiter trying to shoot, {self.drone}")
         enemy = self.choose_enemy_or_ship()
         self.drone.enemy = enemy
         if not self.drone.near(self.drone.guard_coord):
+            logging.info(f"SafeWaiter coming guard_coord, {self.drone}")
             self.drone.move_at_position_near_base()
             return
         point_to_shoot = self.coord_to_shoot(enemy)
-        if len(self.drone.enemies) != 0 and enemy.mothership.payload < self.drone.mothership.payload \
-                and self.try_to_resolve_healing_problem():
+        if len(self.drone.enemies) != 0 and self.try_to_resolve_healing_problem():
             if self.can_damage_team_or_base(point_to_shoot, self.drone.teammates) \
                     or self.can_damage_team_or_base(point_to_shoot, [self.drone.mothership]):
+                logging.info(f"SafeWaiter can't shooting, {self.drone}")
                 self.drone.point = self.drone.get_base_guard_coord()
+                # enemy_near_base = [dr for dr in self.drone.enemies if enemy.distance_to(self.drone.mothership) < 800]
+                # if len(enemy_near_base) * 2 < len(self.drone.my_team):
+                #     self.drone.strategy = Hunter(self.drone)
+                #     self.drone.strategy.start()
                 return
             if self.drone.gun.can_shot and self.drone.fast_turning_to(point_to_shoot):
+                logging.info(f"SafeWaiter shooting, {self.drone}")
                 self.drone.gun.shot(point_to_shoot)
             else:
                 self.drone.fast_turning_to(point_to_shoot)
         else:
+            logging.info(f"SafeWaiter to Hunter, {self.drone}")
             self.drone.strategy = Hunter(self.drone)
             self.drone.strategy.start()
 
@@ -637,39 +656,45 @@ class SafeWaiter(Hunter):
             mate_coord = mate.coord
             can_damage_true = self.calculation_if_can_damage(mate_coord, vector_to_shot, close_distance,
                                                              angle_coefficient=5 * 580)
-            if can_damage_true:
-                return can_damage_true
+            return can_damage_true
 
     def choose_enemy_drone(self, drones_list):
         for e_drone, distance_to_e_drone in drones_list:
-            if self.drone.get_distance_from_points(self.drone.mothership.coord, e_drone.coord) < 800:
+            if self.drone.distance_to(e_drone) < 650:
                 return e_drone
         else:
             return drones_list[0][0]
 
     def try_to_resolve_healing_problem(self):
+        logging.info(f"SafeWaiter try_to_resolve_healing_problem, {self.drone}")
         enemy = self.drone.enemy
         if len(self.drone.my_team) == 1:
             return True
         if isinstance(enemy, Drone) and enemy.mothership.is_alive:
             far_from_enemies_object = SafeCollector(self.drone).get_new_asteroid
-            if far_from_enemies_object or self.attack_weak_enemy_base(enemy):
+            if self.drone.distance_to(enemy) < 630 and \
+                    not self.can_damage_team_or_base(enemy.coord, self.drone.teammates):
+                logging.info(f"SafeWaiter continue, enemy close, {self.drone}")
+                return True
+            elif far_from_enemies_object or self.attack_weak_enemy_base(enemy):
+                logging.info(f"SafeWaiter need to became Hunter, {self.drone}")
                 return False
             elif self.ships_without_drones and self.neighborhood:
                 return False
             else:
+                logging.info(f"SafeWaiter continue, {self.drone}")
                 return True
         return False
 
 
-class WinnerStrategy(SafeWaiter):
+class WinnerWaiter(SafeWaiter):
     def shoot_avoid_damage(self):
         logging.info(f"Winner shooting, {self.drone}")
         enemy = self.choose_enemy_or_ship()
         if not self.drone.near(self.drone.guard_coord):
             self.drone.move_at_position_near_base()
             return
-        if enemy is not None:
+        if isinstance(enemy, Drone):
             point_to_shoot = self.coord_to_shoot(enemy)
             if self.can_damage_team_or_base(point_to_shoot, self.drone.teammates) \
                     or self.can_damage_team_or_base(point_to_shoot, [self.drone.mothership]):
@@ -721,7 +746,7 @@ class SafeBaseDestroyer(Hunter):
                 point = self.calculate_point_to_damage_base(ship)
                 if not point:
                     if self.drone.near(self.drone.guard_coord):
-                        self.drone.fast_turning_to(enemy)
+                        self.drone.fast_turning_to(enemy.coord)
                         self.drone.gun.shot(ship)
                 else:
                     self.drone.point = point
@@ -952,6 +977,18 @@ class CleanerCollector(Collector):
 
 
 class SafeCollector(CleanerCollector):
+    def on_stop_at_point(self, target):
+        super().on_stop_at_point(target)
+        if self.get_new_asteroid is None:
+            self.drone.strategy = Hunter(self.drone)
+            self.drone.strategy.start()
+
+    def on_unload_complete(self):
+        super(SafeCollector, self).on_unload_complete()
+        if self.get_new_asteroid is None:
+            self.drone.strategy = Hunter(self.drone)
+            self.drone.strategy.start()
+
     def start(self):
         super().start()
 
@@ -966,7 +1003,7 @@ class SafeCollector(CleanerCollector):
 
     @property
     def get_new_asteroid(self):
-        safe_distance = 635 - 15 * len(self.drone.my_team)
+        safe_distance = 635 - 10 * len(self.drone.my_team)
         distance_to_objects = self.get_list_of_asteroid(reverse=False)
         for enemy, distance_to_enemy_base in self.drone.enemies:
             for __object in distance_to_objects.copy():
@@ -976,8 +1013,6 @@ class SafeCollector(CleanerCollector):
             current_object = self.give_next_asteroid_from_list(list_of_tuples=distance_to_objects)
             if current_object:
                 return current_object
-        self.drone.strategy = Hunter(self.drone)
-        self.drone.strategy.start()
 
     def on_load_complete(self):
         if self.drone.payload > 50:
