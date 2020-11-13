@@ -59,9 +59,9 @@ class MartynovDrone(Drone):
 
 
 
-        elif self.distance_to(self.mothership) < 5 \
-                and (self.act_mode == 'back' or self.dict_analytic['alive_drones'] > 0):
-            self.act_mode = 'defender'
+        # elif self.distance_to(self.mothership) < 5 \
+        #         and (self.act_mode == 'back' or self.dict_analytic['alive_drones'] > 0):
+        #     self.act_mode = 'defender'
         elif self.target_to_collect:
             if self.distance_object_to_object(self.mothership, self.target_to_collect[0]) < self.gun.shot_distance:
                 self.act_mode = 'collect'
