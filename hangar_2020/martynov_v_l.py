@@ -51,10 +51,7 @@ class MartynovDrone(Drone):
         if self.near(self.mothership):
             if not self.is_empty:
                 self.unload_to(self.mothership)
-        if self.target_to_collect:
-            if self.distance_object_to_object(self.mothership, self.target_to_collect[0]) < self.gun.shot_distance:
-                self.act_mode = 'collect'
-                return
+
 
         if self.act_mode != 'collect' and not self.is_empty:
             self.act_mode = 'back'
@@ -65,6 +62,10 @@ class MartynovDrone(Drone):
         elif self.distance_to(self.mothership) < 5 \
                 and (self.act_mode == 'back' or self.dict_analytic['alive_drones'] > 0):
             self.act_mode = 'defender'
+        elif self.target_to_collect:
+            if self.distance_object_to_object(self.mothership, self.target_to_collect[0]) < self.gun.shot_distance:
+                self.act_mode = 'collect'
+
         elif self.dict_analytic['alive_drones'] >= self.dict_analytic['alive_teammates']:
             self._deffend_or_collect(all_on_mothership=all_on_mothership)
 
@@ -104,6 +105,7 @@ class MartynovDrone(Drone):
             self.act_mode = 'collect'
         else:
             self.act_mode = 'defender'
+
 
     def _if_all_enemy_on_motherships(self, collect_from):
         if collect_from:
