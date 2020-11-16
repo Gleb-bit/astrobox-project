@@ -2,6 +2,7 @@
 
 Дата сражения | Продолжительность (шагов игры) | Первый результат | Второй результат | Третий результат | Четвертый результат
 --- | --- | --- | --- | --- | ---
+2020-11-16 23:51:09 | 5540 | 500 - DmitrievaDrone /dead/ | 0 - SmirnovDrone /dead/
 2020-11-16 17:30:22 | 3631 | 806 - PestovDrone | 0 - OlshannikovDron /dead/
 2020-11-15 23:03:35 | 17001 | 918 - VorobyevDrone /dead/ | 0 - ZhukovDrone /dead/ | 0 - SurkovaDrone /dead/ | 0 - IshmukhamedovDrone /dead/
 2020-11-15 23:02:45 | 2584 | 396 - KhizhovDrone /dead/ | 0 - FominDrone | 0 - VorobyevDrone /dead/ | 0 - SurkovaDrone /dead/
@@ -86,4 +87,3 @@
 2020-10-25 21:43:46 | 17001 | 460 - SivkovDrone /dead/ | 383 - OkhotnikovFNDrone /dead/ | 341 - LepilinDron /dead/ | 296 - KovalevDrone /dead/
 2020-10-18 23:51:26 | 17001 | 0 - ZhukovDrone /dead/ | 0 - KhizhovDrone /dead/ | 0 - SurkovaDrone /dead/ | 0 - FominDrone /dead/
 2020-10-18 23:49:59 | 8434 | 1369 - MishinDrone | 0 - IshmukhamedovDrone /dead/ | 0 - KhizhovDrone /dead/ | 0 - SurkovaDrone /dead/
-2020-10-18 23:49:24 | 17001 | 0 - FominDrone /dead/ | 0 - KhizhovDrone /dead/ | 0 - SurkovaDrone /dead/ | 0 - IshmukhamedovDrone /dead/
