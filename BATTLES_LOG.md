@@ -1,7 +1,8 @@
-##### Результаты соревнований с 15.10.2020 по 15.11.2020
+##### Результаты соревнований с 16.10.2020 по 16.11.2020
 
 Дата сражения | Продолжительность (шагов игры) | Первый результат | Второй результат | Третий результат | Четвертый результат
 --- | --- | --- | --- | --- | ---
+2020-11-16 17:30:22 | 3631 | 806 - PestovDrone | 0 - OlshannikovDron /dead/
 2020-11-15 23:03:35 | 17001 | 918 - VorobyevDrone /dead/ | 0 - ZhukovDrone /dead/ | 0 - SurkovaDrone /dead/ | 0 - IshmukhamedovDrone /dead/
 2020-11-15 23:02:45 | 2584 | 396 - KhizhovDrone /dead/ | 0 - FominDrone | 0 - VorobyevDrone /dead/ | 0 - SurkovaDrone /dead/
 2020-11-15 23:02:24 | 13393 | 1059 - VorobyevDrone /dead/ | 0 - SurkovaDrone /dead/ | 0 - IshmukhamedovDrone /dead/ | 0 - KhizhovDrone /dead/
@@ -86,4 +87,3 @@
 2020-10-18 23:51:26 | 17001 | 0 - ZhukovDrone /dead/ | 0 - KhizhovDrone /dead/ | 0 - SurkovaDrone /dead/ | 0 - FominDrone /dead/
 2020-10-18 23:49:59 | 8434 | 1369 - MishinDrone | 0 - IshmukhamedovDrone /dead/ | 0 - KhizhovDrone /dead/ | 0 - SurkovaDrone /dead/
 2020-10-18 23:49:24 | 17001 | 0 - FominDrone /dead/ | 0 - KhizhovDrone /dead/ | 0 - SurkovaDrone /dead/ | 0 - IshmukhamedovDrone /dead/
-2020-10-18 23:48:18 | 4213 | 100 - SurkovaDrone /dead/ | 100 - KhizhovDrone /dead/ | 100 - KochetovDrone | 0 - IshmukhamedovDrone /dead/

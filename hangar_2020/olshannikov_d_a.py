@@ -656,4 +656,4 @@ class OlshannikovDron(Drone):
         self.points_for_attack = None
         self.my_point_attack = None
 
-drone_class = OlsOlshannikovDron
+drone_class = OlshannikovDron
