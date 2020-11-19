@@ -6,6 +6,11 @@ from robogame_engine.geometry import Point, Vector
 LOOTER = "luter"
 DEFER = "defer"
 COMANDO = "comandir"
+LEFT_DAWN = "1"
+RIGHT_DAWN = "2"
+LEFT_UP = "3"
+RIGHT_UP = "4"
+
 
 class OlshannikovDron(Drone):
     my_team = []
@@ -42,7 +47,6 @@ class OlshannikovDron(Drone):
         self.target = self.get_good_first_asteroid()
         self.move_at(self.target)
 
-
     def add_to_team(self):
         "Добавление дрона к списку дронов его роли"
         self.my_team.append(self)
@@ -73,23 +77,49 @@ class OlshannikovDron(Drone):
     def to_death(self):
         self.delete_in_team()
 
-    def create_point_defing(self, distance_from_motheship=180):
-        if len(self.scene.motherships) == 1:
+    def create_point_defing(self):
+        self.determine_position_my_mothership()
+        if self.position_my_mothership == LEFT_DAWN:
             point = Point(self.my_mothership.coord.x + 125, self.my_mothership.coord.y + 125)
             OlshannikovDron.point_for_defing = point
-            return
-        distance_to_mothrships = []
+        elif self.position_my_mothership == RIGHT_DAWN:
+            point = Point(self.my_mothership.coord.x - 125, self.my_mothership.coord.y + 125)
+            OlshannikovDron.point_for_defing = point
+        elif self.position_my_mothership == LEFT_UP:
+            point = Point(self.my_mothership.coord.x + 125, self.my_mothership.coord.y - 125)
+            OlshannikovDron.point_for_defing = point
+        elif self.position_my_mothership == RIGHT_UP:
+            point = Point(self.my_mothership.coord.x - 125, self.my_mothership.coord.y - 125)
+            OlshannikovDron.point_for_defing = point
+        if len(self.scene.motherships) == 2:
+            OlshannikovDron.point_for_defing.y -= 20
+
+    def get_distance_to_enemy_motherships(self):
+        self.distance_to_mothrships = []
         for motheship in self.scene.motherships:
             distance = self.my_mothership.distance_to(motheship)
-            distance_to_mothrships.append([motheship, distance])
-        distance_to_mothrships.sort(key=lambda x: x[1], reverse=True)
-        distant_mothrship = distance_to_mothrships[0][0]
-        vec = Vector.from_points(self.my_mothership.coord, distant_mothrship.coord)
-        koef_reduced = int(self.distance_to(distant_mothrship) / distance_from_motheship * 4)
-        point = Point(self.my_mothership.x + vec.x / koef_reduced, self.my_mothership.y + vec.y / koef_reduced)
-        while self.distance_to(point) < distance_from_motheship:
-            point = Point(point.x + vec.x / koef_reduced, point.y + vec.y / koef_reduced)
-        OlshannikovDron.point_for_defing = point
+            self.distance_to_mothrships.append([motheship, distance])
+        self.distance_to_mothrships.sort(key=lambda x: x[1], reverse=False)
+        self.distance_to_mothrships.pop(0)
+        self.distance_to_mothrships.sort(key=lambda x: x[1], reverse=True)
+        return self.distance_to_mothrships
+
+    def determine_position_my_mothership(self):
+        self.position_my_mothership = None
+        sum_x_and_y = int(self.my_mothership.coord.x) + int(self.my_mothership.coord.y)
+        if sum_x_and_y == 180:
+            self.position_my_mothership = LEFT_DAWN
+            return
+        elif sum_x_and_y == 2220:
+            self.position_my_mothership = RIGHT_UP
+            return
+        if int(self.my_mothership.coord.x) == 1110:
+            self.position_my_mothership = RIGHT_DAWN
+            return
+        else:
+            self.position_my_mothership = LEFT_UP
+
+
 
     def set_distance_to_asteroids(self):
         """Определяет растояния до астеройдов относительно дрона
@@ -119,7 +149,8 @@ class OlshannikovDron(Drone):
             self.my_asteroid = self.distance_to_asteroids[0][0]
             return self.my_asteroid
         else:
-            self.my_asteroid = self.my_mothership
+            self.create_point_behind_comandor()
+            self.my_asteroid = self.point_bihind_comandor
             return self.my_asteroid
 
     def check_asteroid_with_team(self, asteroid, lower_value_payload=-50):
@@ -187,6 +218,10 @@ class OlshannikovDron(Drone):
             for asteroid in asteroid_for_delate:
                 self.distance_to_asteroids.remove(asteroid)
         for asteroid in self.distance_to_asteroids:
+            if self.check_asteroid_with_team(asteroid, 0):
+                return self.my_asteroid
+        self.distance_to_asteroids.sort(key=lambda x: x[1])
+        for asteroid in asteroid_for_delate:
             if self.check_asteroid_with_team(asteroid, 0):
                 return self.my_asteroid
 
@@ -519,10 +554,11 @@ class OlshannikovDron(Drone):
             else:
                 self.attact_enemy()
         elif len(self.my_team_withot_me) < 3:
-            if self.near(self.my_mothership):
+            self.create_point_behind_comandor()
+            if self.near(self.point_bihind_comandor):
                 return
             else:
-                self.move_at(self.my_mothership)
+                self.move_at(self.point_bihind_comandor)
         else:
             self.selecting_action_looter()
 
@@ -576,6 +612,12 @@ class OlshannikovDron(Drone):
         my_team_defer_with_me.extend(self.my_team_defer)
         my_team_defer_with_me.remove(self)
         return my_team_defer_with_me
+
+    def create_point_behind_comandor(self):
+        vec = Vector.from_points(OlshannikovDron.our_commander.coord, self.my_mothership.coord)
+        self.point_bihind_comandor = Point(OlshannikovDron.our_commander.x + vec.x / 2,
+                                           OlshannikovDron.our_commander.y + vec.y / 2)
+        print(self.distance_to(OlshannikovDron.our_commander))
 
     def attact_enemy(self):
         if self.payload > 20:
