@@ -42,7 +42,10 @@ class OlshannikovDron(Drone):
         self.distans_of_fullness_in_persent = 0
         self.distans_of_filled_in_persent = 0
         self.distans_of_empty_in_persent = 0
-        self.count_fire_for_change_position = 4
+        self.count_fire_for_change_position = 6
+        self.hide = None
+        self.avaid = None
+        self.shot_distance = 681
         self.create_point_defing()
         self.target = self.get_good_first_asteroid()
         self.move_at(self.target)
@@ -80,19 +83,17 @@ class OlshannikovDron(Drone):
     def create_point_defing(self):
         self.determine_position_my_mothership()
         if self.position_my_mothership == LEFT_DAWN:
-            point = Point(self.my_mothership.coord.x + 125, self.my_mothership.coord.y + 125)
+            point = Point(self.my_mothership.coord.x + 82, self.my_mothership.coord.y + 82)
             OlshannikovDron.point_for_defing = point
         elif self.position_my_mothership == RIGHT_DAWN:
-            point = Point(self.my_mothership.coord.x - 125, self.my_mothership.coord.y + 125)
+            point = Point(self.my_mothership.coord.x - 82, self.my_mothership.coord.y + 82)
             OlshannikovDron.point_for_defing = point
         elif self.position_my_mothership == LEFT_UP:
-            point = Point(self.my_mothership.coord.x + 125, self.my_mothership.coord.y - 125)
+            point = Point(self.my_mothership.coord.x + 82, self.my_mothership.coord.y - 82)
             OlshannikovDron.point_for_defing = point
         elif self.position_my_mothership == RIGHT_UP:
-            point = Point(self.my_mothership.coord.x - 125, self.my_mothership.coord.y - 125)
+            point = Point(self.my_mothership.coord.x - 82, self.my_mothership.coord.y - 82)
             OlshannikovDron.point_for_defing = point
-        if len(self.scene.motherships) == 2:
-            OlshannikovDron.point_for_defing.y -= 20
 
     def get_distance_to_enemy_motherships(self):
         self.distance_to_mothrships = []
@@ -390,13 +391,15 @@ class OlshannikovDron(Drone):
 
     def go_to_defing_my_mothership(self):
         if self.near(self.point_for_defing):
+            self.hide_away_all_off()
             self.defing_my_mothership()
         else:
+            self.hide_away_all_on()
             self.move_at(self.point_for_defing)
 
     def defing_my_mothership(self):
         if self.my_target_attack:
-            if self.shot_is_fired == 5:
+            if self.shot_is_fired == self.count_fire_for_change_position:
                 self.shot_is_fired = 0
                 self.get_my_victim()
                 if not self.my_target_attack:
@@ -420,6 +423,14 @@ class OlshannikovDron(Drone):
             else:
                 self.selecting_action_looter()
 
+    def hide_away_all_on(self):
+        for ally in self.my_team:
+            ally.hide = True
+
+    def hide_away_all_off(self):
+        for ally in self.my_team:
+            ally.hide = None
+
     def get_my_victim(self):
         self.get_distance_to_enemy(self)
         self.target = self.get_my_target_enemy()
@@ -436,19 +447,19 @@ class OlshannikovDron(Drone):
                 self.points_for_attack.append(point_to_attack)
         self.corected_point_to_attack_for_mothership()
         self.delete_point_near_for_me()
-        while self.delate_nearest_points(60):
+        while self.delate_nearest_points(65):
             pass
         return self.points_for_attack
 
     def delete_point_near_for_me(self):
         point_for_delate = []
         for point in self.points_for_attack:
-            if self.distance_to(point) < 55:
+            if self.distance_to(point) < 65:
                 point_for_delate.append(point)
         for point in point_for_delate:
             self.points_for_attack.remove(point)
 
-    def delate_nearest_points(self, radius=55):
+    def delate_nearest_points(self, radius=50):
         point_for_delate_uncorect = []
         for point_analiz in self.points_for_attack:
             for point in self.points_for_attack:
@@ -465,23 +476,23 @@ class OlshannikovDron(Drone):
                 return True
 
     def corected_point_to_attack_for_mothership(self):
-        enemy = self.my_target_attack
         bad_point = []
         for point_analiz in self.points_for_attack:
             distance = point_analiz.distance_to(self.my_mothership)
-            if distance < 150:
+            if distance < 120:
                 bad_point.append(point_analiz)
         for point in bad_point:
             self.points_for_attack.remove(point)
         good_point = []
         for point in bad_point:
             point_is_good = False
-            koef_reducing = 1.0
+            koef = 1
             while not point_is_good:
-                vec = Vector.from_points(enemy.coord, point)
-                new_point = Point(enemy.coord.x + vec.x * koef_reducing, enemy.coord.y + vec.y * koef_reducing)
-                koef_reducing -= 0.05
-                if new_point.distance_to(self.my_mothership) > 150:
+                vec = Vector.from_points(self.my_mothership.coord, point)
+                new_point = Point(self.my_mothership.coord.x + vec.x / 10 * koef,
+                                  self.my_mothership.coord.y + vec.y / 10 * koef)
+                koef += 1
+                if new_point.distance_to(self.my_mothership) > 120:
                     good_point.append(new_point)
                     point_is_good = True
         for point in good_point:
@@ -508,12 +519,12 @@ class OlshannikovDron(Drone):
 
     def get_my_target_enemy(self):
         for enemy, distance_to_enemy in self.distance_to_my_enemy:
-            if distance_to_enemy < self.gun.shot_distance:
+            if distance_to_enemy < self.shot_distance:
                 if enemy.distance_to(enemy.my_mothership) > 150:
                     self.my_target_attack = enemy
                     return enemy
         for enemy, distance_to_enemy in self.distance_to_my_enemy:
-            if distance_to_enemy < self.gun.shot_distance:
+            if distance_to_enemy < self.shot_distance:
                 self.my_target_attack = enemy
                 return enemy
 
@@ -535,9 +546,25 @@ class OlshannikovDron(Drone):
             OlshannikovDron.our_commander = self
             self.role = COMANDO
             return
-        if self.health < 60:
+        if self.health < 80 and self.distance_to(self.my_mothership) > 190 and self.points_for_attack:
+            self.create_point_avaid()
+            if self.avaid:
+                self.avaid = None
+                self.move_at(self.my_mothership)
+                return
+            else:
+                self.move_at(self.points_for_avaid)
+                self.avaid = True
+                return
+
+        if self.health < 30:
             self.move_at(self.my_mothership)
-            return
+        if self.hide:
+            if self.near(self.my_mothership):
+                return
+            else:
+                self.move_at(self.my_mothership)
+                return
         if self.my_target_attack:
             if self.payload > 20:
                 self.move_at(self.my_mothership)
@@ -549,7 +576,7 @@ class OlshannikovDron(Drone):
                     self.attact_enemy()
                 else:
                     self.move_at(self.my_point_attack)
-            elif self.shot_is_fired > self.count_fire_for_change_position:
+            elif self.shot_is_fired > self.count_fire_for_change_position * 3:
                 self.shot_is_fired = 0
             else:
                 self.attact_enemy()
@@ -602,7 +629,7 @@ class OlshannikovDron(Drone):
 
     def priority_points_near_mothership(self):
         for point, distance, sum_x_and_y in self.distance_to_points_to_attack:
-            if point.distance_to(self.my_mothership) < 190:
+            if point.distance_to(self.my_mothership) < 200:
                 self.my_point_attack = point
                 self.my_point_attack_info = [point, distance, sum_x_and_y]
                 return True
@@ -615,16 +642,16 @@ class OlshannikovDron(Drone):
 
     def create_point_behind_comandor(self):
         vec = Vector.from_points(OlshannikovDron.our_commander.coord, self.my_mothership.coord)
-        self.point_bihind_comandor = Point(OlshannikovDron.our_commander.x + vec.x / 2,
-                                           OlshannikovDron.our_commander.y + vec.y / 2)
-        print(self.distance_to(OlshannikovDron.our_commander))
+        vec.rotate(180)
+        self.point_bihind_comandor = Point(self.my_mothership.coord.x + vec.x / 3,
+                                           self.my_mothership.coord.y + vec.y / 3)
 
     def attact_enemy(self):
         if self.payload > 20:
             self.move_at(self.my_mothership)
         elif self.my_target_attack:
             self.locating_shot_gun()
-            if self.my_target_attack.health > 0 and self.distance_to(self.my_target_attack) < self.gun.shot_distance:
+            if self.my_target_attack.health > 0 and self.distance_to(self.my_target_attack) < self.shot_distance:
                 if self.gun.cooldown:
                     self.turn_to(self.place_shot_gun)
                 else:
@@ -659,18 +686,18 @@ class OlshannikovDron(Drone):
             return False
         if len(self.my_team) == 2:
             for point in points_on_fire:
-                if point.distance_to(self.my_team_withot_me[0]) < 30:
+                if point.distance_to(self.my_team_withot_me[0]) < 35:
                     return self.my_team_withot_me[0]
         else:
             for point in points_on_fire:
                 for ally in self.my_team_withot_me:
-                    if point.distance_to(ally) < 30:
+                    if point.distance_to(ally) < 35:
                         ally.points_for_attack = self.points_for_attack
                         return ally
 
-    def point_behind_me(self):
-        point = self.get_point_from_self(self.my_target_attack, 40, 80)
-        return point
+    def create_point_avaid(self):
+        point = self.get_point_from_self(self.my_target_attack, 40, 90)
+        self.points_for_avaid = point
 
     def locating_shot_gun(self):
         new_location_enemy = Point(self.my_target_attack.x, self.my_target_attack.y)
@@ -686,7 +713,7 @@ class OlshannikovDron(Drone):
 
     def get_point_from_self(self, target_to, distance, rotate=0):
         vec = Vector.from_points(self.coord, target_to.coord)
-        koef_reduced = self.distance_to(target_to) / distance / 4
+        koef_reduced = self.distance_to(target_to) / distance / 8
         vec.rotate(rotate)
         point = Point(self.coord.x + vec.x / koef_reduced, self.coord.y + vec.y / koef_reduced)
         while self.distance_to(point) < distance:
