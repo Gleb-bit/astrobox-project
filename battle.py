@@ -176,7 +176,7 @@ if __name__ == '__main__':
                              'остальные 3 игрока выбираются автоматически по рейтингу: '
                              'больший/меньший на 10 процентов и примерно равный (плюс/минус 5 процентов)')
 
-    args = parser.parse_args('-c -p hangar_2020/martynov_v_l.py hangar_2020/pestov_m_e.py'.split())
+    args = parser.parse_args()
     init_db(db_url=args.database)
     if args.tournament:
         if not _modules_exists([args.tournament, ]):
