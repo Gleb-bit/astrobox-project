@@ -65,8 +65,13 @@ class MartynovDrone(Drone):
             self._if_defender()
 
         elif self.act_mode == 'attack':
-            if self.dict_analytic['alive_drones'] > self.dict_analytic['alive_teammates']:
+            if self.dict_analytic['alive_drones'] >= self.dict_analytic['alive_teammates']:
                 self._defend_or_collect()
+            else:
+                if all_on_mothership or not alive_enemy:
+                    self.act_mode = 'collect'
+                else:
+                    self.act_mode = 'attack'
 
         elif self.act_mode == 'back':
             if self.is_empty:
@@ -86,7 +91,7 @@ class MartynovDrone(Drone):
             # Собираем, первым делом? если цель для сбора рядом с матерью.
             if self.distance_object_to_object(self.mothership, self.target_to_collect[0]) < self.gun.shot_distance:
                 self.act_mode = 'collect'
-            elif self.dict_analytic['alive_drones'] <= self.dict_analytic['alive_teammates']:
+            elif self.dict_analytic['alive_drones'] <= self.dict_analytic['alive_teammates'] and self.target_to_shoot:
                 self.act_mode = 'attack'
             elif self.dict_analytic['alive_drones'] > self.dict_analytic['alive_teammates']:
                 self._defend_or_collect()
@@ -124,7 +129,7 @@ class MartynovDrone(Drone):
             self.act_mode = 'collect'
         elif not self.is_empty:
             self.act_mode = 'back'
-        elif self.dict_analytic['alive_motherships'] != 0:
+        elif self.dict_analytic['alive_motherships'] != 0 and self.target_to_shoot:
             self.act_mode = 'attack'
         else:
             self.act_mode = 'defender'
