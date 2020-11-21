@@ -90,8 +90,10 @@ class MartynovDrone(Drone):
             return
 
         if self.target_to_collect:
+
             # Собираем, первым делом? если цель для сбора рядом с матерью.
-            if self.distance_object_to_object(self.mothership, self.target_to_collect[0]) < self.gun.shot_distance:
+            if (self.distance_object_to_object(self.mothership, self.target_to_collect[0]) < self.gun.shot_distance
+                    and self.teammates > 3):
                 self.act_mode = 'collect'
                 return
             elif self.dict_analytic['alive_drones'] == 0:
