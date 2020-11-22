@@ -61,7 +61,7 @@ class BeskaevDrone(Drone):
         for drone in self.drones_team:  # учтём всех дронов что уже летят на этот астероид для сбора ресурсов
             if drone == self:  # кроме себя самого
                 continue
-            if drone.target == asteroid and not drone.is_unloading_to_mothership:  # без учёта дронов на разгрузке
+            if drone.target == asteroid and not drone.is_unloading_to_mothership and drone.is_alive:  # без учёта дронов на разгрузке
                 asteroid_future_payload -= drone.free_space
         return asteroid_future_payload
 
@@ -190,10 +190,15 @@ class BeskaevDrone(Drone):
         if self.get_enemy_in_base_range() and self.count_fly >= self.COUNT_SAFE_FLY:
             self.role = Defender(self)
         elif self.is_few_drones_near_enemy_bases() and self.count_fly >= self.COUNT_SAFE_FLY and len(
-                alive_teammates) >= 5:
+                alive_teammates) >= 4:
             self.role = Exterminator(self)
         elif self.get_safe_asteroid() and self.count_fly >= self.COUNT_SAFE_FLY:
             self.role = Collector(self)
+
+        # если после первых вылетов не осталось астероидов для сбора, то всем устанавливаем граничное количество вылетов
+        if isinstance(self.role, Collector) and not self.get_next_asteroid() and self.count_fly < self.COUNT_SAFE_FLY:
+            self.count_fly = self.COUNT_SAFE_FLY
+            self.role = Defender(self)
 
         self.role.role_action()
 
@@ -206,8 +211,11 @@ class BeskaevDrone(Drone):
             self.turn_to(target)
 
     def is_few_drones_near_enemy_bases(self):
-        enemy_base1 = [base for base in self.scene.motherships if base.team != self.team and base.x == self.mothership.x][0]
-        enemy_base2 = [base for base in self.scene.motherships if base.team != self.team and base.y == self.mothership.y][0]
+        enemy_bases = [(base, self.mothership.distance_to(base)) for base in self.scene.motherships
+                       if base.team != self.team]
+        enemy_bases.sort(key=lambda x: x[1])
+        enemy_base1 = enemy_bases[0][0]
+        enemy_base2 = enemy_bases[1][0]
         drones_enemy_base1 = [drone for drone in self.scene.drones if drone.team == enemy_base1.team
                               and drone.is_alive]
         drones_enemy_base2 = [drone for drone in self.scene.drones if drone.team == enemy_base2.team
@@ -303,7 +311,7 @@ class BeskaevDrone(Drone):
         for drone in self.drones_team:
             if drone is self or not drone.is_alive:
                 continue
-            for i in range(1, steps_count + 1):
+            for i in range(15, steps_count + 1):
                 current_vector = vector_to_check * i
                 check_point = Point(point.x + current_vector.x, point.y + current_vector.y)
 
@@ -325,7 +333,8 @@ class BeskaevDrone(Drone):
         if self.team == mothership.team:
             if self.payload:
                 self.unload_to(mothership)
-                self.turn_to(self.target)
+                center = Point(theme.FIELD_WIDTH // 2, theme.FIELD_HEIGHT // 2)
+                self.turn_to(center)
                 self.is_unloading_to_mothership = True
 
     def on_unload_complete(self):
@@ -437,10 +446,11 @@ class Exterminator:
         return self.me.get_start_point()
 
     def get_enemy(self):
-        enemy_base1 = [base for base in self.me.scene.motherships if base.team != self.me.team
-                       and base.x == self.me.mothership.x][0]
-        enemy_base2 = [base for base in self.me.scene.motherships if base.team != self.me.team
-                       and base.y == self.me.mothership.y][0]
+        enemy_bases = [(base, self.me.mothership.distance_to(base)) for base in self.me.scene.motherships
+                       if base.team != self.me.team]
+        enemy_bases.sort(key=lambda x: x[1])
+        enemy_base1 = enemy_bases[0][0]
+        enemy_base2 = enemy_bases[1][0]
         drones_enemy_base1 = [drone for drone in self.me.scene.drones if drone.team == enemy_base1.team
                               and drone.is_alive]
         drones_enemy_base2 = [drone for drone in self.me.scene.drones if drone.team == enemy_base2.team
