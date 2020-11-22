@@ -7,7 +7,7 @@ from astrobox.core import MotherShip
 from robogame_engine.geometry import Vector, Point
 from robogame_engine.theme import theme
 
-logging.basicConfig(filename="my_dist_drone.log", filemode="w", level=logging.INFO)
+logging.basicConfig(filename="my_dist_drone.log", filemode="w", level=logging.ERROR)
 
 
 class DroneAction(Drone):
