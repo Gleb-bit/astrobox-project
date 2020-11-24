@@ -214,18 +214,20 @@ class BeskaevDrone(Drone):
         enemy_bases = [(base, self.mothership.distance_to(base)) for base in self.scene.motherships
                        if base.team != self.team]
         enemy_bases.sort(key=lambda x: x[1])
-        enemy_base1 = enemy_bases[0][0]
-        enemy_base2 = enemy_bases[1][0]
-        drones_enemy_base1 = [drone for drone in self.scene.drones if drone.team == enemy_base1.team
-                              and drone.is_alive]
-        drones_enemy_base2 = [drone for drone in self.scene.drones if drone.team == enemy_base2.team
-                              and drone.is_alive]
-        if (enemy_base1.is_alive and len(drones_enemy_base1) <= 1) or len(drones_enemy_base1) == 1:
-            return True
-        elif (enemy_base2.is_alive and len(drones_enemy_base2) <= 1) or len(drones_enemy_base2) == 1:
-            return True
-        else:
-            return False
+        enemy_bases = [base for base, distance in enemy_bases]
+
+        stop_index = 1 if len(enemy_bases) == 1 else len(enemy_bases) - 1
+
+        for i in range(stop_index):
+            enemy_base = enemy_bases[i]
+            drones_enemy_base = [drone for drone in self.scene.drones if drone.team == enemy_base.team
+                                 and drone.is_alive]
+
+            if len(drones_enemy_base) <= 1:
+                if enemy_base.is_alive or len(drones_enemy_base) == 1:
+                    return True
+
+        return False
 
     def get_safe_asteroid(self):
         asteroid_with_elerium = [asteroid for asteroid in self.asteroids if asteroid.payload > 0]
@@ -449,24 +451,17 @@ class Exterminator:
         enemy_bases = [(base, self.me.mothership.distance_to(base)) for base in self.me.scene.motherships
                        if base.team != self.me.team]
         enemy_bases.sort(key=lambda x: x[1])
-        enemy_base1 = enemy_bases[0][0]
-        enemy_base2 = enemy_bases[1][0]
-        drones_enemy_base1 = [drone for drone in self.me.scene.drones if drone.team == enemy_base1.team
-                              and drone.is_alive]
-        drones_enemy_base2 = [drone for drone in self.me.scene.drones if drone.team == enemy_base2.team
-                              and drone.is_alive]
-
-        if len(drones_enemy_base1) <= 1:
-            if enemy_base1.is_alive:
-                return enemy_base1
-            elif len(drones_enemy_base1) == 1:
-                return drones_enemy_base1[0]
-
-        if len(drones_enemy_base2) <= 1:
-            if enemy_base2.is_alive:
-                return enemy_base2
-            elif len(drones_enemy_base2) == 1:
-                return drones_enemy_base2[0]
+        enemy_bases = [base for base, distance in enemy_bases]
+        stop_index = 1 if len(enemy_bases) == 1 else len(enemy_bases) - 1
+        for i in range(stop_index):
+            enemy_base = enemy_bases[i]
+            drones_enemy_base = [drone for drone in self.me.scene.drones if drone.team == enemy_base.team
+                                 and drone.is_alive]
+            if len(drones_enemy_base) <= 1:
+                if enemy_base.is_alive:
+                    return enemy_base
+                elif len(drones_enemy_base) == 1:
+                    return drones_enemy_base[0]
 
     def is_collision_with_field_size(self, point):
         """ метод проверяет не вылетит ли дрон на границу экрана если полетит в point"""
