@@ -623,3 +623,6 @@ class MothershipsDestroyer(Strategy):
                 self.drone.actions.append(('shooting', pointer))
         else:
             self.drone.actions.append(('moving', self.drone.place))
+
+
+drone_class = MozzhegorovDrone
