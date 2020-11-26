@@ -1,9 +1,9 @@
 # Created by .ignore support plugin (hsz.mobi)
 
-*LOCAL_RATING.md
-*LOCAL_LOGS.md
+#*LOCAL_RATING.md
+#*LOCAL_LOGS.md
 **probe.py
-*.sqlite
+#*.sqlite
 *.zip
 
 settings/local.py

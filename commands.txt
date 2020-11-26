@@ -1,0 +1,10 @@
+Последовательность такая:
+1) Проводим бой своих дронов с кем-нибудь
+2) Обновляем рейтинг
+3) Проводим турнир
+4) Обновляем рейтинг
+
+python battle.py -p hangar_2020/ishmukhamedov.py hangar_2020/khizhov.py -od ./battles_2020
+python renew_rating.py -d ./battles_2020
+python battle.py -od ./battles_2020 --tournament hangar_2020/ishmukhamedov.py
+python renew_rating.py -d ./battles_2020
