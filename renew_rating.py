@@ -102,7 +102,7 @@ class RatingUpdater:
             raise ValueError('Battle results must contain uuid!')
         battle_uuid = battle_results['uuid']
         if Battle.get_or_none(Battle.uuid == battle_uuid):
-            logging.warning(f'Battle {battle_uuid} has been processed before. Skipped.')
+            # logging.warning(f'Battle {battle_uuid} has been processed before. Skipped.')
             return
         self.parse_results(battle_results)
         Battle.create(
@@ -119,7 +119,8 @@ class RatingUpdater:
             try:
                 self.update_rating(battle_result)
             except Exception:
-                logging.exception(f'Some error happened while process file {file}. Skipped.')
+                pass
+                # logging.exception(f'Some error happened while process file {file}. Skipped.')
 
     def renew_from_directory(self, path):
         for dirpath, dirnames, filenames in os.walk(path):
