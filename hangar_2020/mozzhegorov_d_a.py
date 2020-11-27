@@ -10,7 +10,8 @@ import collections
 from robogame_engine.theme import theme
 
 DEFENCE_CONFIG = {
-    'defender': 5,
+    'defender': 4,
+    'collector': 1,
 }
 DESTROY_CONFIG = {
     'defender': 2,
@@ -192,13 +193,26 @@ class Strategy(ABC):
         if not bool(enemies):
             Strategy.head_drone['crew_tactic'] = CLEANER
 
+        if self.drone.scene._step > 16000 and \
+                not isinstance(self.drone.strategy, Collector)\
+                and len(defenders) > 1:
+            self.drone.strategy = Collector
+            return
+
+        if Strategy.head_drone['crew_tactic'] is DEFENCE:
+
+            if self.get_new_target(self.is_ast_needed_drone) is None and \
+                    not isinstance(self.drone.strategy, Defender) and \
+                    (self.drone.is_empty and self.drone.near(self.drone.my_mothership)):
+                self.drone.strategy = Defender
+
         if not bool(enemies) and (len(collectors) < COLLECTORS_WITHOUT_ENEMIES or
                                   not bool(self.motherships_alive_with_ellerium())):
             self.drone.strategy = Collector
             return
 
         if Strategy.head_drone['crew_tactic'] in (ATTACK, DEFENCE):
-            if (len(enemies) < len(teammates) or not bool(enemies)) and not isinstance(self.drone.strategy, Attacker):
+            if (len(enemies) < 15 or not bool(enemies)) and not isinstance(self.drone.strategy, Attacker):
                 Strategy.head_drone['crew_tactic'] = ATTACK
                 self.drone.strategy = Attacker
                 self.drone.actions.append(('moving', self.drone.my_mothership))
@@ -327,10 +341,11 @@ class Strategy(ABC):
 
         enemies = self.enemies_sorted_dist_to_my_ms()
         for ast in self.get_sorted_list_of_asteroids():
+            ast_in_safe_dist = min([enemy.distance_to(ast) for enemy in self.enemies_sorted_dist_to_my_ms()]) > 650 \
+                               or self.drone.my_mothership.distance_to(ast) < 250
             if ast.payload \
                     and ast_filter_type(ast) \
-                    and (not bool(enemies) or
-                         min([enemy.distance_to(ast) for enemy in self.enemies_sorted_dist_to_my_ms()]) > 650):
+                    and (not bool(enemies) or ast_in_safe_dist):
                 return ast
 
         dead_drone = self.get_dead_drone_with_ellerium(self.is_ast_needed_drone)
@@ -489,6 +504,8 @@ class Collector(Strategy):
                 self.drone.actions.append(('loading', self.drone.target))
             elif self.drone.target.is_empty and Strategy.head_drone['enemy_near_base_cnt'] < 50:
                 place = self.get_new_target(self.is_ast_needed_drone)
+                if place is None:
+                    self.drone.actions.append(('moving', self.drone.my_mothership))
                 self.drone.actions.append(('moving', place))
             else:
                 self.drone.actions.append(('moving', self.drone.my_mothership))
