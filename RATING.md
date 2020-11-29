@@ -1,29 +1,29 @@
-##### Рейтинг по состоянию на 28.11.2020
+##### Рейтинг по состоянию на 29.11.2020
 
 Позиция|Имя команды|Рейтинг
 ---|---|---:
-1|BeskaevDrone|884
-2|SivkovDrone|799
-3|KovalevDrone|786
-4|OkhotnikovFNDrone|738
-5|DmitrievaDrone|737
-6|OlshannikovDron|735
-7|StarovoitovDrone|721
-8|LepilinDron|721
-9|AllaberdinDrone|719
-10|IlyinDrone|714
-11|GlazovDrone|713
-12|MozzhegorovDrone|712
-13|MartynovDrone|706
-14|PestovDrone|700
+1|BeskaevDrone|928
+2|SivkovDrone|850
+3|KovalevDrone|832
+4|StarovoitovDrone|776
+5|OlshannikovDron|761
+6|AllaberdinDrone|744
+7|MartynovDrone|744
+8|DmitrievaDrone|740
+9|MishinDrone|738
+10|OkhotnikovFNDrone|727
+11|LepilinDron|726
+12|IlyinDrone|711
+13|MozzhegorovDrone|708
+14|GlazovDrone|698
 15|DevastatorDrone|692
-16|MishinDrone|689
-17|KochetovDrone|674
-18|FominDrone|673
-19|ZhukovDrone|655
-20|ZaikinDrone|655
-21|SurkovaDrone|654
-22|KhizhovDrone|584
-23|VorobyevDrone|567
-24|SmirnovDrone|560
-25|IshmukhamedovDrone|555
+16|SurkovaDrone|659
+17|SmirnovDrone|626
+18|VorobyevDrone|626
+19|PestovDrone|621
+20|FominDrone|609
+21|KochetovDrone|590
+22|ZaikinDrone|581
+23|IshmukhamedovDrone|535
+24|ZhukovDrone|524
+25|KhizhovDrone|474
