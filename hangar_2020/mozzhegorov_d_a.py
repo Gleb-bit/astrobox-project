@@ -25,6 +25,11 @@ ATTACKER_PARAMS = [(0, 0),  # (dist, angle)
                    (73, 75),
                    (146, -85),
                    (146, 85), ]
+ATTACKER_PARAMS = [(0, 0),  # (dist, angle)
+                   (73, -74),
+                   (73, 74),
+                   (146, -83),
+                   (146, 83), ]
 ATTACKER_PARAMS_NEW = [(0, 0),  # (dist, angle)
                        (90, 90),
                        (90, -90),
@@ -194,7 +199,7 @@ class Strategy(ABC):
             Strategy.head_drone['crew_tactic'] = CLEANER
 
         if self.drone.scene._step > 16000 and \
-                not isinstance(self.drone.strategy, Collector)\
+                not isinstance(self.drone.strategy, Collector) \
                 and len(defenders) > 1:
             self.drone.strategy = Collector
             return
@@ -212,7 +217,7 @@ class Strategy(ABC):
             return
 
         if Strategy.head_drone['crew_tactic'] in (ATTACK, DEFENCE):
-            if (len(enemies) < 15 or not bool(enemies)) and not isinstance(self.drone.strategy, Attacker):
+            if (len(enemies) < 10 or not bool(enemies)) and not isinstance(self.drone.strategy, Attacker):
                 Strategy.head_drone['crew_tactic'] = ATTACK
                 self.drone.strategy = Attacker
                 self.drone.actions.append(('moving', self.drone.my_mothership))
@@ -341,7 +346,8 @@ class Strategy(ABC):
 
         enemies = self.enemies_sorted_dist_to_my_ms()
         for ast in self.get_sorted_list_of_asteroids():
-            ast_in_safe_dist = min([enemy.distance_to(ast) for enemy in self.enemies_sorted_dist_to_my_ms()]) > 650 \
+            ast_in_safe_dist = not bool(enemies) or \
+                               min([enemy.distance_to(ast) for enemy in enemies]) > 650 \
                                or self.drone.my_mothership.distance_to(ast) < 250
             if ast.payload \
                     and ast_filter_type(ast) \
@@ -518,6 +524,7 @@ class Attacker(Strategy):
         self.opposite_enemy = False
         self.straight_steps = 0
         self.attack_mothership_id = 0
+        self.shoots = 0
 
     def is_crew_in_friendly_fire(self, target):
         for teammate in self.drone.teammates:
@@ -527,9 +534,9 @@ class Attacker(Strategy):
 
     def next_action(self):
         enemies = self.enemies_sorted_dist_to_my_ms()
-
-        if (len(enemies) > 1 and Strategy.head_drone['enemy_near_base_cnt'] > 150) or \
-                Strategy.head_drone['enemy_near_base_cnt'] > 250:
+        if ((len(enemies) == 1 and Strategy.head_drone['enemy_near_base_cnt'] > 150) or
+            (len(enemies) > 1 and Strategy.head_drone['enemy_near_base_cnt'] > 250)) and \
+                len(set([enemy.team for enemy in enemies])) == 1:
             Strategy.head_drone['crew_tactic'] = MOTHERSHIPDESTROY
             Strategy.head_drone['coord'] = Point(0, 0)
             return
@@ -567,20 +574,26 @@ class Attacker(Strategy):
             self.drone.actions.append(('moving', self.drone.place))
             return
 
-        Strategy.head_drone['target'] = self.get_target_for_shot(pointer.team)
+        if self.drone.offset == 0:
+            Strategy.head_drone['target'] = self.get_target_for_shot(pointer.team)
 
         if Strategy.head_drone['target'] is not None and \
                 not self.is_friendly_fire(Strategy.head_drone['target'].coord) and \
                 not self.drone.distance_to(Strategy.head_drone['target']) > 637:
             self.drone.actions.append(('shooting', Strategy.head_drone['target']))
+            self.shoots += 1
         else:
             self.drone.actions.append(('turning', pointer))
             self.drone.actions.append(('moving_straight', None))
             self.straight_steps += 1
 
-        if self.straight_steps > 25:
+        if any([teammate.near(self.drone) for teammate in self.drone.teammates]):
+            self.straight_steps += 1
+
+        if self.straight_steps > 7 or self.shoots > 20:
+            self.shoots = 0
             self.straight_steps = 0
-            self.drone.actions.append(('moving', self.drone.my_mothership))
+            self.drone.actions.append(('moving', self.drone.place))
 
 
 class Defender(Strategy):
@@ -632,7 +645,8 @@ class MothershipsDestroyer(Strategy):
 
         for distation in range(601, 300, -50):
             self.drone.place = self.get_place_for_destroyer(pointer.coord, MD_PARAMS, distation, 120)
-            if min([enemy.distance_to(self.drone.place) for enemy in self.enemies_sorted_dist_to_my_ms()]) > 640:
+            enemies = self.enemies_sorted_dist_to_my_ms()
+            if not bool(enemies) or min([enemy.distance_to(self.drone.place) for enemy in enemies]) > 640:
                 break
 
         if self.drone.near(self.drone.place):
