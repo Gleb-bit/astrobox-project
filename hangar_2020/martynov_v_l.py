@@ -7,6 +7,18 @@ from robogame_engine.theme import theme
 
 
 class MartynovDrone(Drone):
+    """
+        Класс MartynovDrone - дрон для сбора элериума и защиты.
+        Attributes
+        ----------
+        target_to_collect - цель для сбора элериума.
+        my_near_enemy - ближайший враг.
+        target_to_shoot - цель для выстрела.
+        act_mode - мод дрона (defender, attack, collect, back).
+        point_to - точка для полёта.
+        choice_collect - список доступных целей для сбора элериума.
+        dict_analytic - подробная аналитика поля боя.
+    """
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -14,7 +26,6 @@ class MartynovDrone(Drone):
         self.my_near_enemy = None
         self.target_to_shoot = list()
         self.act_mode = 'defender'
-        self.gun_activated = False
         self.point_to = None
         self.choice_collect = list()
         self.dict_analytic = {
@@ -32,19 +43,26 @@ class MartynovDrone(Drone):
 
     def move_at(self, target, speed=None):
         """
-        добавляем к методу move_at() основного класса подсчёт дистанции
+            Добавляем к методу move_at() основного класса подсчёт дистанции
         """
         super().move_at(target, speed=speed)
 
     def on_born(self):
+        """
+            При роздении, защищаем базу,
+            собираем аналитику поля боя и принимаем решение, собирать ресурсы или атаковать врагов.
+        """
         self.act_mode = 'defender'
         self.action_analytics()
         self.collect_or_attack()
 
     def collect_or_attack(self):
         """
-        Думаем, что делать и делаем
-        Защищаем, если противников больше, чем живых союзников
+            Сложная логика выбора действий дрона "act_mode":
+            - защищать мать,
+            - атаковать врагов,
+            - собирать ресурсы,
+            - вернуться на базу.
         """
 
         all_on_mothership, alive_enemy, collect_from = self._prepare_analytic()
@@ -85,13 +103,18 @@ class MartynovDrone(Drone):
             self.act_mode = 'defender'
 
     def _if_defender(self, all_on_mothership):
+        """
+            Часть сложной логики выбора действий дрона "act_mode".
+            Если зашитник, то...
+            :param all_on_mothership: Все ли противники на своих матерях?
+            :type all_on_mothership: Bool.
+        """
         if not self.is_empty:
             self.act_mode = 'back'
             return
 
         if self.target_to_collect:
-
-            # Собираем, первым делом? если цель для сбора рядом с матерью.
+            # Собираем, первым делом, если цель для сбора рядом с матерью.
             if (self.distance_object_to_object(self.mothership, self.target_to_collect[0]) < self.gun.shot_distance
                     and len(self.teammates) > 3):
                 self.act_mode = 'collect'
@@ -112,7 +135,12 @@ class MartynovDrone(Drone):
             return
 
     def _defend_or_collect(self):
-        # Проверяет дистанцию от ближайшего врага до ближайшего астероида
+        """
+            Часть сложной логики выбора действий дрона "act_mode".
+            Защищать или собирать элериум.
+        """
+
+        # Проверяет дистанцию от ближайшего врага до ближайшего астероида.
         if self.my_near_enemy and self.target_to_collect:
 
             another_distance = abs(self.distance_object_to_object(self.my_near_enemy[0], self.target_to_collect[0]))
@@ -123,8 +151,7 @@ class MartynovDrone(Drone):
         else:
             can_i_take = True
 
-        # # Атакуем, если есть астероиды
-
+        # Собираем, если есть астероиды.
         if self.my_near_enemy \
                 and self.target_to_collect \
                 and can_i_take:
@@ -133,6 +160,14 @@ class MartynovDrone(Drone):
             self.act_mode = 'defender'
 
     def _if_collect(self, collect_from, all_on_mothership):
+        """
+            Часть сложной логики выбора действий дрона "act_mode".
+            Если сборщик, то...
+            :param collect_from: Цель для сбора
+            :type collect_from: Объект - астероид или дрон или чужая база.
+            :param all_on_mothership: Все ли противники на своих матерях?
+            :type all_on_mothership: Bool.
+        """
         if self.target_to_collect:
             object_distance = self.distance_object_to_object(self.mothership, self.target_to_collect[0]) \
                               > self.gun.shot_distance
@@ -158,11 +193,22 @@ class MartynovDrone(Drone):
     # noinspection PyMethodMayBeStatic
     def distance_object_to_object(self, first, second):
         """
-            The distance to other points
+            Дистанция от одного объекта до другого.
+            :param first: первый объект
+            :type first: объект с координатами "x" и "y".
+            :param second: второй объект
+            :type second: объект с координатами "x" и "y".
         """
         return math.sqrt((first.coord.x - second.x) ** 2 + (first.coord.y - second.y) ** 2)
 
     def _prepare_analytic(self):
+        """
+            Промежуточная аналитика для сложной логики выбора действий дрона "act_mode".
+            return:
+            all_on_mothership - все враги возле своих баз (поле свободно для сбора =) )
+            alive_enemy - количество живых врагов. Есть кого атаковать?
+            collect_from - количество объектов с элериумом. Есть с кого собирать?
+        """
         self.dict_analytic['alive_teammates'] = len([drone for drone in self.teammates if drone.is_alive])
         alive_enemy = self.dict_analytic['alive_drones'] + self.dict_analytic['alive_motherships']
         collect_from = (
@@ -197,8 +243,9 @@ class MartynovDrone(Drone):
 
     def wandering_in_space(self):
         """
-        Можем ли блуждать по полю?
-        :return:
+            Можем ли блуждать по полю?
+            Если показатель health меньше допустимой нормы, блуждаем на базу.
+            :return:
         """
 
         if self.is_alive is False:
@@ -218,6 +265,11 @@ class MartynovDrone(Drone):
             return True
 
     def next_action(self):
+        """
+            - Аналиника,
+            - выбор "act_mode",
+            - запуск логики работы дрона исходя из "act_mode".
+        """
         if self.is_alive:
             self.action_analytics()
             self.collect_or_attack()
@@ -241,7 +293,9 @@ class MartynovDrone(Drone):
         self.next_action()
 
     def space_enemy_attack(self):
-
+        """
+            Логика работы война. "act_mod" = "attack".
+        """
         if self.point_to is None:
             self.point_to = self._get_near_point(self, self._get_places_near_enemy())
 
@@ -255,6 +309,10 @@ class MartynovDrone(Drone):
                 self.move_at(self.point_to)
 
     def _attack_move_or_turn(self):
+        """
+            Часть логики работы война. "act_mod" = "attack".
+            Двигаемся или поворачиваемся?
+        """
         if not self.near(self.point_to):
             self.move_at(self.point_to)
         elif self.distance_to(self.target_to_shoot[0]) >= self.gun.shot_distance:
@@ -265,9 +323,7 @@ class MartynovDrone(Drone):
 
     def defend_my_base(self):
         """
-        Выбор точки для атаки
-        Защищаем, если рядом с матерью
-        :return:
+            Логика работы защитника. "act_mod" = "defender".
         """
 
         self.point_to = self._get_near_point(self, self._get_places_near_mothership())
@@ -278,6 +334,10 @@ class MartynovDrone(Drone):
             self.choice_action()
 
     def choice_action(self):
+        """
+            Часть логики работы защитника. "act_mod" = "defender".
+            Атакуем или поворачиваемся?
+        """
         if self.target_to_shoot:
             vec = Vector.from_points(self.coord, self.target_to_shoot[0].coord)
             if abs(vec.direction - self.direction) >= 7:
@@ -288,12 +348,9 @@ class MartynovDrone(Drone):
 
     def teammates_on_attack_line(self):
         """
-        Отвеч на вопрос "есть ли союзники на линии атаки?"
-        Допилить чем ближе к союзнику, тем больше угол до союзника
-        Возможно как-то с помощью прямоугольного треугольника...
-        :return:
+            Проверяет "есть ли союзники на линии атаки?"
+            :return: True or False
         """
-
         can_attack = [
             (abs(self.direction - Vector.from_points(self.coord, drone.coord).direction) > 25
              or self.distance_to(self.target_to_shoot[0]) < self.distance_to(drone))
@@ -304,7 +361,10 @@ class MartynovDrone(Drone):
         return all(can_attack)
 
     def _get_places_near_enemy(self):
-
+        """
+            Выбор точки возле противника для атаки.
+            :return: список доступных точек для атаки.
+        """
         point_list = list()
         directions_list = list()
         start_vector = Vector(x=self.target_to_shoot[0].x, y=self.target_to_shoot[0].y)
@@ -344,7 +404,14 @@ class MartynovDrone(Drone):
 
     def _get_near_point(self, team_object, all_point_list):
         """
-        Ближайшаа точка из списка точек
+            Выбор ближайшей точки для team_object из all_point_list.
+            :return: Одну точку или False, в случае, если точек нет.
+
+            :param team_object: текущий дрон или союзник.
+            :type team_object: дрон.
+
+            :param all_point_list: Список доступных точек.
+            :type all_point_list: Point list.
         """
         teammates_point = [
             (drone.x, drone.y) for drone in self.teammates
@@ -366,14 +433,10 @@ class MartynovDrone(Drone):
 
         return choice_point[0] if choice_point else False
 
-    def point_near_point(self, first, second):
-        points_dist = math.sqrt((first.x - second[0]) ** 2 + (first.x - second[1]) ** 2)
-
-        return points_dist <= self.radius / 10
-
     def _get_places_near_mothership(self):
         """
-        Все точки рядо с матерью
+            Выбор точки возле матери для защиты.
+            :return: список доступных точек для защиты вокруг матери.
         """
 
         point_list = list()
@@ -407,8 +470,7 @@ class MartynovDrone(Drone):
 
     def return_to_base(self):
         """
-        Возвращаемся на базу и ничего не делаем. Конец игры.
-        :return:
+            Возвращаемся на базу и ничего не делаем. Конец игры.
         """
 
         if self.near(self.mothership):
@@ -419,7 +481,9 @@ class MartynovDrone(Drone):
             self.move_at(self.mothership)
 
     def space_collect_from(self):
-
+        """
+            Логика работы сборщика. "act_mod" = "collect".
+        """
         if not self.target_to_collect:
             return
 
@@ -445,6 +509,10 @@ class MartynovDrone(Drone):
                 self.move_at(self.mothership)
 
     def _collect_if_is_empty(self):
+        """
+            Часть логика работы сборщика. "act_mod" = "collect".
+            Если в поле, пустой и нечего собирать, думаем куда лететь.
+        """
         if not self.choice_collect:
             self.point_to = self.mothership
             self.move_at(self.point_to)
@@ -456,6 +524,10 @@ class MartynovDrone(Drone):
             self.move_at(self.point_to)
 
     def _collect_if_transition(self):
+        """
+            Часть логика работы сборщика. "act_mod" = "collect".
+            Пока разгружаемся, думаем куда лететь.
+        """
         if self._transition:
             # Выбор, на астероид или на базу
             next_target = self._elerium_gathering()
@@ -475,6 +547,10 @@ class MartynovDrone(Drone):
                     self.move_to_new_asteroid()
 
     def _collect_if_at_mothership(self):
+        """
+            Часть логика работы сборщика. "act_mod" = "collect".
+            Если на метери, думаем куда лететь.
+        """
         # Дрон не пустой - отдаём матери
         if not self.is_empty:
             self.unload_to(self.mothership)
@@ -491,13 +567,15 @@ class MartynovDrone(Drone):
         """
         Is it near to the object?
         :param obj:
-        :return:
+        :return: Bool.
         """
 
         return self.distance_to(obj) <= self.radius / 10
 
     def _enemy_mother_analytics(self):
-
+        """
+            Ищем беззащитную база для атаки
+        """
         # Матеря с защитой
         mothers_defend = {}
 
@@ -534,8 +612,11 @@ class MartynovDrone(Drone):
 
     def _enemy_drone_analytics(self):
         """
-        Выбор ближайшего дрона противника
-        Мониторинг живых противников.
+            Выбор ближайшего дрона противника для атаки.
+            Мониторинг живых противников.
+            !!! Выбираем ближайшую цель только если цели нет, или дистанция до цели:
+            - у защитников более 30%,
+            - у остальных более 70%.
         """
         choice_drones = [
             [
@@ -551,10 +632,6 @@ class MartynovDrone(Drone):
         enemy_drones_on_mothership = [drone for drone in choice_drones if drone[4] <= 350]
         self.dict_analytic['enemy_drones_on_mothership'] = len(enemy_drones_on_mothership)
         # Ближайший противник
-
-        # !!! Выбираем ближайшую цель только если цели нет
-        # или дистанция до цели у защитников более 30%
-        # у остальных более 70%
         if self.act_mode == 'defender':
             shot_dist_rate = 0.3
         else:
@@ -572,9 +649,9 @@ class MartynovDrone(Drone):
 
     def near_enemy(self, object_list):
         """
-        Выбор ближайшего врага.
-        :param object_list:
-        :return:
+            Выбор ближайшего врага.
+            :param object_list: Список врагов.
+            :type object_list: drone list.
         """
 
         if not object_list:
@@ -587,10 +664,11 @@ class MartynovDrone(Drone):
                 self.target_to_shoot = self.my_near_enemy
 
     def near_collect(self, object_list):
+
         """
-        Выбор ближайшего объекта для сбора.
-        :param object_list:
-        :return:
+            Выбор ближайшего объекта для сбора.
+            :param object_list:
+            :type object_list: list of object.
         """
 
         if not object_list:
@@ -600,6 +678,12 @@ class MartynovDrone(Drone):
             self.target_to_collect = object_list[0]
 
     def action_analytics(self):
+        """
+            Полная аналитика для решения, что делать дрону:
+            - Проверка наличия врагов,
+            - Проверка наличия свободных матерей,
+            - Проверка наличия объектов для сбора ресурсов.
+        """
         self._enemy_drone_analytics()
 
         if not self.target_to_shoot \
@@ -609,12 +693,14 @@ class MartynovDrone(Drone):
         self._collect_analytics()
 
     def _collect_analytics(self):
-        # Анализируем, с кого можно фармануть
-        # первы делом отдаём уже зарезервированные объекты.
+        """
+            Анализируем, с кого можно собрать ресурсы.
+            Первым делом отдаём уже зарезервированные объекты.
+        """
 
         asteroid_target = self._asteroid_target_team()
-        # Отбираем астероиды с payload > 0
 
+        # Отбираем астероиды с payload > 0
         self.choice_collect = [
             [
                 asteroid,
@@ -660,30 +746,12 @@ class MartynovDrone(Drone):
 
         self.choice_collect.extend(another_drones)
 
-        # self._collect_greed()
-
         self.near_collect(self.choice_collect)
-
-    def _collect_greed(self):
-        """
-        Добавил немного жадности дронам.
-        """
-        greed_is_bad = list()
-        for asteroid in self.choice_collect:
-            for drone in self.scene.drones:
-                if drone.is_alive and drone not in self.teammates:
-                    if self.distance_object_to_object(drone, asteroid[0]) <= drone.gun.shot_distance:
-                        break
-                    else:
-                        if asteroid not in greed_is_bad:
-                            greed_is_bad.append(asteroid)
-                            self.dict_analytic['greed_count'] += 1
-        self.choice_collect = greed_is_bad or self.choice_collect
 
     def _elerium_gathering(self):
         """
-        Если количество Элириума способно заполнить трюм, разворачиваемся к базе
-        :return:
+            Если количество Элириума способно заполнить трюм, разворачиваемся к базе.
+            :return: следующий объект для сбора элириума | мать.
         """
 
         if (self.fullness + (self.target_to_collect[1] / 100)) >= 1:
@@ -699,6 +767,10 @@ class MartynovDrone(Drone):
         return next_target
 
     def _get_my_asteroid(self):
+        """
+            Выбор следующего объекта для сбора элериума
+            :return: следующий объект для сбора элириума | мать.
+        """
         sorted_asteroid = self._choice_near_object()
         # Если есть, то астероид, если нет, то база
         if sorted_asteroid == self.mothership:
@@ -710,7 +782,10 @@ class MartynovDrone(Drone):
             self.attack_mode = 'attack' if sorted_asteroid is None else 'collect'
 
     def _choice_near_object(self):
-        # Ближайшие к self
+        """
+            Выбор следующего объекта для сбора элериума
+            :return: объект | None.
+        """
         if len(self.choice_collect) > 0:
             first_target = self.choice_collect[0]
             return first_target[0]
@@ -718,14 +793,19 @@ class MartynovDrone(Drone):
             return None
 
     def move_to_new_asteroid(self):
-        # Выбор ближайшего, незанятого астероида
+        """
+            Двигаемся к ближайшему объекту для сбора элериума.
+        """
         self.target_to_collect = list() if not self.choice_collect else self.choice_collect[0]
         if self.target_to_collect:
             self.point_to = self.target_to_collect[0]
             self.move_at(self.point_to)
 
     def _asteroid_target_team(self):
-        # занятые астероиды
+        """
+            Объекты для сбора элериума, занятые союзниками.
+            :return: список объектов.
+        """
         asteroid_target = [
             team_ship.target_to_collect[0]
             for team_ship in self.teammates
