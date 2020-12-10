@@ -1,7 +1,9 @@
-##### Результаты соревнований с 05.11.2020 по 06.12.2020
+##### Результаты соревнований с 09.11.2020 по 10.12.2020
 
 Дата сражения | Продолжительность (шагов игры) | Первый результат | Второй результат | Третий результат | Четвертый результат
 --- | --- | --- | --- | --- | ---
+2020-12-10 22:38:59 | 2299 | 859 - DemintsevDrone | 261 - DmitrievaDrone /dead/ | 200 - PestovDrone /dead/ | 0 - VorobyevDrone /dead/
+2020-12-10 22:36:54 | 17001 | 791 - DemintsevDrone /dead/ | 112 - MishinDrone /dead/
 2020-12-06 21:42:18 | 9094 | 1440 - KochetovDrone /dead/ | 100 - KhizhovDrone /dead/ | 0 - ZhukovDrone /dead/ | 0 - ZaikinDrone /dead/
 2020-12-06 21:41:36 | 7947 | 1562 - KochetovDrone | 0 - ZhukovDrone /dead/ | 0 - ZaikinDrone /dead/ | 0 - IshmukhamedovDrone /dead/
 2020-12-06 21:40:53 | 17001 | 0 - IshmukhamedovDrone /dead/ | 0 - KochetovDrone | 0 - ZhukovDrone /dead/ | 0 - KhizhovDrone /dead/
