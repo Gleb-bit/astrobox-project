@@ -54,9 +54,9 @@ class MartynovDrone(Drone):
         """
         self.act_mode = 'defender'
         self.action_analytics()
-        self.collect_or_attack()
+        self.choice_action()
 
-    def collect_or_attack(self):
+    def choice_action(self):
         """
             Сложная логика выбора действий дрона "act_mode":
             - защищать мать,
@@ -272,7 +272,7 @@ class MartynovDrone(Drone):
         """
         if self.is_alive:
             self.action_analytics()
-            self.collect_or_attack()
+            self.choice_action()
 
         # Действуем, только если живы
         if self.wandering_in_space():
@@ -331,9 +331,9 @@ class MartynovDrone(Drone):
         if self.point_to and not self.near(self.point_to):
             self.move_at(self.point_to)
         elif self.near(self.point_to):
-            self.choice_action()
+            self.defender_shot_or_turn()
 
-    def choice_action(self):
+    def defender_shot_or_turn(self):
         """
             Часть логики работы защитника. "act_mod" = "defender".
             Атакуем или поворачиваемся?
