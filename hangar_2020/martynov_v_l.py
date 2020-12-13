@@ -83,7 +83,7 @@ class MartynovDrone(Drone):
             self._if_defender(all_on_mothership)
 
         elif self.act_mode == 'attack':
-            if self.dict_analytic['alive_drones'] >= self.dict_analytic['alive_teammates']:
+            if self.dict_analytic['alive_drones'] >= self.dict_analytic['alive_teammates'] and not all_on_mothership:
                 self._defend_or_collect()
             else:
                 if (not alive_enemy or all_on_mothership) and self.target_to_collect:
@@ -124,12 +124,15 @@ class MartynovDrone(Drone):
                 return
 
         if self.target_to_shoot:
-            if self.dict_analytic['alive_drones'] <= self.dict_analytic['alive_teammates'] and self.target_to_shoot:
+            if self.dict_analytic['alive_drones'] < self.dict_analytic['alive_teammates'] and self.target_to_shoot:
                 self.act_mode = 'attack'
-            elif self.dict_analytic['alive_drones'] > self.dict_analytic['alive_teammates'] and not all_on_mothership:
+            elif self.dict_analytic['alive_drones'] >= self.dict_analytic['alive_teammates'] and not all_on_mothership:
                 self._defend_or_collect()
-            elif all_on_mothership and self.target_to_shoot[3] == 'mothership':
+
+            elif all_on_mothership and self.target_to_shoot[3] == 'mothership' and not self.target_to_collect:
                 self.act_mode = 'attack'
+            elif all_on_mothership and self.target_to_collect:
+                self.act_mode = 'collect'
             else:
                 self.act_mode = 'defender'
             return
