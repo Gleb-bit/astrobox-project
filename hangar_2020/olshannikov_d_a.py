@@ -3,7 +3,6 @@ from astrobox.core import Drone
 from robogame_engine.geometry import Point, Vector
 
 
-LOOTER = "luter"
 DEFER = "defer"
 COMANDO = "comandir"
 LEFT_DAWN = "1"
@@ -14,7 +13,6 @@ RIGHT_UP = "4"
 
 class OlshannikovDron(Drone):
     my_team = []
-    my_team_looter = []
     my_team_defer = []
     all_distans_flights = 0
     distans_of_fullness = 0
@@ -53,8 +51,6 @@ class OlshannikovDron(Drone):
     def add_to_team(self):
         "Добавление дрона к списку дронов его роли"
         self.my_team.append(self)
-        if self.role == LOOTER:
-            self.my_team_looter.append(self)
         if self.role == DEFER:
             self.my_team_defer.append(self)
         if self.role == COMANDO:
@@ -62,8 +58,6 @@ class OlshannikovDron(Drone):
 
     def delete_in_team(self):
         self.my_team.remove(self)
-        if self.role == LOOTER:
-            self.my_team_looter.remove(self)
         if self.role == DEFER:
             self.my_team_defer.remove(self)
         if self.role == COMANDO:
@@ -288,8 +282,6 @@ class OlshannikovDron(Drone):
 
     def selecting_action(self):
         """Выбор действия дрона в зависимости от версии"""
-        if self.role == LOOTER:
-            self.selecting_action_looter()
         if self.role == DEFER:
             self.selecting_action_defer()
         if self.role == COMANDO:
@@ -313,13 +305,13 @@ class OlshannikovDron(Drone):
         объект дрон, дистанция до него и его заполненность
         """
         self.distance_to_my_team = []
-        if len(self.my_team_looter) == 1:
-            dron = self.my_team_looter[0]
+        if len(self.my_team_defer) == 1:
+            dron = self.my_team_defer[0]
             if dron.fullness != 1.0:
                 if not dron.loading_dron:
                     self.distance_to_my_team.append([dron, self.distance_to(dron)])
         else:
-            for dron in self.my_team_looter:
+            for dron in self.my_team_defer:
                 if dron.fullness != 1.0:
                     if not dron.loading_dron:
                         self.distance_to_my_team.append([dron, self.distance_to(dron)])
