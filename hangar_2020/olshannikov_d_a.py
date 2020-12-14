@@ -52,7 +52,7 @@ class OlshannikovDron(Drone):
         self.move_at(self.target)
 
     def add_to_team(self):
-        "Добавление дрона к списку дронов его роли"
+        """Добавление дрона к списку дронов его роли"""
         self.my_team.append(self)
         if self.role == DEFER:
             self.my_team_defer.append(self)
@@ -60,7 +60,7 @@ class OlshannikovDron(Drone):
             OlshannikovDron.our_commander = self
 
     def delete_in_team(self):
-        """Удаление друна из его монанды"""
+        """Удаление дрона из его команды"""
         self.my_team.remove(self)
         if self.role == DEFER:
             self.my_team_defer.remove(self)
@@ -305,11 +305,7 @@ class OlshannikovDron(Drone):
             self.move_at(self._get_my_asteroid())
 
     def set_distance_to_my_team(self):
-        """Формирует список до союзных не полных дронов, которые не заняты другими дронами исключая себя
-
-        self.distance_to_my_team - список списков, в списках 3 атрибута,
-        объект дрон, дистанция до него и его заполненность
-        """
+        """Формирует список до союзных не полных дронов, которые не заняты другими дронами исключая себя"""
         self.distance_to_my_team = []
         if len(self.my_team_defer) == 1:
             dron = self.my_team_defer[0]
@@ -735,7 +731,7 @@ class OlshannikovDron(Drone):
         return point
 
     def delete_data_dead_enemy(self):
-        """Улаоение информации о мёртвом враге"""
+        """Удаление информации о мёртвом враге"""
         self.my_target_attack = None
         self.points_for_attack = None
         self.my_point_attack = None
