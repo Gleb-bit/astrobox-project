@@ -132,7 +132,6 @@ class DemintsevDrone(Drone):
         y = self.my_mothership.coord.y
 
         if len([1 for drone in DemintsevDrone.my_team if drone.is_alive]) == 1:
-            print(len([1 for drone in DemintsevDrone.my_team if drone.is_alive]))
             if x > self.X_CENTRE and y > self.Y_CENTRE:
                 new_x = x - 115.0
                 new_y = y - 115.0
