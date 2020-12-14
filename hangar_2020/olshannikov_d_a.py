@@ -2,9 +2,10 @@
 from astrobox.core import Drone
 from robogame_engine.geometry import Point, Vector
 
-
 DEFER = "defer"
 COMANDO = "comandir"
+DISTANSE_BETWEEN_POINT_TO_ATTACK = 65
+DISTANCE_HIDE_FIRST_ASTEROID = 600
 LEFT_DAWN = "1"
 RIGHT_DAWN = "2"
 LEFT_UP = "3"
@@ -41,6 +42,8 @@ class OlshannikovDron(Drone):
         self.distans_of_filled_in_persent = 0
         self.distans_of_empty_in_persent = 0
         self.count_fire_for_change_position = 6
+        self.distanse_between_point_to_attack = DISTANSE_BETWEEN_POINT_TO_ATTACK
+        self.distance_hide_first_asteroid = DISTANCE_HIDE_FIRST_ASTEROID
         self.hide = None
         self.avaid = None
         self.shot_distance = 681
@@ -57,6 +60,7 @@ class OlshannikovDron(Drone):
             OlshannikovDron.our_commander = self
 
     def delete_in_team(self):
+        """Удаление друна из его монанды"""
         self.my_team.remove(self)
         if self.role == DEFER:
             self.my_team_defer.remove(self)
@@ -72,9 +76,11 @@ class OlshannikovDron(Drone):
         self.add_to_team()
 
     def to_death(self):
+        """Функция вызывающая при смерти дрона"""
         self.delete_in_team()
 
     def create_point_defing(self):
+        """Создание точки обороны в зависимости от расположения базы"""
         self.determine_position_my_mothership()
         if self.position_my_mothership == LEFT_DAWN:
             point = Point(self.my_mothership.coord.x + 82, self.my_mothership.coord.y + 82)
@@ -90,6 +96,7 @@ class OlshannikovDron(Drone):
             OlshannikovDron.point_for_defing = point
 
     def get_distance_to_enemy_motherships(self):
+        """Определяет дистанцию вражеских баз от союзной"""
         self.distance_to_mothrships = []
         for motheship in self.scene.motherships:
             distance = self.my_mothership.distance_to(motheship)
@@ -100,6 +107,7 @@ class OlshannikovDron(Drone):
         return self.distance_to_mothrships
 
     def determine_position_my_mothership(self):
+        """Определяет, в каком углу зареспилась база"""
         self.position_my_mothership = None
         sum_x_and_y = int(self.my_mothership.coord.x) + int(self.my_mothership.coord.y)
         if sum_x_and_y == 180:
@@ -114,14 +122,8 @@ class OlshannikovDron(Drone):
         else:
             self.position_my_mothership = LEFT_UP
 
-
-
     def set_distance_to_asteroids(self):
-        """Определяет растояния до астеройдов относительно дрона
-
-        self.distance_to_asteroids -- отсортированный список дистанций астеройдов по возрастанию
-        self.near_asteroid -- самый ближний астеройд
-        """
+        """Определяет растояния до астеройдов относительно дрона"""
         self.distance_to_asteroids = []
         for asteroid in self.asteroids:
             if asteroid.payload:
@@ -159,7 +161,8 @@ class OlshannikovDron(Drone):
         else:
             return self.check_alleged_payload_with_team(asteroid, lower_value_payload)
 
-    def check_alleged_payload_when_one_ally(self,asteroid,  lower_value_payload):
+    def check_alleged_payload_when_one_ally(self, asteroid, lower_value_payload):
+        """Проверка загруженности астеройдов, если дрон 1"""
         if self.my_team_withot_me[0].target == asteroid[0]:
             self.supposed_payload_asteroid = asteroid[0].payload - self.my_team_withot_me[0].free_space
             self.expected_payload_asteroid_with_me = self.supposed_payload_asteroid - self.free_space
@@ -170,7 +173,8 @@ class OlshannikovDron(Drone):
             self.my_asteroid = asteroid[0]
             return self.my_asteroid
 
-    def check_alleged_payload_with_team(self,asteroid, lower_value_payload):
+    def check_alleged_payload_with_team(self, asteroid, lower_value_payload):
+        """Проверка загруженности астеройдов если есть команда"""
         self.supposed_payload_asteroid = asteroid[0].payload
         for dron in self.my_team_withot_me:
             if dron.target == asteroid[0]:
@@ -180,7 +184,6 @@ class OlshannikovDron(Drone):
             self.my_asteroid = asteroid[0]
             return self.my_asteroid
 
-
     def _get_my_asteroid(self):
         """Возвращает оптимальный астеройд, с которого нужно собирать ресурсы"""
         self.set_distance_to_asteroids()
@@ -188,11 +191,13 @@ class OlshannikovDron(Drone):
         return self.my_asteroid
 
     def get_good_first_asteroid(self):
+        """Выбор астеройда, когда только зареспились"""
         self.set_distance_to_first()
         self.choice_first_asteroid()
         return self.my_asteroid
 
     def set_distance_to_first(self):
+        """Определяется дистанция до астеройдов, для первого полёта"""
         self.distance_to_asteroids = []
         for asteroid in self.asteroids:
             self.distance_to_asteroids.append([asteroid, self.distance_to(asteroid), asteroid.payload])
@@ -201,13 +206,14 @@ class OlshannikovDron(Drone):
         return self.distance_to_asteroids
 
     def choice_first_asteroid(self):
+        """Выбор первого астеройда"""
         self.my_team_withot_me = []
         self.my_team_withot_me.extend(self.my_team)
         self.my_team_withot_me.remove(self)
         self.my_asteroid = []
         asteroid_for_delate = []
         for asteroid in self.distance_to_asteroids:
-            if asteroid[1] > 600:
+            if asteroid[1] > self.distance_hide_first_asteroid:
                 asteroid_for_delate.append(asteroid)
         if asteroid_for_delate:
             for asteroid in asteroid_for_delate:
@@ -288,7 +294,7 @@ class OlshannikovDron(Drone):
             self.selecting_actiom_comando()
 
     def selecting_action_looter(self):
-        """Метод определяющий действие дрона версии LOOTER"""
+        """Метод определяющий действие дрона при команде сбора ресурсов"""
         if self.need_loading_in_dron():
             self.interaction_dron()
         elif self.need_unload_to_mothership():
@@ -346,6 +352,7 @@ class OlshannikovDron(Drone):
             self.loading_dron.turn_to(self.my_mothership)
 
     def need_unload_to_mothership(self):
+        """Нужно ли лететь разгружаться на базу"""
         if self.distance_to(self.my_mothership) == 0.0:
             return False
         if self.fullness > 0.9:
@@ -355,11 +362,12 @@ class OlshannikovDron(Drone):
             return True
         self._get_my_asteroid()
         self.proportion_need_for_unloading = (self.distance_to(self.my_asteroid) /
-                                              self.distance_to(self.my_mothership)) *\
+                                              self.distance_to(self.my_mothership)) * \
                                              self.fullness
         return self.proportion_need_for_unloading >= 0.4
 
     def selecting_actiom_comando(self):
+        """Выбор действия командира"""
         self.check_ally()
         if len(self.my_team_withot_me) < 4:
             self.go_to_defing_my_mothership()
@@ -371,6 +379,7 @@ class OlshannikovDron(Drone):
             self.selecting_action_looter()
 
     def check_ally(self):
+        """Проверка живы ли союзники"""
         if self.health == 0:
             return
         if len(self.my_team) == 1:
@@ -382,6 +391,7 @@ class OlshannikovDron(Drone):
         self.my_team_withot_me.remove(self)
 
     def go_to_defing_my_mothership(self):
+        """Лететь к точке защиты, команда союзникам спрятаться или раскрыться"""
         if self.near(self.point_for_defing):
             self.hide_away_all_off()
             self.defing_my_mothership()
@@ -390,6 +400,7 @@ class OlshannikovDron(Drone):
             self.move_at(self.point_for_defing)
 
     def defing_my_mothership(self):
+        """Метод определяющий защиты базы"""
         if self.my_target_attack:
             if self.shot_is_fired == self.count_fire_for_change_position:
                 self.shot_is_fired = 0
@@ -408,26 +419,27 @@ class OlshannikovDron(Drone):
             if not self.my_target_attack:
                 return
             self.give_victim_my_team()
-            if self.my_target_attack:
-                self.create_points_to_attack()
-                self.give_points_to_attack_to_defer()
-                self.attact_enemy()
-            else:
-                self.selecting_action_looter()
+            self.create_points_to_attack()
+            self.give_points_to_attack_to_defer()
+            self.attact_enemy()
 
     def hide_away_all_on(self):
+        """Спрятать всю команду"""
         for ally in self.my_team:
             ally.hide = True
 
     def hide_away_all_off(self):
+        """Вся команда перестаёт быть спрятаной"""
         for ally in self.my_team:
             ally.hide = None
 
     def get_my_victim(self):
+        """Метод выбора врага"""
         self.get_distance_to_enemy(self)
         self.target = self.get_my_target_enemy()
 
     def create_points_to_attack(self):
+        """Создать точки для атаки"""
         enemy = self.my_target_attack
         vec = Vector.from_points(self.coord, enemy.coord)
         vec.rotate(180)
@@ -439,19 +451,21 @@ class OlshannikovDron(Drone):
                 self.points_for_attack.append(point_to_attack)
         self.corected_point_to_attack_for_mothership()
         self.delete_point_near_for_me()
-        while self.delate_nearest_points(65):
+        while self.delate_nearest_points(self.distanse_between_point_to_attack):
             pass
         return self.points_for_attack
 
     def delete_point_near_for_me(self):
+        """Удалить точки вокруг командира"""
         point_for_delate = []
         for point in self.points_for_attack:
-            if self.distance_to(point) < 65:
+            if self.distance_to(point) < self.distanse_between_point_to_attack:
                 point_for_delate.append(point)
         for point in point_for_delate:
             self.points_for_attack.remove(point)
 
     def delate_nearest_points(self, radius=50):
+        """Удаление точек атаки, лежащих друг другу ближе радиуса"""
         point_for_delate_uncorect = []
         for point_analiz in self.points_for_attack:
             for point in self.points_for_attack:
@@ -468,6 +482,7 @@ class OlshannikovDron(Drone):
                 return True
 
     def corected_point_to_attack_for_mothership(self):
+        """Удаление точек слишком близких к базе и создание хороших точек"""
         bad_point = []
         for point_analiz in self.points_for_attack:
             distance = point_analiz.distance_to(self.my_mothership)
@@ -491,6 +506,7 @@ class OlshannikovDron(Drone):
             self.points_for_attack.append(point)
 
     def give_points_to_attack_to_defer(self):
+        """Передача точек для атаки деферам"""
         number_defer = 0
         for defer in self.my_team_defer:
             defer.my_points_attack = self.points_for_attack
@@ -498,6 +514,7 @@ class OlshannikovDron(Drone):
             self.my_points_attack = self.points_for_attack
 
     def get_distance_to_enemy(self, obj):
+        """Определение дистанции до врагов"""
         self.my_enemy = []
         self.my_enemy.extend(self.scene.drones)
         for ally in self.my_team:
@@ -510,17 +527,18 @@ class OlshannikovDron(Drone):
         return self.distance_to_my_enemy
 
     def get_my_target_enemy(self):
+        """Выбор врага для атаки"""
         for enemy, distance_to_enemy in self.distance_to_my_enemy:
-            if distance_to_enemy < self.shot_distance:
-                if enemy.distance_to(enemy.my_mothership) > 150:
-                    self.my_target_attack = enemy
-                    return enemy
+            if distance_to_enemy < self.shot_distance and enemy.distance_to(enemy.my_mothership) > 150:
+                self.my_target_attack = enemy
+                return enemy
         for enemy, distance_to_enemy in self.distance_to_my_enemy:
             if distance_to_enemy < self.shot_distance:
                 self.my_target_attack = enemy
                 return enemy
 
     def give_victim_my_team(self):
+        """Передача таргета для атаки деферам"""
         if self.distance_to(self.my_target_attack) < 100:
             return
         if len(self.my_team_defer) == 1:
@@ -530,6 +548,7 @@ class OlshannikovDron(Drone):
                 ally.my_target_attack = self.my_target_attack
 
     def selecting_action_defer(self):
+        """Определения действия дефера"""
         if self.health == 0:
             self.to_death()
             return
@@ -548,7 +567,6 @@ class OlshannikovDron(Drone):
                 self.move_at(self.points_for_avaid)
                 self.avaid = True
                 return
-
         if self.health < 30:
             self.move_at(self.my_mothership)
         if self.hide:
@@ -582,6 +600,7 @@ class OlshannikovDron(Drone):
             self.selecting_action_looter()
 
     def get_my_point_attack(self):
+        """Выбор точки атаки из списка"""
         defer_with_point_to_attack = []
         for defer in self.my_team:
             if defer.my_point_attack:
@@ -607,6 +626,7 @@ class OlshannikovDron(Drone):
         self.move_at(self.my_mothership)
 
     def delete_point_near_enemy(self):
+        """Удаление точек слишком близко к врагам"""
         index_bad_point = []
         index = 0
         for point, distance, sum_x_and_y in self.distance_to_points_to_attack:
@@ -620,6 +640,7 @@ class OlshannikovDron(Drone):
                 self.distance_to_points_to_attack.pop(index)
 
     def priority_points_near_mothership(self):
+        """Если есть свободная точка рядом с базой, то нужно выбрать её"""
         for point, distance, sum_x_and_y in self.distance_to_points_to_attack:
             if point.distance_to(self.my_mothership) < 200:
                 self.my_point_attack = point
@@ -627,43 +648,41 @@ class OlshannikovDron(Drone):
                 return True
 
     def get_my_team_defer_with_me(self):
+        """Создание списка команды дефером без вызывающего"""
         my_team_defer_with_me = []
         my_team_defer_with_me.extend(self.my_team_defer)
         my_team_defer_with_me.remove(self)
         return my_team_defer_with_me
 
     def create_point_behind_comandor(self):
+        """Создание точки между командиром и базой"""
         vec = Vector.from_points(OlshannikovDron.our_commander.coord, self.my_mothership.coord)
         vec.rotate(180)
         self.point_bihind_comandor = Point(self.my_mothership.coord.x + vec.x / 3,
                                            self.my_mothership.coord.y + vec.y / 3)
 
     def attact_enemy(self):
-        if self.payload > 20:
-            self.move_at(self.my_mothership)
-        elif self.my_target_attack:
-            self.locating_shot_gun()
-            if self.my_target_attack.health > 0 and self.distance_to(self.my_target_attack) < self.shot_distance:
-                if self.gun.cooldown:
-                    self.turn_to(self.place_shot_gun)
-                else:
-                    if self.ally_line_shot_gun():
-                        self.shot_is_fired += 1
-                        ally = self.ally_line_shot_gun()
-                        ally.points_for_attack = self.points_for_attack
-                    else:
-                        self.turn_to(self.place_shot_gun)
-                        self.gun.shot(self.place_shot_gun)
-                        self.turn_to(self.place_shot_gun)
-                        self.shot_is_fired += 1
+        """выбор определения метода атаки по врагу"""
+        self.locating_shot_gun()
+        if self.my_target_attack.health > 0 and self.distance_to(self.my_target_attack) < self.shot_distance:
+            if self.gun.cooldown:
+                self.turn_to(self.place_shot_gun)
             else:
-                self.shot_is_fired = 0
-                self.delete_data_dead_enemy()
-
+                if self.ally_line_shot_gun():
+                    self.shot_is_fired += 1
+                    ally = self.ally_line_shot_gun()
+                    ally.points_for_attack = self.points_for_attack
+                else:
+                    self.turn_to(self.place_shot_gun)
+                    self.gun.shot(self.place_shot_gun)
+                    self.turn_to(self.place_shot_gun)
+                    self.shot_is_fired += 1
         else:
-            self.selecting_action_looter()
+            self.shot_is_fired = 0
+            self.delete_data_dead_enemy()
 
     def ally_line_shot_gun(self):
+        """Есть ли союзник на линии огня"""
         self.check_ally()
         vec = Vector.from_points(self.coord, self.my_target_attack.coord)
         points_on_fire = []
@@ -688,10 +707,12 @@ class OlshannikovDron(Drone):
                         return ally
 
     def create_point_avaid(self):
+        """Создание точки рядом с вызывающим"""
         point = self.get_point_from_self(self.my_target_attack, 40, 90)
         self.points_for_avaid = point
 
     def locating_shot_gun(self):
+        """Метод определяющий место выстрела, что бы стрелять на опережение"""
         new_location_enemy = Point(self.my_target_attack.x, self.my_target_attack.y)
         if self.last_location_enemy:
             vec = Vector.from_points(self.last_location_enemy, new_location_enemy)
@@ -704,6 +725,7 @@ class OlshannikovDron(Drone):
             self.place_shot_gun = self.last_location_enemy
 
     def get_point_from_self(self, target_to, distance, rotate=0):
+        """Создание точки рядом с собой, относительно врага, с определенной дистанции и поворотом"""
         vec = Vector.from_points(self.coord, target_to.coord)
         koef_reduced = self.distance_to(target_to) / distance / 8
         vec.rotate(rotate)
@@ -713,8 +735,10 @@ class OlshannikovDron(Drone):
         return point
 
     def delete_data_dead_enemy(self):
+        """Улаоение информации о мёртвом враге"""
         self.my_target_attack = None
         self.points_for_attack = None
         self.my_point_attack = None
+
 
 drone_class = OlshannikovDron
