@@ -292,7 +292,7 @@ class MartynovDrone(Drone):
             elif self.act_mode == 'back':
                 self.return_to_base()
 
-    def on_hearbeat(self):
+    def on_heartbeat(self):
         self.next_action()
 
     def space_enemy_attack(self):
