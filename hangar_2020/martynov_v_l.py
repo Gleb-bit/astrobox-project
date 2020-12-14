@@ -54,9 +54,9 @@ class MartynovDrone(Drone):
         """
         self.act_mode = 'defender'
         self.action_analytics()
-        self.collect_or_attack()
+        self.choice_action()
 
-    def collect_or_attack(self):
+    def choice_action(self):
         """
             Сложная логика выбора действий дрона "act_mode":
             - защищать мать,
@@ -83,7 +83,7 @@ class MartynovDrone(Drone):
             self._if_defender(all_on_mothership)
 
         elif self.act_mode == 'attack':
-            if self.dict_analytic['alive_drones'] >= self.dict_analytic['alive_teammates']:
+            if self.dict_analytic['alive_drones'] >= self.dict_analytic['alive_teammates'] and not all_on_mothership:
                 self._defend_or_collect()
             else:
                 if (not alive_enemy or all_on_mothership) and self.target_to_collect:
@@ -124,12 +124,15 @@ class MartynovDrone(Drone):
                 return
 
         if self.target_to_shoot:
-            if self.dict_analytic['alive_drones'] <= self.dict_analytic['alive_teammates'] and self.target_to_shoot:
+            if self.dict_analytic['alive_drones'] < self.dict_analytic['alive_teammates'] and self.target_to_shoot:
                 self.act_mode = 'attack'
-            elif self.dict_analytic['alive_drones'] > self.dict_analytic['alive_teammates'] and not all_on_mothership:
+            elif self.dict_analytic['alive_drones'] >= self.dict_analytic['alive_teammates'] and not all_on_mothership:
                 self._defend_or_collect()
-            elif all_on_mothership and self.target_to_shoot[3] == 'mothership':
+
+            elif all_on_mothership and self.target_to_shoot[3] == 'mothership' and not self.target_to_collect:
                 self.act_mode = 'attack'
+            elif all_on_mothership and self.target_to_collect:
+                self.act_mode = 'collect'
             else:
                 self.act_mode = 'defender'
             return
@@ -272,7 +275,7 @@ class MartynovDrone(Drone):
         """
         if self.is_alive:
             self.action_analytics()
-            self.collect_or_attack()
+            self.choice_action()
 
         # Действуем, только если живы
         if self.wandering_in_space():
@@ -331,9 +334,9 @@ class MartynovDrone(Drone):
         if self.point_to and not self.near(self.point_to):
             self.move_at(self.point_to)
         elif self.near(self.point_to):
-            self.choice_action()
+            self.defender_shot_or_turn()
 
-    def choice_action(self):
+    def defender_shot_or_turn(self):
         """
             Часть логики работы защитника. "act_mod" = "defender".
             Атакуем или поворачиваемся?
