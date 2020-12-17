@@ -1,6 +1,5 @@
 import importlib
 import inspect
-import logging
 import math
 import random
 
@@ -11,8 +10,6 @@ from robogame_engine.geometry import Vector
 
 from hangar_2020.kachanov_v_a_package.roles import Turel, BaseGuard, Spy, CombatBot, Collector, Distractor, Defender, \
     Transport
-
-logging.basicConfig(filename="head.log", filemode="w", level=logging.INFO)
 
 
 class Headquarters:

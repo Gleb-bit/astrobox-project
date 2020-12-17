@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-import logging
 import math
 
 from astrobox.core import Asteroid
@@ -10,8 +9,6 @@ from robogame_engine.theme import theme
 from hangar_2020.kachanov_v_a_package.drone import DeusDrone
 from hangar_2020.kachanov_v_a_package.head import Headquarters
 from hangar_2020.kachanov_v_a_package.roles import Transport, Collector, Turel, Distractor
-
-logging.basicConfig(filename="kachanov_soldiers.log", filemode="w", level=logging.INFO)
 
 
 class KachanovDrone(DeusDrone):
