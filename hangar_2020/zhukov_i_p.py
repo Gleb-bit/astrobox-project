@@ -60,7 +60,7 @@ class ZhukovDrone(Drone):
             if self.find_closest_asteroids():
                 self.move_at(self.find_closest_asteroids())
 
-    def on_hearbeat(self):
+    def on_heartbeat(self):
         if self.meter_2 < self.limit_health:
             self.heal()
             self.war_is_over = False

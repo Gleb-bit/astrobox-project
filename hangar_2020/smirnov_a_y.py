@@ -22,7 +22,7 @@ class SmirnovDrone(Drone):
         self.position = []
 
     # Главный метод
-    def on_hearbeat(self):
+    def on_heartbeat(self):
         enemies = self.get_enemies()
 
         if self.position and self.position[0] == 'move_at':

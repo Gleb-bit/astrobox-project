@@ -401,7 +401,7 @@ class KhizhovDrone(Drone):
     def on_unload_complete(self):
         self.next_action()
 
-    def on_hearbeat(self):
+    def on_heartbeat(self):
         if self.meter_2 <= self.limit_health:
             self.task = (self.go_home, False)
             return self.next_action()

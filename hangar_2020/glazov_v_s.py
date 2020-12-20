@@ -52,7 +52,7 @@ class GlazovDrone(Drone):
 
         self.job.after_born()
 
-    def on_hearbeat(self):
+    def on_heartbeat(self):
         if self.no_enemies:
             self.job = Worker(self)
         if self.health <= 70:

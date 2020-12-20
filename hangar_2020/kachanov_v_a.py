@@ -210,7 +210,7 @@ class KachanovDrone(DeusDrone):
     def on_wake_up(self):
         self.next_action()
 
-    def on_hearbeat(self):
+    def on_heartbeat(self):
 
         if not isinstance(self.role, Turel):
             if self.meter_2 <= self.limit_health:

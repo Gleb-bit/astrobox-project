@@ -27,7 +27,7 @@ class Strategy(ABC):
             "on_stop_at_mothership": self.on_stop_at_mothership,
             "on_unload_complete": self.on_unload_complete,
             "on_stop_at_point": self.on_stop_at_point,
-            "on_hearbeat": self.on_hearbeat,
+            "on_heartbeat": self.on_heartbeat,
             "on_stop": self.on_stop,
             "on_wake_up": self.on_wake_up
         }
@@ -60,7 +60,7 @@ class Strategy(ABC):
         pass
 
     @abstractmethod
-    def on_hearbeat(self, **kwargs):
+    def on_heartbeat(self, **kwargs):
         pass
 
     @abstractmethod
@@ -220,7 +220,7 @@ class Collector(Strategy):
     def on_stop(self, **kwargs):
         self.on_wake_up()
 
-    def on_hearbeat(self, **kwargs):
+    def on_heartbeat(self, **kwargs):
         self.return_for_heal()
 
     def on_wake_up(self, **kwargs):
@@ -281,7 +281,7 @@ class Defender(Strategy):
     def on_stop(self, **kwargs):
         self.next_action()
 
-    def on_hearbeat(self, **kwargs):
+    def on_heartbeat(self, **kwargs):
         self.return_for_heal()
 
     def on_wake_up(self, **kwargs):
@@ -394,7 +394,7 @@ class Peacemaker(Strategy):
     def on_stop(self, **kwargs):
         self.next_action()
 
-    def on_hearbeat(self, **kwargs):
+    def on_heartbeat(self, **kwargs):
         self.next_action()
 
     def on_wake_up(self, **kwargs):
@@ -537,7 +537,7 @@ class MothershipKiller(Strategy):
     def on_stop(self, **kwargs):
         self.next_action()
 
-    def on_hearbeat(self, **kwargs):
+    def on_heartbeat(self, **kwargs):
         self.next_action()
 
     def on_wake_up(self, **kwargs):
@@ -667,7 +667,7 @@ class VorobyevDrone(Drone):
     def on_wake_up(self, **kwargs):
         self._strategy.implement_strategy(message="on_wake_up", **kwargs)
 
-    def on_hearbeat(self, **kwargs):
+    def on_heartbeat(self, **kwargs):
         if(self.strategy.get_count_of_enemies_without_turrets() <= 2 and self.strategy.get_count_of_enemies_all() <= 2)\
                 and len(self.teammates) >= 1:
             current_strategies = [teammate.strategy.__class__.__name__ for teammate in self.teammates if
@@ -703,7 +703,7 @@ class VorobyevDrone(Drone):
                 if not isinstance(teammate.strategy, Collector):
                     teammate.strategy = teammate.collect_strategy
 
-        self._strategy.implement_strategy(message="on_hearbeat", **kwargs)
+        self._strategy.implement_strategy(message="on_heartbeat", **kwargs)
 
     def detect_angle_location_on_start(self):
         my_mship_coords = self.my_mothership.coord

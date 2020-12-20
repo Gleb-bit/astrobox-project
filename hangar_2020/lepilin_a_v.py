@@ -70,7 +70,7 @@ class LepilinDron(Drone):
         self.set_state(Protector(me=self))
         self.character_act()
 
-    def on_hearbeat(self):
+    def on_heartbeat(self):
         """пульс игры"""
 
         if self.health < 40 or self.payload > 50:
