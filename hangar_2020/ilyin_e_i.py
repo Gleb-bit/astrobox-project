@@ -114,7 +114,7 @@ class IlyinDrone(Drone):
             self.partial_distance += self.distance_to(target)
         super(IlyinDrone, self).move_at(target, speed)
 
-    def on_hearbeat(self):
+    def on_heartbeat(self):
         self.role.act()
 
     def shoot(self, enemy):
