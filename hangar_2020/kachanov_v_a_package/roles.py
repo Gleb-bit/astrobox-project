@@ -1,10 +1,6 @@
-import logging
-
 from astrobox.themes.default import MOTHERSHIP_HEALING_DISTANCE
 
 from hangar_2020.kachanov_v_a_package.drone import DeusDrone
-
-logging.basicConfig(filename="roles.log", filemode="w", level=logging.INFO)
 
 
 class Behavior:
