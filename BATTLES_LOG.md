@@ -2,6 +2,8 @@
 
 Дата сражения | Продолжительность (шагов игры) | Первый результат | Второй результат | Третий результат | Четвертый результат
 --- | --- | --- | --- | --- | ---
+2021-01-03 12:15:02 | 17001 | 465 - DemintsevDrone | 373 - KachanovDrone | 357 - SivkovDrone /dead/ | 342 - LepilinDron /dead/
+2021-01-03 12:13:48 | 2167 | 770 - BeskaevDrone | 600 - KachanovDrone
 2021-01-03 12:06:08 | 17001 | 863 - SivkovDrone /dead/ | 501 - DemintsevDrone /dead/ | 362 - IlyinDrone /dead/ | 0 - LepilinDron /dead/
 2021-01-03 12:05:14 | 17001 | 583 - DemintsevDrone | 443 - BeskaevDrone /dead/ | 368 - SivkovDrone | 140 - DevastatorDrone /dead/
 2021-01-03 12:04:17 | 4942 | 579 - SivkovDrone /dead/ | 497 - BeskaevDrone | 478 - DemintsevDrone | 0 - IlyinDrone /dead/
