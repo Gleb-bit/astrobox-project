@@ -1,7 +1,9 @@
-##### Результаты соревнований с 03.12.2020 по 03.01.2021
+##### Результаты соревнований с 04.12.2020 по 04.01.2021
 
 Дата сражения | Продолжительность (шагов игры) | Первый результат | Второй результат | Третий результат | Четвертый результат
 --- | --- | --- | --- | --- | ---
+2021-01-04 21:52:56 | 4188 | 522 - SivkovDrone | 460 - DemintsevDrone /dead/ | 391 - VoychenkoDrones /dead/ | 200 - DevastatorDrone /dead/
+2021-01-04 21:52:07 | 3531 | 1143 - BeskaevDrone | 435 - VoychenkoDrones
 2021-01-03 12:15:02 | 17001 | 465 - DemintsevDrone | 373 - KachanovDrone | 357 - SivkovDrone /dead/ | 342 - LepilinDron /dead/
 2021-01-03 12:13:48 | 2167 | 770 - BeskaevDrone | 600 - KachanovDrone
 2021-01-03 12:06:08 | 17001 | 863 - SivkovDrone /dead/ | 501 - DemintsevDrone /dead/ | 362 - IlyinDrone /dead/ | 0 - LepilinDron /dead/
