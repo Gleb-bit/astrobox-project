@@ -2,6 +2,8 @@ import math
 from collections import defaultdict
 from functools import reduce
 from typing import List
+from abc import ABCMeta, ABC
+from abc import abstractmethod
 
 from robogame_engine.geometry import Vector, Point
 from astrobox.core import theme, Asteroid, Drone, MotherShip, Unit
@@ -266,9 +268,117 @@ def all_positions(in_distance: float, in_radius_drone: float) -> List[Point]:
     return points
 
 
+class AbstractVoychenkoDrone:
+    __metaclass__ = ABCMeta
+
+    @abstractmethod
+    def distance_to(self, obj) -> int:
+        pass
+
+    @property
+    @abstractmethod
+    def coord(self) -> Point:
+        pass
+
+    @property
+    @abstractmethod
+    def radius(self) -> int:
+        pass
+
+    @property
+    @abstractmethod
+    def mothership(self) -> MotherShip:
+        pass
+
+    @property
+    @abstractmethod
+    def enemy_mothership(self) -> List[Drone]:
+        pass
+
+    @property
+    @abstractmethod
+    def teammates(self) -> List['AbstractVoychenkoDrone']:
+        pass
+
+    @abstractmethod
+    def team_enemy(self, team_number: [int, None] = None) -> List[Drone]:
+        pass
+
+    @property
+    @abstractmethod
+    def asteroids(self) -> List[Asteroid]:
+        pass
+
+    @property
+    @abstractmethod
+    def health(self) -> int:
+        pass
+
+    @abstractmethod
+    def team_role(self, in_type_role: type) -> List['AbstractVoychenkoDrone']:
+        pass
+
+    @property
+    @abstractmethod
+    def health2(self) -> int:
+        pass
+
+    @abstractmethod
+    def direction(self):
+        pass
+
+    @abstractmethod
+    def drone_focus_on_obj(self, in_obj: [Unit, Drone], distance: [int, None] = None) -> List[Drone]:
+        pass
+
+    @abstractmethod
+    def move_at(self, target, speed=None) -> None:
+        pass
+
+    @abstractmethod
+    def game_step(self):
+        pass
+
+    @abstractmethod
+    def on_born(self):
+        pass
+
+    @abstractmethod
+    def on_hearbeat(self):
+        pass
+
+    @abstractmethod
+    def on_stop_at_asteroid(self, asteroid):
+        pass
+
+    @abstractmethod
+    def on_load_complete(self):
+        pass
+
+    @abstractmethod
+    def on_stop_at_mothership(self, mothership):
+        pass
+
+    @abstractmethod
+    def on_unload_complete(self):
+        pass
+
+    @abstractmethod
+    def on_stop_at_point(self, target):
+        pass
+
+    @abstractmethod
+    def on_stop(self):
+        pass
+
+    @abstractmethod
+    def on_wake_up(self):
+        pass
+
+
 class Position:
-    def __init__(self, drone: 'VoychenkoDrones'):
-        self.drone: 'VoychenkoDrones' = drone
+    def __init__(self, drone: AbstractVoychenkoDrone):
+        self.drone: AbstractVoychenkoDrone = drone
 
     def get_point_attack_to_drone(self, in_distance: float, in_target_check: Unit):
         if self.drone.distance_to(in_target_check) <= in_distance and self.check_point(self.drone.coord,
@@ -384,6 +494,9 @@ class Role:
         asteroids_max_to_miss_danger = self.drone.count_asteroids * 0.7
         can_miss_danger = (self.drone.count_fullness_asteroid <= asteroids_max_to_miss_danger)
         return len(enemy_drone_near_base) > MIN_COUNT_ENEMY_DRONE_IN_HOME_ZONE and can_miss_danger
+
+    def available_do(self):
+        pass
 
 
 class CollectorRole(Role):
@@ -793,7 +906,7 @@ class SoliderRole(Role):
 class Strategy:
     all_ellerium = 0
 
-    def __init__(self, drone: 'VoychenkoDrones'):
+    def __init__(self, drone: AbstractVoychenkoDrone):
         self.drone = drone
         self.count_scenario = 0
         self.drone.role = CollectorRole(self.drone)
@@ -914,10 +1027,10 @@ class Strategy:
                 self.change_role()
 
 
-class VoychenkoDrones(Drone):
+class VoychenkoDrones(Drone, AbstractVoychenkoDrone, ABC):
 
     def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+        Drone.__init__(self, **kwargs)
         self.role = None
         self.shot_distance: int = self.gun.shot_distance + PlasmaProjectile.radius + 5 if self.gun is not None else 0
         self.strategy: Strategy = Strategy(self)
@@ -991,11 +1104,11 @@ class VoychenkoDrones(Drone):
             return
         self.strategy.next_action()
 
-    def team_role(self, in_type_role: type):
+    def team_role(self, in_type_role: type) -> List[AbstractVoychenkoDrone]:
         return [drone for drone in self.scene.drones if
                 isinstance(drone, VoychenkoDrones) and isinstance(drone.role, in_type_role) and drone.is_alive]
 
-    def team_enemy(self, team_number: [int, None] = None) -> List['VoychenkoDrones']:
+    def team_enemy(self, team_number: [int, None] = None) -> List[Drone]:
         if team_number is None:
             return [drone for drone in self.scene.drones if not isinstance(drone, VoychenkoDrones) and drone.is_alive]
         else:
@@ -1041,7 +1154,7 @@ class VoychenkoDrones(Drone):
 
         for drone in self.team_enemy():
             vector = Vector.from_direction(drone.direction, distance)
-            end_point = Point(drone.x + vector.x, drone.y + vector.y)
+            end_point = Point(drone.coord.x + vector.x, drone.coord.y + vector.y)
 
             if is_line_intersection_circle(
                     in_obj.coord, in_obj.radius + PlasmaProjectile.radius,
