@@ -1,4 +1,4 @@
-##### Рейтинг по состоянию на 05.01.2021
+##### Рейтинг по состоянию на 06.01.2021
 
 Позиция|Имя команды|Рейтинг
 ---|---|---:
@@ -6,7 +6,7 @@
 2|SivkovDrone|771
 3|BeskaevDrone|766
 4|KachanovDrone|750
-5|VoychenkoDrones|678
-6|LepilinDron|580
-7|IlyinDrone|576
-8|DevastatorDrone|571
+5|VoychenkoDrones|727
+6|DevastatorDrone|571
+7|LepilinDron|558
+8|IlyinDrone|556
