@@ -51,10 +51,7 @@ class DemintsevDrone(Drone):
         super().on_heartbeat()
 
     def turn(self, _object):
-        if isinstance(_object, Point):
-            self.vector = Vector.from_points(point1=self.coord, point2=_object)
-        else:
-            self.vector = Vector.from_points(point1=self.coord, point2=_object.coord)
+        super().turn_to(_object)
 
     def move(self, _object):
         self.turn(_object)
