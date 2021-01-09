@@ -35,7 +35,7 @@ class DemintsevDrone(Drone):
     def get_elerium_restriction(self):
         for asteroid in self.asteroids:
             DemintsevDrone.elerium_restriction += asteroid.payload
-        DemintsevDrone.elerium_restriction = DemintsevDrone.elerium_restriction // 3
+        DemintsevDrone.elerium_restriction = DemintsevDrone.elerium_restriction // 4
 
     def change_strategy(self):
         if DemintsevDrone.enemies_drones_alive:
@@ -51,10 +51,7 @@ class DemintsevDrone(Drone):
         super().on_heartbeat()
 
     def turn(self, _object):
-        if isinstance(_object, Point):
-            self.vector = Vector.from_points(point1=self.coord, point2=_object)
-        else:
-            self.vector = Vector.from_points(point1=self.coord, point2=_object.coord)
+        super().turn_to(_object)
 
     def move(self, _object):
         self.turn(_object)
@@ -132,7 +129,6 @@ class DemintsevDrone(Drone):
         y = self.my_mothership.coord.y
 
         if len([1 for drone in DemintsevDrone.my_team if drone.is_alive]) == 1:
-            print(len([1 for drone in DemintsevDrone.my_team if drone.is_alive]))
             if x > self.X_CENTRE and y > self.Y_CENTRE:
                 new_x = x - 115.0
                 new_y = y - 115.0
