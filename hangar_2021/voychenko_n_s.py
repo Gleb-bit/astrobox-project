@@ -9,13 +9,10 @@ from robogame_engine.geometry import Vector, Point
 from astrobox.core import theme, Asteroid, Drone, MotherShip, Unit
 from astrobox.guns import PlasmaProjectile
 
-CNT_MISS_ASTEROID_AT_START = 1
-MISS_ASTEROID_AT_START_WHEN_ASTEROID_IN_HOME = 5
-MISS_DANGER_ZONE_WHEN_OTHER_ASTEROID_CNT = 4
-MIN_ENEMY_ON_BASE_TO_ATTACK = 2
+MIN_ENEMY_ON_BASE_TO_ATTACK = 1
 MIN_DRONE_FOR_ATTACK = 3
-MIN_SOLIDER = 4
-MAX_NOT_FIGHT = 4
+MIN_SOLIDER = 1
+MAX_NOT_FIGHT = 5
 MIN_COUNT_ENEMY_DRONE_IN_HOME_ZONE = 1
 
 CAN_LOAD = 'CAN_LOAD'
@@ -138,6 +135,14 @@ SCENARIOS = {
             }
         }},
 }
+
+
+def is_obj_near_type(obj: Unit, obj_type, objets: List[Unit]) -> bool:
+    for check_obj in objets:
+        if isinstance(check_obj, obj_type) and obj.distance_to(check_obj) < theme.CARGO_TRANSITION_DISTANCE:
+            return True
+
+    return False
 
 
 def _counter(func):
@@ -289,6 +294,10 @@ class AbstractVoychenkoDrone:
     @property
     @abstractmethod
     def pos_point(self) -> Point:
+        pass
+
+    @abstractmethod
+    def damage_taken(self, damage=0):
         pass
 
     @pos_point.setter
@@ -585,8 +594,13 @@ class Role:
     def available_do(self):
         pass
 
+    def have_damage(self):
+        pass
+
 
 class CollectorRole(Role):
+    danger_asteroid = []
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -594,7 +608,10 @@ class CollectorRole(Role):
         """Что дрон может сделать"""
         if self.is_can_load():
             return ''
-        elif self.drone.cargo.free_space > 0 and self.get_load_target() is not None:
+        elif self.drone.distance_to(
+                self.drone.mothership) < theme.MOTHERSHIP_HEALING_DISTANCE and self.drone.cargo.payload > 15:
+            return CAN_UNLOAD
+        elif self.drone.cargo.free_space > 15 and self.get_load_target() is not None:
             return CAN_LOAD
         elif self.drone.cargo.payload > 0:
             return CAN_UNLOAD
@@ -663,15 +680,8 @@ class CollectorRole(Role):
 
     def get_available_asteroids(self) -> List[Unit]:
         busy_asteroids = self.busy_asteroids()
-        asteroids: List[Unit] = [asteroid for asteroid in self.drone.asteroids if asteroid not in busy_asteroids.keys()
-                                 or len(self.drone.asteroids) < self.drone.count_asteroids / 2]
-        if self.drone.count_asteroids == len(self.drone.asteroids):
-            distance_my_zone = self.drone.mothership.distance_to(self.drone.center)
-            asteroids_in_my_zone = len(
-                [asteroid for asteroid in asteroids if asteroid.distance_to(self.drone.mothership) < distance_my_zone])
-            if asteroids_in_my_zone > MISS_ASTEROID_AT_START_WHEN_ASTEROID_IN_HOME:
-                asteroids = sorted(asteroids, key=lambda val: self.drone.mothership.distance_to(val))
-                asteroids = asteroids[CNT_MISS_ASTEROID_AT_START:]
+        asteroids: List[Unit] = [asteroid for asteroid in self.drone.asteroids if
+                                 len(self.drone.asteroids) < 10 or asteroid not in busy_asteroids.keys()]
         if not asteroids:
             asteroids = self.drone.asteroids
         return asteroids
@@ -690,35 +700,26 @@ class CollectorRole(Role):
         return all_asteroid
 
     def get_safe_zone_obj(self, objects) -> List[Unit]:
-        danger_motherships = []
-        for mothership in self.drone.enemy_mothership:
-            drones_near_base = [drone for drone in
-                                self.drone.enemy_near_obj(mothership, theme.MOTHERSHIP_HEALING_DISTANCE + 100) if
-                                drone.team_number == mothership.team_number and not isinstance(drone.target,
-                                                                                               (Asteroid, MotherShip))]
-
-            if len(drones_near_base) > 2:
-                danger_motherships.append(mothership)
-
         safe_zone = []
         for obj in objects:
-            miss = False
-            for danger_mothership in danger_motherships:
-                if obj.distance_to(danger_mothership) <= self.drone.shot_distance + (theme.MOTHERSHIP_HEALING_DISTANCE -
-                                                                                     self.drone.radius):
-                    enemy_drones = [drone for drone in self.drone.enemy_near_obj(obj, self.drone.shot_distance)
-                                    if
-                                    drone.team_number == danger_mothership.team_number and not isinstance(drone.target,
-                                                                                                          (Asteroid,
-                                                                                                           MotherShip))]
-                    if len(enemy_drones) > 1:
-                        miss = True
-                        break
-            if miss:
+            enemy_drones = [drone for drone in self.drone.enemy_near_obj(obj, self.drone.shot_distance)
+                            if not isinstance(drone.target, (Asteroid, MotherShip))
+                            and not is_obj_near_type(drone, Asteroid, drone.scene.asteroids)
+                            and not drone.near(drone.mothership) and not drone.is_moving]
+            count_enemy = len(enemy_drones)
+            if count_enemy > 1 or (obj in CollectorRole.danger_asteroid and count_enemy > 0):
                 continue
+
             safe_zone.append(obj)
 
-        return safe_zone
+        if len(safe_zone) <= 3 and CollectorRole.danger_asteroid:
+            CollectorRole.danger_asteroid = []
+            safe_zone = self.get_safe_zone_obj(objects)
+
+        if not safe_zone and len(self.drone.teammates) > 3:
+            return objects
+        else:
+            return safe_zone
 
     def get_load_target(self) -> [Unit, None]:
         """Найти цель для сборки"""
@@ -729,6 +730,10 @@ class CollectorRole(Role):
         if not asteroids:
             return None
 
+        # if len(self.drone.asteroids) < self.drone.count_asteroids * 0.8 and len(self.drone.enemy_near_obj(
+        #         self.drone.mothership, self.drone.shot_distance)) < 1:
+        #     asteroids.sort(key=lambda value: value.distance_to(self.drone.center))
+        # else:
         asteroids.sort(key=lambda value: self.drone.distance_to(value))
 
         return asteroids[0]
@@ -791,7 +796,15 @@ class CollectorRole(Role):
         else:
             return SUCCESS
 
+    def have_damage(self):
+        if isinstance(self.drone.target, (Asteroid, Drone)):
+            if self.drone.target not in CollectorRole.danger_asteroid:
+                CollectorRole.danger_asteroid.append(self.drone.target)
+
     def move_to_repair(self) -> [str, None]:
+        if isinstance(self.drone.target, (Asteroid, Drone)):
+            if self.drone.target not in self.drone.asteroids:
+                CollectorRole.danger_asteroid.append(self.drone.target)
 
         self.drone.target = self.drone.mothership
 
@@ -835,7 +848,8 @@ class SoliderRole(Role):
                     self.drone.pos_point = None
             return DEFENDER
         else:
-            self.drone.pos_point = None
+            if self.drone.target is None:
+                self.drone.pos_point = None
 
         return CAN_FIGHT
 
@@ -891,6 +905,10 @@ class SoliderRole(Role):
 
     def move_to_defend_place(self):
         """Двигаться к базе в зону востановления занять позицию к обороне"""
+        if self.drone.pos_point is not None and self.drone.mothership.distance_to(
+                self.drone.pos_point) > theme.MOTHERSHIP_HEALING_DISTANCE:
+            self.drone.pos_point = None
+
         if self.drone.pos_point is None or self.drone.mothership.distance_to(
                 self.drone.pos_point) > theme.MOTHERSHIP_HEALING_DISTANCE - self.drone.radius:
             distance = theme.MOTHERSHIP_HEALING_DISTANCE - self.drone.radius
@@ -910,6 +928,7 @@ class SoliderRole(Role):
         """Двигаться к найденному месту для атаки"""
         if self.drone.target not in self.enemy_available or self.drone.target is None:
             self.drone.target = None
+            self.drone.pos_point = None
             return UNSUCCESSFUL
 
         distance = self.drone.distance_to(self.drone.target)
@@ -959,7 +978,12 @@ class SoliderRole(Role):
         end_point = Point(self.drone.coord.x + end_vector_direct.x, self.drone.coord.y + end_vector_direct.y)
         radius_target = self.drone.radius + PlasmaProjectile.radius
         if not is_line_intersection_circle(self.drone.target.coord, radius_target, self.drone.coord, end_point):
-            self.drone.turn_to(self.drone.target)
+            if isinstance(self.drone.target, Drone) and self.drone.target.is_moving:
+                move_v = Vector.from_direction(self.drone.target.direction, 25)
+                point = Point(self.drone.target.coord.x + move_v.x, self.drone.target.coord.y + move_v.y)
+                self.drone.turn_to(point)
+            else:
+                self.drone.turn_to(self.drone.target)
         else:
             if self.drone.is_can_shot():
                 self.count_not_fight = 0
@@ -980,8 +1004,9 @@ class SoliderRole(Role):
 
         return [drone for drone in self.drone.team_enemy()
                 if drone not in self.drone.enemy_near_obj(drone.mothership, theme.MOTHERSHIP_HEALING_DISTANCE)
-                or not drone.mothership.is_alive or (len(self.drone.team_role(SoliderRole)) >= 4
-                                                     and len(self.drone.team_enemy(drone.team_number)) == 1
+                or not drone.mothership.is_alive or (len(self.drone.team_role(SoliderRole)) >= MIN_DRONE_FOR_ATTACK
+                                                     and len(
+                        self.drone.team_enemy(drone.team_number)) == MIN_ENEMY_ON_BASE_TO_ATTACK
                                                      and drone.mothership in self.enemy_mothership_available)]
 
     @property
@@ -1050,7 +1075,7 @@ class Strategy:
         if not self.drone.teammates:
             health = self.drone.health2
         elif isinstance(self.drone.role, CollectorRole):
-            health = self.drone.health if not drone_focus_on_me else self.drone.health2
+            health = self.drone.health if len(drone_focus_on_me) < 1 else self.drone.health2
         elif isinstance(self.drone.role, SoliderRole) and self.drone.target is not None and isinstance(
                 self.drone.target, MotherShip):
             health = self.drone.health
@@ -1120,9 +1145,6 @@ class Strategy:
         if self.all_ellerium == 0:
             self.sum_ellerium()
 
-        dead_fill_drone_in_my_zone = [drone for drone in self.drone.asteroids if isinstance(drone, Drone)
-                                      and self.drone.mothership.distance_to(drone) < self.drone.shot_distance]
-
         we_win = self.drone.mothership.cargo.payload > (self.all_ellerium * 0.5)
         if we_win:
             if isinstance(self.drone.role, CollectorRole):
@@ -1142,18 +1164,20 @@ class Strategy:
                                      not mothership.is_alive and mothership.cargo.payload > 0
                                      and not self.drone.team_enemy(mothership.team_number)]
 
-        if isinstance(self.drone.role, SoliderRole) and dead_fill_drone_in_my_zone and not self.drone.team_role(
-                CollectorRole) and len(self.drone.team_role(SoliderRole)) > MIN_SOLIDER:
-            self.change_role()
-
         if have_dead_fill_mothership and isinstance(self.drone.role, SoliderRole):
             self.change_role()
 
         if have_dead_fill_mothership and isinstance(self.drone.role, CollectorRole):
             return
 
+        elif isinstance(self.drone.role, SoliderRole) and not self.drone.team_role(
+                CollectorRole) and len(self.drone.team_role(SoliderRole)) >= MIN_SOLIDER:
+            temp = CollectorRole(self.drone)
+            if temp.get_load_target():
+                self.change_role()
         elif isinstance(self.drone.role, CollectorRole) and self.drone.team_enemy() and self.drone.cargo.payload == 0:
-            if len(self.drone.team_role(SoliderRole)) < MIN_SOLIDER and len(self.drone.team_role(CollectorRole)) > 1:
+            if len(self.drone.team_role(SoliderRole)) < MIN_SOLIDER and len(self.drone.team_role(CollectorRole)) > 1 \
+                    and self.drone.mothership.health < 100:
                 self.change_role()
             elif self.no_resourses:
                 self.change_role()
@@ -1164,7 +1188,7 @@ class VoychenkoDrones(Drone, AbstractVoychenkoDrone, ABC):
     def __init__(self, **kwargs):
         Drone.__init__(self, **kwargs)
         self.role = None
-        self.shot_distance = self.gun.shot_distance + PlasmaProjectile.radius + 5 if self.gun is not None else 0
+        self.shot_distance = self.gun.shot_distance + PlasmaProjectile.radius if self.gun is not None else 0
         self.strategy: Strategy = Strategy(self)
         self.pos_point = None
         self.center: Point = Point(round(theme.FIELD_WIDTH / 2), round(theme.FIELD_WIDTH / 2))
@@ -1226,9 +1250,8 @@ class VoychenkoDrones(Drone, AbstractVoychenkoDrone, ABC):
 
         vector_to_target = Vector.from_points(self.coord, point_to_move)
 
-        if vector_to_target.module >= theme.DRONE_SPEED * theme.HEARTBEAT_INTERVAL:
-            vector_direct = Vector.from_direction(vector_to_target.direction,
-                                                  theme.DRONE_SPEED * theme.HEARTBEAT_INTERVAL)
+        if vector_to_target.module >= 100:
+            vector_direct = Vector.from_direction(vector_to_target.direction, 100)
             point_to_move = Point(self.coord.x + vector_direct.x, self.coord.y + vector_direct.y)
 
         if (point_to_move.x, point_to_move.x) == (self.last_point_to_move.x, self.last_point_to_move.y):
@@ -1399,6 +1422,11 @@ class VoychenkoDrones(Drone, AbstractVoychenkoDrone, ABC):
     @property
     def count_fullness_asteroid(self):
         return len([asteroid for asteroid in self.asteroids if asteroid.cargo.free_space == 0])
+
+    def damage_taken(self, damage=0):
+        super().damage_taken(damage)
+        if damage > 0:
+            self.role.have_damage()
 
     def enemy_near_obj(self, in_obj: [Unit, Point], in_distance: float) -> List[Unit]:
         """Враги вокруг in_drone в дистанции in_distance"""
