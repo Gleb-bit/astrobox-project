@@ -2,12 +2,12 @@
 
 Позиция|Имя команды|Рейтинг
 ---|---|---:
-1|BeskaevDrone|801
-2|SivkovDrone|792
-3|VoychenkoDrones|785
-4|KachanovDrone|755
-5|DemintsevDrone|732
-6|OlshannikovDron|710
-7|LepilinDron|522
-8|IlyinDrone|518
-9|DevastatorDrone|502
+1|VoychenkoDrones|833
+2|BeskaevDrone|813
+3|SivkovDrone|792
+4|KachanovDrone|739
+5|OlshannikovDron|733
+6|DemintsevDrone|717
+7|IlyinDrone|558
+8|LepilinDron|515
+9|DevastatorDrone|480

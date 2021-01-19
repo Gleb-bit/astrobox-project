@@ -2,6 +2,14 @@
 
 Дата сражения | Продолжительность (шагов игры) | Первый результат | Второй результат | Третий результат | Четвертый результат
 --- | --- | --- | --- | --- | ---
+2021-01-19 21:18:29 | 7179 | 630 - OlshannikovDron /dead/ | 453 - IlyinDrone /dead/ | 300 - DevastatorDrone /dead/ | 200 - DemintsevDrone /dead/
+2021-01-19 21:17:46 | 17001 | 634 - VoychenkoDrones /dead/ | 479 - OlshannikovDron /dead/ | 433 - LepilinDron /dead/ | 0 - DevastatorDrone /dead/
+2021-01-19 21:16:30 | 5713 | 605 - VoychenkoDrones /dead/ | 500 - DemintsevDrone /dead/ | 229 - OlshannikovDron | 0 - LepilinDron /dead/
+2021-01-19 21:15:49 | 4725 | 424 - SivkovDrone /dead/ | 417 - DemintsevDrone | 342 - BeskaevDrone | 248 - LepilinDron /dead/
+2021-01-19 21:15:15 | 17001 | 881 - SivkovDrone | 426 - LepilinDron /dead/ | 234 - KachanovDrone | 0 - DemintsevDrone /dead/
+2021-01-19 21:14:11 | 17001 | 869 - VoychenkoDrones /dead/ | 424 - DemintsevDrone | 352 - SivkovDrone | 0 - LepilinDron /dead/
+2021-01-19 21:12:59 | 7612 | 418 - DemintsevDrone | 413 - BeskaevDrone | 387 - SivkovDrone /dead/ | 350 - OlshannikovDron
+2021-01-19 21:12:23 | 2033 | 415 - BeskaevDrone | 379 - OlshannikovDron | 377 - SivkovDrone /dead/ | 258 - DemintsevDrone
 2021-01-19 21:10:24 | 1958 | 857 - OlshannikovDron | 642 - DemintsevDrone
 2021-01-09 21:26:40 | 17001 | 947 - VoychenkoDrones | 554 - BeskaevDrone | 100 - DevastatorDrone /dead/ | 0 - IlyinDrone /dead/
 2021-01-09 21:24:19 | 17001 | 931 - VoychenkoDrones /dead/ | 278 - KachanovDrone | 100 - DevastatorDrone /dead/ | 0 - LepilinDron /dead/
