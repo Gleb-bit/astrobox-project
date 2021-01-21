@@ -1,7 +1,6 @@
 from astrobox.core import Drone
 from robogame_engine.geometry import Point, Vector
 from hangar_2021.shirokov_a_s_add.brain_center import BrainCenterShirokovDrones
-from hangar_2021.shirokov_a_s_add.statistic import StatisticShirokovDrones
 
 
 class ShirokovDrone(Drone):
