@@ -218,4 +218,4 @@ class SimonDrone(Drone):
         return True
 
 
-drone_class = SimonDrone()
+drone_class = SimonDrone
