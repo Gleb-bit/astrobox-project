@@ -4,30 +4,38 @@ from astrobox.core import Drone
 from astrobox.space_field import SpaceField
 from robogame_engine.geometry import Point, Vector
 
+my_team = []
 
-class SimonScene(SpaceField):
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.my_team = []
-        self.mothership_for_attack = None
-        self.points_to_attack = None
-        self.points_to_attack_mothership = None
+class SimonDrone(Drone):
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        logging.basicConfig(filename="../my_dist_drone.log", filemode="w", level=logging.INFO)
+        self.action = None
+
+        self.command_for_attack = None
+        self.point_to_attack_mothership = None
+        self.target_for_attack = None
+        self.obj_for_on_load = None
+        self.nearby_drone_is_alive = None
+
+        self.main_mothership_for_attack = None
 
     def get_coords_for_attak_mothership(self, drones_in_my_team, mothership_name):
-        mothership = self.get_mothership(mothership_name)
-        drones = list(d for d in self.drones if d.team == mothership.team)
+        mothership = self.scene.get_mothership(mothership_name)
+        drones = list(d for d in self.scene.drones if d.team == mothership.team)
         quantity = drones_in_my_team
-        if mothership.x > self.field[0] / 2 and mothership.y > self.field[1] / 2:
+        if mothership.x > self.scene.field[0] / 2 and mothership.y > self.scene.field[1] / 2:
             p = Point(mothership.x, mothership.y - 500)
             v = Vector.from_points(mothership.coord, p)
-        elif mothership.x > self.field[0] / 2 and mothership.y < self.field[1] / 2:
+        elif mothership.x > self.scene.field[0] / 2 and mothership.y < self.scene.field[1] / 2:
             p = Point(mothership.x - 500, mothership.y)
             v = Vector.from_points(mothership.coord, p)
-        elif mothership.x < self.field[0] / 2 and mothership.y > self.field[1] / 2:
+        elif mothership.x < self.scene.field[0] / 2 and mothership.y > self.scene.field[1] / 2:
             p = Point(mothership.x + 500, mothership.y)
             v = Vector.from_points(mothership.coord, p)
-        elif mothership.x < self.field[0] / 2 and mothership.y < self.field[1] / 2:
+        elif mothership.x < self.scene.field[0] / 2 and mothership.y < self.scene.field[1] / 2:
             p = Point(mothership.x, mothership.y + 500)
             v = Vector.from_points(mothership.coord, p)
         points_to_stop = [p]
@@ -38,25 +46,14 @@ class SimonScene(SpaceField):
             next_p = Point(mothership.x + next_v.x, mothership.y + next_v.y)
             points_to_stop.append(next_p)
             angle += difference
-        self.points_to_attack_mothership = points_to_stop
-
-
-class SimonDrone(Drone):
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        logging.basicConfig(filename="my_dist_drone.log", filemode="w", level=logging.INFO)
-        self.action = None
-
-        self.command_for_attack = None
-        self.point_to_attack_mothership = None
-        self.target_for_attack = None
-        self.obj_for_on_load = None
-        self.nearby_drone_is_alive = None
+        for d in my_team:
+            d.point_to_attack_mothership = points_to_stop.pop()
+            d.move_at(self.point_to_attack_mothership)
+            self.action = 'move_to_plase_for_attack'
 
     def on_born(self):
         logging.info(f'Drone {self.id} on_born')
-        self.scene.my_team.append(self)
+        my_team.append(self)
         self.action = 'Start_atack'
 
     def on_heartbeat(self):
@@ -65,8 +62,8 @@ class SimonDrone(Drone):
         for d in self.scene.drones:
             if d.gun.cooldown != 0 and d.team != self.team and d.team != self.command_for_attack and d.mothership.is_alive:
                 self.point_to_attack_mothership = None
-                self.scene.mothership_for_attack = d.team
-                self.command_for_attack = self.scene.mothership_for_attack
+                self.main_mothership_for_attack = d.team
+                self.command_for_attack = self.main_mothership_for_attack
                 self.action = 'get_plase_for_attack_mothership'
         if self.action == 'move_to_mathership' and self.health > 99:
             self.action = 'move_to_plase_for_attack'
@@ -84,9 +81,9 @@ class SimonDrone(Drone):
         if self.action == 'Start_atack':
             self.get_mothership_for_attack()
         if self.action == 'get_plase_for_attack_mothership':
-            self.get_plase_for_attack_mothership(self.scene.mothership_for_attack)
+            self.get_plase_for_attack_mothership(self.main_mothership_for_attack)
         if self.action == 'get_drone_for_attack':
-            self.get_drone_for_attack(self.scene.mothership_for_attack)
+            self.get_drone_for_attack(self.main_mothership_for_attack)
         if self.action == 'shottt':
             self.shottt(self.gun, self.target_for_attack)
 
@@ -141,29 +138,24 @@ class SimonDrone(Drone):
         if not motherships_for_attack:
             self.action = 'search_obj_with_elerium'
         else:
-            self.scene.mothership_for_attack = motherships_for_attack.pop().team
-            self.command_for_attack = self.scene.mothership_for_attack
+            self.main_mothership_for_attack = motherships_for_attack.pop().team
+            self.command_for_attack = self.main_mothership_for_attack
             self.action = 'get_plase_for_attack_mothership'
 
     def get_plase_for_attack_mothership(self, mothership):
-        if not self.scene.points_to_attack_mothership:
-            drones_in_my_team = len(list(d for d in self.scene.drones if d.team == self.team and d.is_alive))
-            self.scene.get_coords_for_attak_mothership(drones_in_my_team, mothership)
-        if not self.point_to_attack_mothership:
-            self.point_to_attack_mothership = self.scene.points_to_attack_mothership.pop()
-            self.move_at(self.point_to_attack_mothership)
-        self.action = 'move_to_plase_for_attack'
+        drones_in_my_team = len(list(d for d in self.scene.drones if d.team == self.team and d.is_alive))
+        self.get_coords_for_attak_mothership(drones_in_my_team, mothership)
 
     def on_stop_at_point(self, target):
         if target == self.point_to_attack_mothership:
             if not self.target_for_attack or not self.target_for_attack.is_alive:
-                self.get_drone_for_attack(self.scene.mothership_for_attack)
+                self.get_drone_for_attack(self.main_mothership_for_attack)
             self.action = 'shottt'
 
     def on_stop_at_asteroid(self, asteroid):
         if asteroid.near(self.point_to_attack_mothership):
             if not self.target_for_attack or not self.target_for_attack.is_alive:
-                self.get_drone_for_attack(self.scene.mothership_for_attack)
+                self.get_drone_for_attack(self.main_mothership_for_attack)
             self.action = 'shottt'
 
     def get_drone_for_attack(self, name_mothership):
@@ -197,7 +189,7 @@ class SimonDrone(Drone):
                 self.action = 'shottt'
 
     def not_shot_on_my_drones(self):
-        for drone in self.scene.my_team:
+        for drone in my_team:
             if drone != self and drone.is_alive and self.distance_to(drone) < self.distance_to(
                     self.target_for_attack):
                 # точки начала и конца отрезка
@@ -218,4 +210,4 @@ class SimonDrone(Drone):
         return True
 
 
-drone_class = SimonDrone()
+drone_class = SimonDrone
