@@ -247,7 +247,7 @@ class BysevDrone(Drone):
         self.pilot.on_wake_up()
 
     def on_heartbeat(self):
-        if self.health <= 50:
+        if self.health <= 70:
             self.move_at(self.mothership)
             self.gun.shot(self.have_gun)
 
