@@ -10,7 +10,7 @@ class ShirokovDrone(Drone):
     """
 
     my_brain_center = BrainCenterShirokovDrones()  # класс для командного центра
-    statistic = None  # класс для статистики (если хочешь вернуть обратно, то введи StatisticShirokovDrones() )
+    statistic = StatisticShirokovDrones() if my_brain_center.print_statistic is True else None  # вывод статистики
     commands = {'found_dead_drones_with_ell': (2, my_brain_center.scavenger),
                 'found_dead_bases_with_ell': (3, my_brain_center.scavenger),
                 'found_enemy_bases_without_drones': (4, my_brain_center.siege_master),
@@ -23,7 +23,6 @@ class ShirokovDrone(Drone):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.role = None  # текущая роль дрона
-        self.active = False  # дрон сейчас активный или неактивный
         self.current_path_target = None  # точка или объект, куда дрон летит в данный момент, либо где находится сейчас
 
     def on_born(self):
@@ -81,8 +80,6 @@ class ShirokovDrone(Drone):
         :type target: Point или Object
         """
 
-        if self.active is False and self.is_alive is True:
-            self.active = True
         if isinstance(target, Point):
             self.current_path_target = target
         else:
@@ -128,7 +125,8 @@ class ShirokovDrone(Drone):
         if vector_to_target.direction - self.ACCURACY_SHOT_AIMING <= \
                 self.direction <= \
                 vector_to_target.direction + self.ACCURACY_SHOT_AIMING:  # если враг в зоне поражения, то стреляем
-            #self.statistic.shots += 1
+            if self.statistic is not None:
+                self.statistic.write_shots()
             self.gun.shot(target)
         else:  # если нет, то поворачиваемся к нему
             self.turn_to(target)
@@ -270,7 +268,6 @@ class ShirokovDrone(Drone):
         """
         Базовый метод для выдачи команды дронам, которые находятся в бездействии
         """
-
         if self.role.combat_class is False:
             self.find_and_turn_move_target(fly=True)
         else:
@@ -284,11 +281,20 @@ class ShirokovDrone(Drone):
         Базовый метод для проверок от имени дрона в реальном времени
         """
 
+        print([(base, base.payload) for base in self.my_brain_center.ret_enemy_bases_by_status(filter_alive=True)])
+        print(self.my_mothership.payload)
+
+        if self.statistic is not None:  # блок про статистику, если не выводим, то не обращаем внимания
+            if self.my_brain_center.ret_dead_or_alive_my_drones_main_status is False:  # если все дроны мертвы
+                if self.statistic.statistics_have_been_displayed is False:  # и мы еще не выводили статистику
+                    self.statistic.count_before_output_statistic += 1  # заводим обратный отсчет, чтобы все обработки завершились
+                    if self.statistic.count_before_output_statistic > 10:  # по достижении фиксированного значения выводим статистику
+                        print(self.statistic.output_statistic())
+                        self.statistic.statistics_have_been_displayed = True  # мы вывели статистику, переключаем показатель
+
         if self.checks_in_heartbeat_for_this_drone() is True:  # делаем проверки для конкретного дрона
-            if self.role.checks_in_heartbeat_for_drone_with_role(
-                    self.current_path_target) is False:  # делаем проверки для роли конкретного дрона
-                self.find_and_turn_move_target(
-                    fly=True)  # если проверка на роль не прошла, то общая команда для всех - искать новую цель для полета
+            if self.role.checks_in_heartbeat_for_drone_with_role(self.current_path_target) is False:  # делаем проверки для роли конкретного дрона
+                self.find_and_turn_move_target(fly=True)  # если проверка на роль не прошла, то общая команда для всех - искать новую цель для полета
 
             check_field_from_brain_center = self.my_brain_center.checks_in_heartbeat_for_brain_center()  # запрос о состоянии поля
             for key_situation, value_situation_code in check_field_from_brain_center.items():  # обработка запроса о состоянии поля
@@ -322,12 +328,13 @@ class ShirokovDrone(Drone):
         """
 
         if self.is_alive is False:
-            # if self.id not in self.statistic.destroyed_my_drones:
-            #     self.statistic.destroyed_my_drones.append(self.id)
-            self.complete_transit()
+            if self.statistic is not None:  # блок про статистику, если не выводим, то не обращаем внимания
+                if self.id not in self.statistic.destroyed_my_drones:
+                    self.statistic.write_dead_drone(self.id)
             return False
         else:
-            # self.statistic.write_data(combat_class=self.role.combat_class, fullness=self.fullness)
+            if self.statistic is not None:  # блок про статистику, если не выводим, то не обращаем внимания
+                self.statistic.write_data(combat_class=self.role.combat_class, fullness=self.fullness)
             return True
 
     def check_less_limit(self):
@@ -343,16 +350,6 @@ class ShirokovDrone(Drone):
             self.add_move_at(self.my_mothership)
             return False
         return True
-
-    def complete_transit(self):
-        """
-        Метод для вывода дрона из активного состояния
-        """
-
-        self.active = False
-        self.stop()
-        # if self.my_brain_center.ret_not_active_my_drones_main_status is True:
-        #     print(self.statistic)
 
 
 drone_class = ShirokovDrone

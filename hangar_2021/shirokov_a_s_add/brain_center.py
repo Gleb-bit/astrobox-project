@@ -22,6 +22,7 @@ class BrainCenterShirokovDrones:
                                                       'all_bases': None,
                                                       'my_base': None,
                                                       'enemy_bases': None}  # разбивка объектов на поле по видам и принадлежности (свой/чужой)
+    print_statistic = False  # указывает, нужен ли вывод финальной статистики
     shot_distance = None  # дистанция выстрела
     defend_points = None  # тьюпл с точками защиты, которые занимают дроны класса Defender
     attack_points = None  # словарь с тьюплами точек атаки вокруг каждой вражеской базы (для дронов класса SiegeMaster)
@@ -55,7 +56,7 @@ class BrainCenterShirokovDrones:
                       self.scavenger, self.siege_master)
         self.starting_lineup = {2: {self.senior_collector: 2, self.defender_base: 3},
                                 3: {self.senior_collector: 3, self.defender_base: 2},
-                                4: {self.senior_collector: 4, self.junior_collector: 1}}
+                                4: {self.senior_collector: 5}}
 
     def identify_objects(self, asteroids: list, drones: list, motherships: list, my_mothership,
                          shot_distance: int):
@@ -184,8 +185,11 @@ class BrainCenterShirokovDrones:
         angle += self.DEGREES_DEVIATION[
             self.recognize_quadrant_for_obj(base_obj)]  # определяем отклонение от стартовой точки
         count_points = schema['count_points'] if count_points is None else count_points
-
-        step_angle = delta_first_and_last / (count_points - 1)  # определяем отклонение между соседними точками
+        try:
+            step_angle = delta_first_and_last / (count_points - 1)  # определяем отклонение между соседними точками
+        except ZeroDivisionError:
+            step_angle = 0
+            angle += delta_first_and_last / 2
         default_distance_from_base = default_distance  # радиус, в котором будет выстроена оборона
         list_of_points = []
         count = 1
@@ -449,16 +453,16 @@ class BrainCenterShirokovDrones:
         return False
 
     @property
-    def ret_not_active_my_drones_main_status(self):
+    def ret_dead_or_alive_my_drones_main_status(self):
         """
-        Метод для проверки активности дронов из моей команды
+        Метод для проверки факта гибели всей команды
 
-        :return: True, если все дроны не активны, и False, если хотя бы один активен
+        :return: True, если хотя бы один дрон жив, и False, если все мертвы
         :rtype: bool
         """
 
-        not_active_my_drones = [drone.active for drone in self.all_objects_on_field['my_drones']]
-        return True if any(not_active_my_drones) is False else False
+        dead_or_alive_my_drones = [drone.is_alive for drone in self.all_objects_on_field['my_drones']]
+        return any(dead_or_alive_my_drones)
 
     @property
     def ret_object_identify_status(self):
