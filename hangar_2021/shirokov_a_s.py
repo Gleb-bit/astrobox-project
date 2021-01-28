@@ -11,11 +11,11 @@ class ShirokovDrone(Drone):
 
     my_brain_center = BrainCenterShirokovDrones()  # класс для командного центра
     statistic = StatisticShirokovDrones() if my_brain_center.print_statistic is True else None  # вывод статистики
-    commands = {'found_dead_drones_with_ell': (2, my_brain_center.scavenger),
+    commands = {'perimeter_alarm': (1, my_brain_center.defender_base),
+                'found_dead_drones_with_ell': (2, my_brain_center.scavenger),
                 'found_dead_bases_with_ell': (3, my_brain_center.scavenger),
                 'found_enemy_bases_without_drones': (4, my_brain_center.siege_master),
-                'mothership_has_little_health': (5, my_brain_center.defender_base),
-                'perimeter_alarm': (1, my_brain_center.defender_base)}  # команды дронам о ситуации на поле боя
+                'mothership_has_little_health': (5, my_brain_center.defender_base)}  # команды дронам о ситуации на поле боя
     HEALTH_LIMIT_PERCENT = 0.60  # здоровье дрона в процентах, при котором дрон летит на родную базу лечиться
     ACCURACY_SHOT_AIMING = 5  # значение в градусах, при котором допустим выстрел по цели
     ACCURACY_CANCEL_SHOT_FRIENDLY_FIRE = 30  # значение в градусах, при котором не допустим выстрел из-за френдли файра
