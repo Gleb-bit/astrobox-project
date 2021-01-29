@@ -11,7 +11,6 @@ from robogame_engine.theme import theme
 
 
 class BasicDrone(Drone):
-    distance_traveled = {}
     soldiers = []
     attack_range = None
     nearest_asteroids = []
@@ -48,22 +47,13 @@ class BasicDrone(Drone):
         self.shooting_back = False
         self.defense_of_base = False
 
-    def count_distance(self, destination):
-        distance = int(self.distance_to(destination))
-        if self.cargo.is_full:
-            YurchenkoDrone.distance_traveled[str(self.id)]['full'] += distance
-        elif self.cargo.is_empty:
-            YurchenkoDrone.distance_traveled[str(self.id)]['empty'] += distance
-        else:
-            YurchenkoDrone.distance_traveled[str(self.id)]['not_fully_filled'] += distance
-
     def move_and_make_target_copy(self, target):
         self.move_at(target)
         self.target_copy = target
 
     def assign_and_count_distance_and_move_at_dead_target(self, target):
         self.dead_target = target
-        self.count_distance_and_assign_target(target)
+        self.target = target
         self.move_at(target)
 
     def assign_target_firing_position_and_attack_place(self, target, firing_position=None):
@@ -71,13 +61,6 @@ class BasicDrone(Drone):
             self.firing_position = firing_position
         self.target = target
         self.attack_place = deepcopy(self.target.coord)
-
-    def count_distance_and_assign_target(self, target=None):
-        self.target = target
-        if not target:
-            self.count_distance(self.my_mothership)
-        else:
-            self.count_distance(target)
 
     def get_and_move_to_firing_position(self, object):
         firing_position = self.get_place_for_attack(self, object)
@@ -203,9 +186,6 @@ class BasicDrone(Drone):
         nearest_not_empty_asteroid = self.go_to_nearest_not_empty_asteroid(enemies_near_asteroid)
         if self.cargo.is_full or not nearest_not_empty_asteroid or self.target == nearest_not_empty_asteroid:
             self.move_at(self.my_mothership)
-            self.count_distance_and_assign_target()
-        else:
-            self.count_distance_and_assign_target(target=nearest_not_empty_asteroid)
 
     def get_place_and_angle(self, soldier, purpose, target, ang):
         place = self.get_place_near(purpose, target, ang)
@@ -611,9 +591,6 @@ class YurchenkoDrone(BasicDrone):
             YurchenkoDrone.soldiers = self, *self.teammates
             self.distribute_roles(main_role='transporter', dop_role='collector')
             self.get_positions_for_shooting_back(len_places=len(YurchenkoDrone.soldiers))
-        if str(self.id) not in YurchenkoDrone.distance_traveled:
-            YurchenkoDrone.distance_traveled[str(self.id)] = {'full': 0, 'empty': 0,
-                                                              'not_fully_filled': 0}
         if self.role == 'warrior':
             if not self.shooting_back:
                 alive_enemy_drones = self.get_enemy_alive_drones_with_distance()
@@ -625,7 +602,6 @@ class YurchenkoDrone(BasicDrone):
         else:
             self.target = self.get_nearest_asteroid()
             self.move_at(self.target)
-            self.count_distance(self.target)
         self.target_copy = self.target
 
     def on_stop_at_asteroid(self, asteroid):
