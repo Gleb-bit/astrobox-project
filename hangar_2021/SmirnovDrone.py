@@ -5,7 +5,7 @@ from robogame_engine import GameObject
 from robogame_engine.geometry import Point, Vector
 from robogame_engine.theme import theme
 
-MIN_HEALTH = 40
+MIN_HEALTH = 45
 MAX_CARGO = 50
 
 
@@ -19,6 +19,7 @@ class SmirnovDrone(Drone):
     asteroids_with_payload = []
     asteroids_busy = []
     asteroids_queue = []
+    enemy_list = []
 
     def __init__(self):
         super(SmirnovDrone, self).__init__()
@@ -122,36 +123,60 @@ class SmirnovDrone(Drone):
 
     def strategy(self):
         self._recount()
-        if len(self.teammates_lives) < 2 and self.my_mothership.payload > 1:
-            self.protect()
-            return
-        if len(self.teammates_lives) > 4 and len(self.asteroids_with_payload) > 2:
-            self.seek()
-            return
-        if (self.enemy_dead_list and
-                len(self.collectors) < len(self.teammates_lives) - 1 and
-                not self.dead_loot
-                or self.enemy_dead_list and self in self.collectors and not self.dead_loot):
-            self.collect()
-            return
-        elif (not self.seekers or len(self.seekers) < 2
-              and len(self.teammates_lives) > 2):
-            self.seek()
-            return
-        elif (self in self.seekers and len(self.teammates_lives) > 2
-              and len(self.seekers) < 2):
-            self.seek()
-            return
-        if len(self.teammates_lives) < 3 and len(self.enemy_list) < 3:
-            self.seek()
-        elif not self.enemy_list and not self.dead_loot:
-            self.collect()
-        elif self.dead_loot:
-            self.seek()
-        elif len(self.enemy_list) < 3 and not self.mother_ship_is_dead:
-            self.destroy()
-        elif self.enemy_list:
-            self.hunting()
+        if len(self.enemy_list) > 10:
+            if len(self.teammates_lives) < 2 and self.my_mothership.payload > 1:
+                self.protect()
+                return
+            if len(self.teammates_lives) > 4 and len(self.asteroids_with_payload) > 2:
+                self.seek()
+                return
+            if (self.enemy_dead_list and
+                    len(self.collectors) < len(self.teammates_lives) - 1 and
+                    not self.dead_loot
+                    or self.enemy_dead_list and self in self.collectors and not self.dead_loot):
+                self.collect()
+                return
+            elif (not self.seekers or len(self.seekers) < 2
+                  and len(self.teammates_lives) > 2):
+                self.seek()
+                return
+            elif (self in self.seekers and len(self.teammates_lives) > 2
+                  and len(self.seekers) < 2):
+                self.seek()
+                return
+            if len(self.teammates_lives) < 3 and len(self.enemy_list) < 3:
+                self.seek()
+            elif not self.enemy_list and not self.dead_loot:
+                self.collect()
+            elif self.dead_loot:
+                self.seek()
+            elif len(self.enemy_list) < 3 and not self.mother_ship_is_dead:
+                self.destroy()
+            elif self.enemy_list:
+                self.hunting()
+        else:
+            if len(self.teammates_lives) < 2 and self.my_mothership.payload > 1:
+                self.protect()
+                return
+            if (not self.seekers or len(self.seekers) < 2
+                    and len(self.teammates_lives) > 2):
+                self.seek()
+                return
+            elif (self in self.seekers and len(self.teammates_lives) > 2
+                    and len(self.seekers) < 2):
+                self.seek()
+                return
+            if (len(self.teammates_lives) <= 3 and len(self.enemy_list) < 4
+                    and len(self.asteroids_with_payload) > 1):
+                self.seek()
+            elif not self.enemy_list and not self.dead_loot:
+                self.collect()
+            elif self.dead_loot:
+                self.seek()
+            elif len(self.enemy_list) < 3 and not self.mother_ship_is_dead:
+                self.destroy()
+            elif self.enemy_list:
+                self.hunting()
 
 
 class Seeker:
