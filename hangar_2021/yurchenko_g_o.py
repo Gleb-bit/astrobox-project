@@ -609,7 +609,7 @@ class YurchenkoDrone(BasicDrone):
             YurchenkoDrone.first_drone = self.id
             YurchenkoDrone.mothership_full_health = self.my_mothership.health
             YurchenkoDrone.soldiers = self, *self.teammates
-            self.distribute_roles(main_role='warrior', dop_role='warrior')
+            self.distribute_roles(main_role='transporter', dop_role='collector')
             self.get_positions_for_shooting_back(len_places=len(YurchenkoDrone.soldiers))
         if str(self.id) not in YurchenkoDrone.distance_traveled:
             YurchenkoDrone.distance_traveled[str(self.id)] = {'full': 0, 'empty': 0,
@@ -662,7 +662,6 @@ class YurchenkoDrone(BasicDrone):
         if any(enemy.distance_to(YurchenkoDrone.position_for_shooting_back[self.id]) <= enemy.gun.shot_distance for
                enemy in self.get_enemy_alive_drones() if
                enemy.distance_to(enemy.mothership) > MOTHERSHIP_HEALING_DISTANCE) or low_mothership_health:
-            self.shooting_back = True
             self.defense_of_base = True
             self.role = 'warrior'
             self.move_at(YurchenkoDrone.position_for_shooting_back[self.id])
