@@ -90,9 +90,8 @@ class BasicDrone(Drone):
         return drones
 
     def get_enemy_bases(self, soldier):
-        bases = [(base, soldier.distance_to(base)) for base in soldier.scene.motherships if
+        bases = [base for base in soldier.scene.motherships if
                  base.team != soldier.team]
-        bases.sort(key=lambda x: x[1])
         return bases
 
     def get_enemy_alive_drones(self):
@@ -127,11 +126,11 @@ class BasicDrone(Drone):
                                     self.get_enemy_alive_drones()) if enemies_near_asteroid else False
         while (nearest_asteroid in [teammate.target for teammate in
                                     self.teammates] and payload_of_nearest_asteroid <= 0) or nearest_asteroid.is_empty or enemies_near_asteroid:
-            if not nearest_asteroids or number_asteroid + 1 == len(nearest_asteroids):
+            if not nearest_asteroids or number_asteroid == len(nearest_asteroids):
                 return None
             else:
-                number_asteroid += 1
                 nearest_asteroid = nearest_asteroids[number_asteroid][index_asteroid]
+                number_asteroid += 1
                 enemies_near_asteroid = any(enemy.distance_to(nearest_asteroid) <= enemy.gun.shot_distance for enemy in
                                             self.get_enemy_alive_drones())
         if algorithm_for_transporter:
@@ -577,10 +576,10 @@ class YurchenkoDrone(BasicDrone):
             self.being_treated = True
         elif self.dead_target and not self.dead_target.is_empty:
             self.load_from(self.dead_target)
-        elif self.role == 'collector' or self.role == 'transporter':
-            if self.my_mothership.payload <= max(
-                    [enemy_base[self.item_number].payload for enemy_base in self.get_enemy_bases(self)]):
-                self.get_destination()
+        elif self.my_mothership.payload <= max(
+                [enemy_base.payload for enemy_base in self.get_enemy_bases(self)]):
+            self.role = 'transporter'
+            self.get_destination()
         else:
             self.shoot_or_change_target()
 
@@ -642,7 +641,7 @@ class YurchenkoDrone(BasicDrone):
             self.role = 'warrior'
             self.move_at(YurchenkoDrone.position_for_shooting_back[self.id])
         elif self.my_mothership.payload <= max(
-                [enemy_base[self.item_number].payload for enemy_base in self.get_enemy_bases(self)]):
+                [enemy_base.payload for enemy_base in self.get_enemy_bases(self)]):
             self.change_role_to_warrior_or_get_destination()
 
 
