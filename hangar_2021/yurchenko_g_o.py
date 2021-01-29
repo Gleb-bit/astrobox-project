@@ -669,3 +669,6 @@ class YurchenkoDrone(BasicDrone):
         elif self.my_mothership.payload <= max(
                 [enemy_base[self.item_number].payload for enemy_base in self.get_enemy_bases(self)]):
             self.change_role_to_warrior_or_get_destination()
+
+
+drone_class = YurchenkoDrone
