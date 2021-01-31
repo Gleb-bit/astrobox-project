@@ -22,24 +22,44 @@ class SimonDrone(Drone):
 
         self.main_mothership_for_attack = None
 
-    def get_coords_for_attak_mothership(self, drones_in_my_team, mothership_name):
+    def get_coords_for_attak(self, drones_in_my_team, mothership_name):
         mothership = self.scene.get_mothership(mothership_name)
         drones = list(d for d in self.scene.drones if d.team == mothership.team)
         quantity = drones_in_my_team
+        if mothership != self.mothership:
+            distance = 400
+        else:
+            distance = 300
+            angle = 85 / (quantity - 1)
+            rotate = -5
+            self.target_for_attack = None
         if mothership.x > self.scene.field[0] / 2 and mothership.y > self.scene.field[1] / 2:
-            p = Point(mothership.x, mothership.y - 500)
+            p = Point(mothership.x, mothership.y - distance)
             v = Vector.from_points(mothership.coord, p)
+            angle = 40 / (quantity - 1)
+            rotate = 0
         elif mothership.x > self.scene.field[0] / 2 and mothership.y < self.scene.field[1] / 2:
-            p = Point(mothership.x - 500, mothership.y)
+            p = Point(mothership.x - distance, mothership.y)
             v = Vector.from_points(mothership.coord, p)
+            angle = 40 / (quantity - 1)
+            rotate = -50
         elif mothership.x < self.scene.field[0] / 2 and mothership.y > self.scene.field[1] / 2:
-            p = Point(mothership.x + 500, mothership.y)
+            p = Point(mothership.x + distance, mothership.y)
             v = Vector.from_points(mothership.coord, p)
+            angle = 40 / (quantity - 1)
+            rotate = -50
         elif mothership.x < self.scene.field[0] / 2 and mothership.y < self.scene.field[1] / 2:
-            p = Point(mothership.x, mothership.y + 500)
+            p = Point(mothership.x, mothership.y + distance)
             v = Vector.from_points(mothership.coord, p)
+            angle = 40 / (quantity - 1)
+            rotate = 0
+        len_alive = len(set(m for m in self.scene.motherships if m.is_alive))
+        if len_alive == 2:
+            angle = 90 / (quantity - 1)
+            rotate = 0
+        v.rotate(rotate)
+        p = Point(mothership.x + v.x, mothership.y + v.y)
         points_to_stop = [p]
-        angle = 90 / (quantity - 1)
         difference = angle
         while len(points_to_stop) < quantity:
             next_v = Vector.from_direction(v.direction - angle, v.module)
@@ -57,29 +77,33 @@ class SimonDrone(Drone):
         self.action = 'Start_atack'
 
     def on_heartbeat(self):
-        if self.health < 30:
-            self.action = 'move_to_mathership'
-        for d in self.scene.drones:
-            if d.gun.cooldown != 0 and d.team != self.team and d.team != self.command_for_attack and d.mothership.is_alive:
-                self.point_to_attack_mothership = None
-                self.main_mothership_for_attack = d.team
-                self.command_for_attack = self.main_mothership_for_attack
-                self.action = 'get_plase_for_attack_mothership'
-        if self.action == 'move_to_mathership' and self.health > 99:
+        if self.health > 99 and self.action == 'move_to_mathership':
             self.action = 'move_to_plase_for_attack'
-        if self.action == 'move_to_plase_for_attack':
-            self.move_at(self.point_to_attack_mothership)
-        if self.action == 'move_to_mathership':
+        elif self.action == 'move_to_mathership':
             self.vector = Vector.from_points(self.coord, self.mothership.coord)
             self.move_at(self.my_mothership)
+        elif self.health < 40:
+            self.action = 'move_to_mathership'
+            pass
+        elif self.health < 70 and self.distance_to(self.mothership) > 500:
+            self.action = 'move_to_mathership'
+        elif self.health > 99 and self.action == 'move_to_mathership':
+            self.action = 'move_to_plase_for_attack'
+            pass
+        if self.action == 'get_drone_for_attack_from_mothership':
+            self.get_drone_for_attack_from_mothership()
+            pass
+        if self.action == 'Start_atack':
+            self.get_mothership_for_attack()
+            pass
+        if self.action == 'move_to_plase_for_attack':
+            self.move_at(self.point_to_attack_mothership)
         if self.action == 'search_obj_with_elerium':
             self.search_obj_with_elerium()
         if self.action == 'load_from':
             self.load_from(self.obj_for_on_load)
         if self.action == 'unload_to':
             self.unload_to(self.mothership)
-        if self.action == 'Start_atack':
-            self.get_mothership_for_attack()
         if self.action == 'get_plase_for_attack_mothership':
             self.get_plase_for_attack_mothership(self.main_mothership_for_attack)
         if self.action == 'get_drone_for_attack':
@@ -110,10 +134,11 @@ class SimonDrone(Drone):
     def on_stop_at_mothership(self, mothership):
         if mothership == self.obj_for_on_load:
             self.action = 'load_from'
-        if mothership == self.mothership:
+        elif mothership == self.mothership and self.action == 'full':
             self.action = 'unload_to'
 
     def on_load_complete(self):
+        self.action = 'full'
         self.move_at(self.mothership)
 
     def on_unload_complete(self):
@@ -126,37 +151,80 @@ class SimonDrone(Drone):
             self.nearby_drone_is_alive = nearby_drones_is_alive.pop()
 
     def shottt(self, gun, target):
-        if target.health <= 0:
-            self.action = 'get_drone_for_attack'
-        self.vector = Vector.from_points(self.coord, target.coord)
-        if self.not_shot_on_my_drones():
-            self.gun.shot(target)
+        if self.action != 'move_to_mathership':
+            if target.health <= 0 or self.distance_to(target):
+                if self.command_for_attack != None:
+                    self.action = 'get_drone_for_attack'
+                else:
+                    self.action = 'get_drone_for_attack_from_mothership'
+            self.vector = Vector.from_points(self.coord, target.coord)
+            if self.not_shot_on_my_drones():
+                self.gun.shot(target)
 
     def get_mothership_for_attack(self):
         motherships_for_attack = sorted(list(m for m in self.scene.motherships if m.is_alive and m.team != self.team),
-                                        key=lambda m: self.mothership.distance_to(m))
+                                        key=lambda m: self.mothership.distance_to(m), reverse=True)
         if not motherships_for_attack:
             self.action = 'search_obj_with_elerium'
         else:
-            self.main_mothership_for_attack = motherships_for_attack.pop().team
-            self.command_for_attack = self.main_mothership_for_attack
-            self.action = 'get_plase_for_attack_mothership'
+            comand_drones_is_alive = set(d.team for d in self.scene.drones if d.is_alive)
+            opponents_is_alive = set(m for m in self.scene.motherships if m.is_alive)
+            opponents = set(m for m in self.scene.motherships)
+            if opponents == opponents_is_alive or (len(opponents_is_alive) == 2 and len(comand_drones_is_alive) == 2):
+                self.main_mothership_for_attack = motherships_for_attack.pop().team
+                self.command_for_attack = self.main_mothership_for_attack
+                self.action = 'get_plase_for_attack_mothership'
+            else:
+                self.main_mothership_for_attack = self.team
+                self.command_for_attack = None
+                self.action = 'get_plase_for_attack_mothership'
 
     def get_plase_for_attack_mothership(self, mothership):
         drones_in_my_team = len(list(d for d in self.scene.drones if d.team == self.team and d.is_alive))
-        self.get_coords_for_attak_mothership(drones_in_my_team, mothership)
+        self.get_coords_for_attak(drones_in_my_team, mothership)
 
     def on_stop_at_point(self, target):
         if target == self.point_to_attack_mothership:
-            if not self.target_for_attack or not self.target_for_attack.is_alive:
-                self.get_drone_for_attack(self.main_mothership_for_attack)
-            self.action = 'shottt'
+            if self.command_for_attack == None:
+                self.action = 'get_drone_for_attack_from_mothership'
+            else:
+                if not self.target_for_attack or not self.target_for_attack.is_alive:
+                    self.get_drone_for_attack(self.main_mothership_for_attack)
+                self.action = 'shottt'
 
     def on_stop_at_asteroid(self, asteroid):
         if asteroid.near(self.point_to_attack_mothership):
-            if not self.target_for_attack or not self.target_for_attack.is_alive:
-                self.get_drone_for_attack(self.main_mothership_for_attack)
-            self.action = 'shottt'
+            if self.command_for_attack == None:
+                self.action = 'get_drone_for_attack_from_mothership'
+            else:
+                if not self.target_for_attack or not self.target_for_attack.is_alive:
+                    self.get_drone_for_attack(self.main_mothership_for_attack)
+                self.action = 'shottt'
+
+    def get_drone_for_attack_from_mothership(self):
+        matherships_is_alive = list(m for m in self.scene.motherships if m.is_alive)
+        comand_drones_is_alive = set(d.team for d in self.scene.drones if d.is_alive)
+        if len(matherships_is_alive) == 2 and len(comand_drones_is_alive) == 2:
+            self.action = 'Start_atack'
+        else:
+            drones_for_attack = list(d for d in self.scene.drones if d.team != self.team and d.is_alive)
+            if drones_for_attack:
+                drones_in_radius_attack = set(d for d in drones_for_attack if self.distance_to(
+                    d) <= self.gun.shot_distance and d.is_alive)
+                reserved_drones_for_attack = set(d.target_for_attack for d in self.scene.drones if d.team == self.team)
+                free = drones_in_radius_attack - reserved_drones_for_attack
+                if free:
+                    sort_to_distance = sorted(free,
+                                              key=lambda drone: self.distance_to(drone),
+                                              reverse=True)
+                    self.target_for_attack = sort_to_distance[-1]
+                    self.action = 'shottt'
+                elif drones_in_radius_attack:
+                    sort_to_distance = sorted(drones_in_radius_attack,
+                                              key=lambda drone: self.distance_to(drone),
+                                              reverse=True)
+                    self.target_for_attack = sort_to_distance[-1]
+                    self.action = 'shottt'
 
     def get_drone_for_attack(self, name_mothership):
         mothership_for_attack = self.scene.get_mothership(name_mothership)
@@ -164,12 +232,16 @@ class SimonDrone(Drone):
             self.action = 'Start_atack'
         drones_for_attack = list(d for d in self.scene.drones if d.team == mothership_for_attack.team and d.is_alive)
         if drones_for_attack == []:
-            if mothership_for_attack.is_alive:
-                self.target_for_attack = mothership_for_attack
-                self.action = 'shottt'
+            all_d_is_alive = set(d.team for d in self.scene.drones if d.is_alive)
+            if len(all_d_is_alive) != 1:
+                self.action = 'get_drone_for_attack_from_mothership'
             else:
-                self.point_to_attack_mothership = None
-                self.action == 'Start_atack'
+                if mothership_for_attack.is_alive:
+                    self.target_for_attack = mothership_for_attack
+                    self.action = 'shottt'
+                else:
+                    self.point_to_attack_mothership = None
+                    self.action == 'Start_atack'
         if drones_for_attack:
             drones_in_radius_attack = set(d for d in drones_for_attack if self.distance_to(
                 d) <= self.gun.shot_distance and d.is_alive)
@@ -205,7 +277,10 @@ class SimonDrone(Drone):
                 d = abs((a * p1) + (b * p2) + c) / pow(a ** 2 + b ** 2, 0.5)
                 # если d < радиуса окружности - прямая пересекает окружжность, если равен - косается
                 if drone.radius >= d >= 0:
-                    self.action = 'get_drone_for_attack'
+                    if self.command_for_attack == None:
+                        self.action = 'get_drone_for_attack_from_mothership'
+                    else:
+                        self.action = 'get_drone_for_attack'
                     return False
         return True
 
