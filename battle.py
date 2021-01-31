@@ -193,7 +193,7 @@ if __name__ == '__main__':
     try:
         result = run_battle(player_modules=players, speed=args.game_speed,
                             asteroids_count=args.asteroids_count, drones_count=args.drones_count,
-                            show_screen=True)
+                            show_screen=args.show_screen)
         if result:
             if args.out_file:
                 save_battle_result(result=result, path=args.out_file)
