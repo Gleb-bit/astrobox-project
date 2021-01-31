@@ -284,4 +284,5 @@ class SimonDrone(Drone):
                     return False
         return True
 
-# drone_class = SimonDrone()
+
+drone_class = SimonDrone
