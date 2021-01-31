@@ -80,6 +80,7 @@ class SimonDrone(Drone):
         if self.health > 99 and self.action == 'move_to_mathership':
             self.action = 'move_to_plase_for_attack'
         elif self.action == 'move_to_mathership':
+            # TODO - Запрещённый приём! Разворачивайте дронов исключительно через turn_to
             self.vector = Vector.from_points(self.coord, self.mothership.coord)
             self.move_at(self.my_mothership)
         elif self.health < 40:
