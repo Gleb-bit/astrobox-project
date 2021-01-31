@@ -575,7 +575,6 @@ class YurchenkoDrone(BasicDrone):
             self.in_general_structure = False
             self.being_treated = True
         elif self.dead_target and not self.dead_target.is_empty:
-            print(2)
             self.load_from(self.dead_target)
         elif (self.my_mothership.payload <= max(
                 [enemy_base.payload for enemy_base in
