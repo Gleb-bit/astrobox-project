@@ -1,7 +1,19 @@
-##### Результаты соревнований с 28.12.2020 по 28.01.2021
+##### Результаты соревнований с 31.12.2020 по 31.01.2021
 
 Дата сражения | Продолжительность (шагов игры) | Первый результат | Второй результат | Третий результат | Четвертый результат
 --- | --- | --- | --- | --- | ---
+2021-01-31 20:18:50 | 3848 | 756 - LepilinDron /dead/ | 310 - IlyinDrone /dead/ | 239 - DevastatorDrone /dead/ | 0 - SimonDrone /dead/
+2021-01-31 20:18:02 | 2894 | 410 - LepilinDron /dead/ | 376 - IlyinDrone /dead/ | 250 - SmirnovDrone /dead/ | 200 - DevastatorDrone /dead/
+2021-01-31 20:17:35 | 4993 | 441 - DemintsevDrone /dead/ | 429 - SivkovDrone | 357 - SmirnovDrone /dead/ | 258 - LepilinDron /dead/
+2021-01-31 20:16:54 | 17001 | 473 - DemintsevDrone | 363 - BeskaevDrone /dead/ | 283 - LepilinDron /dead/ | 258 - BysevDrone /dead/
+2021-01-31 20:16:02 | 7547 | 530 - BeskaevDrone | 455 - DemintsevDrone | 187 - LepilinDron /dead/ | 0 - SimonDrone /dead/
+2021-01-31 20:15:23 | 5230 | 794 - BeskaevDrone | 392 - DemintsevDrone /dead/ | 265 - KachanovDrone | 0 - LepilinDron /dead/
+2021-01-31 20:14:50 | 3400 | 622 - BeskaevDrone | 449 - OlshannikovDron | 448 - DemintsevDrone | 0 - LepilinDron /dead/
+2021-01-31 20:14:22 | 5192 | 588 - BeskaevDrone | 421 - DemintsevDrone | 407 - ShirokovDrone | 0 - LepilinDron /dead/
+2021-01-31 20:13:52 | 7473 | 816 - BeskaevDrone | 683 - SivkovDrone | 0 - DemintsevDrone /dead/ | 0 - LepilinDron /dead/
+2021-01-31 20:13:13 | 10518 | 829 - SivkovDrone /dead/ | 665 - BeskaevDrone | 0 - DemintsevDrone /dead/ | 0 - SmirnovDrone /dead/
+2021-01-31 20:00:57 | 2334 | 477 - VoychenkoDrones | 340 - BeskaevDrone | 277 - SivkovDrone /dead/ | 211 - DemintsevDrone
+2021-01-31 20:00:26 | 1770 | 467 - VoychenkoDrones | 315 - DemintsevDrone | 312 - SivkovDrone /dead/ | 292 - BeskaevDrone /dead/
 2021-01-28 22:23:14 | 17001 | 734 - VoychenkoDrones /dead/ | 394 - DemintsevDrone /dead/ | 365 - BysevDrone /dead/ | 0 - LepilinDron /dead/
 2021-01-28 22:16:15 | 17001 | 872 - DemintsevDrone | 695 - BysevDrone
 2021-01-27 22:33:53 | 5634 | 1083 - BeskaevDrone | 396 - DemintsevDrone /dead/ | 0 - SimonDrone /dead/ | 0 - LepilinDron /dead/
