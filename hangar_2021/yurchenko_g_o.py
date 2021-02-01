@@ -569,7 +569,7 @@ class YurchenkoDrone(BasicDrone):
         self.role = 'warrior'
 
     def on_wake_up(self):
-        print(self.my_mothership.payload, [base.payload for base in self.scene.motherships])
+        # print(self.my_mothership.payload, [base.payload for base in self.scene.motherships])
         if self.health <= YurchenkoDrone.min_percents_drone_health:
             self.move_at(self.my_mothership)
             self.in_general_structure = False
