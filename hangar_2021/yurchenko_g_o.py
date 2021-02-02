@@ -124,7 +124,7 @@ class BasicDrone(Drone):
         enemies_near_asteroid = [enemy for enemy in self.get_enemy_alive_drones() if enemy.distance_to(
             nearest_asteroid) <= enemy.gun.shot_distance and enemy.gun.cooldown > 0] if enemies_near_asteroid else False
         while (nearest_asteroid in [teammate.target for teammate in
-                                    self.teammates] and payload_of_nearest_asteroid == 0) or nearest_asteroid.is_empty or enemies_near_asteroid and len(
+                                    self.teammates] and payload_of_nearest_asteroid <= 0) or nearest_asteroid.is_empty or enemies_near_asteroid and len(
             enemies_near_asteroid) >= 3:
             if not nearest_asteroids or number_asteroid + 1 == len(nearest_asteroids):
                 return None
@@ -133,8 +133,6 @@ class BasicDrone(Drone):
                 nearest_asteroid = nearest_asteroids[number_asteroid][index_asteroid]
                 enemies_near_asteroid = [enemy for enemy in self.get_enemy_alive_drones() if enemy.distance_to(
                     nearest_asteroid) <= enemy.gun.shot_distance and enemy.gun.cooldown > 0] if enemies_near_asteroid else False
-        if algorithm_for_transporter:
-            return nearest_asteroids[number_asteroid]
         return nearest_asteroids[number_asteroid]
 
     def check_target(self, nearest_asteroids, dif_between_free_space_and_most_filled_aster=50,
@@ -451,7 +449,7 @@ class BasicDrone(Drone):
             if firing_position:
                 return
 
-    def get_action_for_shooting_back(self, low_mothership_health, target_number, small_number_shooting_bases=2):
+    def get_action_for_shooting_back(self, low_mothership_health, target_number):
         if self.being_treated or low_mothership_health:
             self.move_at(YurchenkoDrone.position_for_shooting_back[self.id])
         else:
@@ -463,12 +461,11 @@ class BasicDrone(Drone):
                            enemy.distance_to(enemy.mothership) > MOTHERSHIP_HEALING_DISTANCE]
             if (all(enemy_alive_drones_on_mothership) or all(
                     enemies_far)) and self.target or not enemy_alive_drones:
-                self.shoot_base_or_enemy_or_leave_position(enemy_alive_drones, target_number,
-                                                           small_number_shooting_bases)
+                self.shoot_base_or_enemy_or_leave_position(enemy_alive_drones, target_number)
             else:
                 self.get_target_turn_and_shoot(enemy_alive_drones)
 
-    def shoot_base_or_enemy_or_leave_position(self, enemy_alive_drones, target_number, small_number_shooting_bases):
+    def shoot_base_or_enemy_or_leave_position(self, enemy_alive_drones, target_number):
         enemy_bases_in_shot_distance = [base for base in self.get_enemy_bases_alive() if
                                         self.distance_to(base) <= self.gun.shot_distance and not any(
                                             enemy for enemy in self.get_enemy_alive_drones() if
