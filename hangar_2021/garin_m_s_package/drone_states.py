@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import garin_m_s_package.functions as f
+import hangar_2021.garin_m_s_package.functions as f
 from abc import ABCMeta, abstractmethod
 
 
