@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import functions as f
+import garin_m_s_package.functions as f
 from abc import ABCMeta, abstractmethod
 
 

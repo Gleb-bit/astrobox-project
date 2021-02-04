@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
-from garin_m_s.statistics import StatisticsMixin
-import garin_m_s.drone_states as st
+from garin_m_s_package.statistics import StatisticsMixin
+import garin_m_s_package.drone_states as st
 from astrobox.core import Drone
 
 

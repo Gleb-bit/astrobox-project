@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import geom as g
+import garin_m_s_package.geom as g
 from astrobox.guns import PlasmaProjectile
 from astrobox.core import Drone, MotherShip
 from robogame_engine.geometry import Point
