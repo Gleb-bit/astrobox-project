@@ -1,7 +1,9 @@
-##### Результаты соревнований с 04.01.2021 по 04.02.2021
+##### Результаты соревнований с 06.01.2021 по 06.02.2021
 
 Дата сражения | Продолжительность (шагов игры) | Первый результат | Второй результат | Третий результат | Четвертый результат
 --- | --- | --- | --- | --- | ---
+2021-02-06 22:02:57 | 17001 | 455 - CheslavlevDrone /dead/ | 347 - DemintsevDrone /dead/ | 334 - KachanovDrone | 0 - BysevDrone /dead/
+2021-02-06 22:01:50 | 1988 | 795 - OlshannikovDron | 718 - CheslavlevDrone
 2021-02-04 23:51:39 | 17001 | 477 - SivkovDrone | 432 - GarinDrone /dead/ | 388 - DemintsevDrone | 262 - SmirnovDrone /dead/
 2021-02-04 23:49:12 | 17001 | 856 - GarinDrone | 774 - KachanovDrone
 2021-02-01 21:28:13 | 17001 | 450 - DemintsevDrone | 379 - YurchenkoDrone | 344 - SivkovDrone | 293 - BysevDrone /dead/
@@ -52,7 +54,3 @@
 2021-01-09 21:17:31 | 17001 | 433 - SivkovDrone /dead/ | 382 - BeskaevDrone | 317 - DemintsevDrone /dead/ | 100 - DevastatorDrone /dead/
 2021-01-09 21:16:13 | 3044 | 475 - BeskaevDrone | 454 - DemintsevDrone | 412 - SivkovDrone /dead/ | 100 - DevastatorDrone /dead/
 2021-01-06 23:07:23 | 5601 | 721 - VoychenkoDrones | 207 - KachanovDrone | 0 - IlyinDrone /dead/ | 0 - LepilinDron /dead/
-2021-01-05 22:13:25 | 17001 | 585 - KachanovDrone | 425 - BeskaevDrone | 335 - VoychenkoDrones /dead/ | 0 - IlyinDrone /dead/
-2021-01-05 22:09:59 | 17001 | 493 - BeskaevDrone /dead/ | 395 - VoychenkoDrones /dead/ | 308 - LepilinDron /dead/ | 300 - IlyinDrone /dead/
-2021-01-04 21:52:56 | 4188 | 522 - SivkovDrone | 460 - DemintsevDrone /dead/ | 391 - VoychenkoDrones /dead/ | 200 - DevastatorDrone /dead/
-2021-01-04 21:52:07 | 3531 | 1143 - BeskaevDrone | 435 - VoychenkoDrones
