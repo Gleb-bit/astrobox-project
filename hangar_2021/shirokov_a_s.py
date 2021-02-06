@@ -280,15 +280,15 @@ class ShirokovDrone(Drone):
         Базовый метод для проверок от имени дрона в реальном времени
         """
 
-        print([(base, base.payload) for base in self.my_brain_center.ret_enemy_bases_by_status(filter_alive=True)])
-        print(self.my_mothership.payload)
+        # print([(base, base.payload) for base in self.my_brain_center.ret_enemy_bases_by_status(filter_alive=True)])
+        # print(self.my_mothership.payload)
 
         if self.statistic is not None:  # блок про статистику, если не выводим, то не обращаем внимания
             if self.my_brain_center.ret_dead_or_alive_my_drones_main_status is False:  # если все дроны мертвы
                 if self.statistic.statistics_have_been_displayed is False:  # и мы еще не выводили статистику
                     self.statistic.count_before_output_statistic += 1  # заводим обратный отсчет, чтобы все обработки завершились
                     if self.statistic.count_before_output_statistic > 10:  # по достижении фиксированного значения выводим статистику
-                        print(self.statistic.output_statistic())
+                        # print(self.statistic.output_statistic())
                         self.statistic.statistics_have_been_displayed = True  # мы вывели статистику, переключаем показатель
 
         if self.checks_in_heartbeat_for_this_drone() is True:  # делаем проверки для конкретного дрона
