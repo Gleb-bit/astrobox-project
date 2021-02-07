@@ -1,7 +1,22 @@
-##### Результаты соревнований с 06.01.2021 по 06.02.2021
+##### Результаты соревнований с 07.01.2021 по 07.02.2021
 
 Дата сражения | Продолжительность (шагов игры) | Первый результат | Второй результат | Третий результат | Четвертый результат
 --- | --- | --- | --- | --- | ---
+2021-02-07 20:43:18 | 10490 | 507 - SmirnovDrone /dead/ | 399 - LepilinDron /dead/ | 100 - DevastatorDrone /dead/ | 0 - IlyinDrone /dead/
+2021-02-07 20:42:37 | 17001 | 400 - KachanovDrone /dead/ | 299 - DevastatorDrone /dead/ | 0 - BysevDrone /dead/ | 0 - LepilinDron /dead/
+2021-02-07 20:41:29 | 17001 | 761 - KachanovDrone /dead/ | 400 - DevastatorDrone /dead/ | 384 - LepilinDron /dead/ | 0 - SimonDrone /dead/
+2021-02-07 20:39:30 | 17001 | 558 - LepilinDron /dead/ | 509 - KachanovDrone /dead/ | 100 - DevastatorDrone /dead/ | 0 - SmirnovDrone /dead/
+2021-02-07 20:32:16 | 3232 | 488 - LepilinDron /dead/ | 461 - SmirnovDrone /dead/ | 361 - KachanovDrone | 188 - IlyinDrone /dead/
+2021-02-07 20:30:51 | 2552 | 500 - LepilinDron /dead/ | 387 - SivkovDrone /dead/ | 345 - KachanovDrone | 309 - DemintsevDrone /dead/
+2021-02-07 20:29:21 | 4186 | 448 - YurchenkoDrone | 384 - SivkovDrone /dead/ | 354 - DemintsevDrone | 293 - LepilinDron /dead/
+2021-02-07 20:28:11 | 7728 | 418 - GarinDrone /dead/ | 418 - SivkovDrone /dead/ | 341 - DemintsevDrone | 223 - LepilinDron /dead/
+2021-02-07 20:26:48 | 4275 | 615 - BeskaevDrone | 505 - ShirokovDrone | 399 - DemintsevDrone | 0 - LepilinDron /dead/
+2021-02-07 20:26:23 | 3903 | 773 - BeskaevDrone | 388 - DemintsevDrone | 386 - OlshannikovDron | 0 - LepilinDron /dead/
+2021-02-07 20:25:59 | 3746 | 768 - BeskaevDrone | 450 - DemintsevDrone | 438 - CheslavlevDrone | 0 - LepilinDron /dead/
+2021-02-07 20:25:25 | 5877 | 670 - BeskaevDrone | 375 - SivkovDrone | 0 - DemintsevDrone /dead/ | 0 - LepilinDron /dead/
+2021-02-07 20:24:51 | 4005 | 823 - YurchenkoDrone | 437 - BeskaevDrone | 349 - SivkovDrone | 0 - DemintsevDrone /dead/
+2021-02-07 20:24:19 | 1772 | 500 - VoychenkoDrones | 431 - BeskaevDrone | 368 - DemintsevDrone | 231 - SivkovDrone /dead/
+2021-02-07 20:23:48 | 17001 | 502 - VoychenkoDrones | 359 - DemintsevDrone | 290 - BeskaevDrone /dead/ | 240 - SivkovDrone
 2021-02-06 22:02:57 | 17001 | 455 - CheslavlevDrone /dead/ | 347 - DemintsevDrone /dead/ | 334 - KachanovDrone | 0 - BysevDrone /dead/
 2021-02-06 22:01:50 | 1988 | 795 - OlshannikovDron | 718 - CheslavlevDrone
 2021-02-04 23:51:39 | 17001 | 477 - SivkovDrone | 432 - GarinDrone /dead/ | 388 - DemintsevDrone | 262 - SmirnovDrone /dead/
@@ -53,4 +68,3 @@
 2021-01-09 21:18:33 | 6690 | 611 - BeskaevDrone | 526 - SivkovDrone | 0 - DevastatorDrone /dead/ | 0 - DemintsevDrone /dead/
 2021-01-09 21:17:31 | 17001 | 433 - SivkovDrone /dead/ | 382 - BeskaevDrone | 317 - DemintsevDrone /dead/ | 100 - DevastatorDrone /dead/
 2021-01-09 21:16:13 | 3044 | 475 - BeskaevDrone | 454 - DemintsevDrone | 412 - SivkovDrone /dead/ | 100 - DevastatorDrone /dead/
-2021-01-06 23:07:23 | 5601 | 721 - VoychenkoDrones | 207 - KachanovDrone | 0 - IlyinDrone /dead/ | 0 - LepilinDron /dead/
