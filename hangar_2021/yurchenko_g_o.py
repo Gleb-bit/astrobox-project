@@ -118,14 +118,14 @@ class BasicDrone(Drone):
         return [base for base in self.scene.motherships if base.team is not self.team and base.is_alive]
 
     def check_for_presence_in_teammates(self, nearest_asteroids, nearest_asteroid, number_asteroid,
-                                        algorithm_for_transporter, nearest_asteroid_index, enemies_near_asteroid=True,
-                                        index_payload=2, index_asteroid=1):
+                                        nearest_asteroid_index, enemies_near_asteroid=True,
+                                        index_payload=2, index_asteroid=1, safe_len_enemies=3):
         payload_of_nearest_asteroid = nearest_asteroids[nearest_asteroid_index][index_payload]
         enemies_near_asteroid = [enemy for enemy in self.get_enemy_alive_drones() if enemy.distance_to(
             nearest_asteroid) <= enemy.gun.shot_distance and enemy.gun.cooldown > 0] if enemies_near_asteroid else False
         while (nearest_asteroid in [teammate.target for teammate in
-                                    self.teammates] and payload_of_nearest_asteroid <= 0) or nearest_asteroid.is_empty or enemies_near_asteroid and len(
-            enemies_near_asteroid) >= 3:
+                                    self.teammates] and payload_of_nearest_asteroid == 0) or nearest_asteroid.is_empty or enemies_near_asteroid and len(
+            enemies_near_asteroid) >= safe_len_enemies:
             if not nearest_asteroids or number_asteroid + 1 == len(nearest_asteroids):
                 return None
             else:
@@ -138,18 +138,16 @@ class BasicDrone(Drone):
     def check_target(self, nearest_asteroids, dif_between_free_space_and_most_filled_aster=50,
                      free_space_of_transporter=20, enemies_near_target=True, number_asteroid=0, index_asteroid=1,
                      index_payload=2):
-        algorithm_for_transporter = None
         nearest_asteroid = nearest_asteroids[number_asteroid][index_asteroid]
         nearest_asteroid_index = nearest_asteroids.index(nearest_asteroids[number_asteroid])
         if self.role == 'transporter' and self.free_space >= free_space_of_transporter:
-            algorithm_for_transporter = True
             nearest_asteroids = self.get_tuple_most_filled_asteroids(nearest_asteroids)
             if nearest_asteroids and nearest_asteroids[number_asteroid][
                 index_payload] - self.free_space >= dif_between_free_space_and_most_filled_aster:
                 nearest_asteroid = nearest_asteroids[number_asteroid][index_asteroid]
                 nearest_asteroid_index = nearest_asteroids.index(nearest_asteroids[number_asteroid])
         return self.check_for_presence_in_teammates(nearest_asteroids, nearest_asteroid, number_asteroid,
-                                                    algorithm_for_transporter, nearest_asteroid_index,
+                                                    nearest_asteroid_index,
                                                     enemies_near_target)
 
     def get_nearest_asteroid(self, enemies_near_target=True, index_payload=2, index_asteroid=1):
@@ -252,7 +250,7 @@ class BasicDrone(Drone):
         self.assign_and_count_distance_and_move_at_dead_target(target)
         return target
 
-    def get_roles(self, main_role, dop_role, amount_main_role=4):
+    def get_roles(self, main_role, dop_role, amount_main_role):
         alive_our_drones = self.get_alive_our_drones()
         for soldier in alive_our_drones:
             if len([soldier for soldier in alive_our_drones if soldier.role == main_role]) < amount_main_role:
@@ -359,7 +357,7 @@ class BasicDrone(Drone):
                 enemy_base = self.move_at_enemy_base(all_enemies)
                 if enemy_base:
                     return
-        self.get_roles(main_role='transporter', dop_role='transporter')
+        self.get_roles(main_role='transporter', dop_role='transporter', amount_main_role=4)
 
     def assign_turn_and_shoot_object(self, object):
         self.assign_target_firing_position_and_attack_place(object, self.coord)
@@ -406,8 +404,7 @@ class BasicDrone(Drone):
                       (-150, 130),
                       (-60, YurchenkoDrone.mothership_healing_distance),
                       (30, YurchenkoDrone.mothership_healing_distance)]
-        alive_our_drones = [drone for drone in self.get_alive_our_drones()]
-        for drone in alive_our_drones:
+        for drone in YurchenkoDrone.soldiers:
             YurchenkoDrone.position_for_shooting_back[drone.id] = Point(
                 self.my_mothership.x + places[index_place][index_x],
                 self.my_mothership.y + places[index_place][index_y])
@@ -502,7 +499,7 @@ class YurchenkoDrone(BasicDrone):
             enemy_bases_alive_without_shooting_drones = [enemy_base for enemy_base in self.get_enemy_bases_alive()
                                                          if not (
                     enemy for enemy in self.get_enemy_alive_drones() if
-                    enemy.team == enemy_base.team and enemy.gun.cooldown > 0 and enemy_base.distance_to(
+                    enemy.team == enemy_base.team and enemy_base.distance_to(
                         enemy) <= MOTHERSHIP_HEALING_DISTANCE)]
             if enemy_bases_alive_without_shooting_drones:
                 self.role = 'warrior'
@@ -587,7 +584,7 @@ class YurchenkoDrone(BasicDrone):
             YurchenkoDrone.first_drone = self.id
             YurchenkoDrone.mothership_full_health = self.my_mothership.health
             YurchenkoDrone.soldiers = self, *self.teammates
-            self.get_roles(main_role='collector', dop_role='transporter')
+            self.get_roles(main_role='collector', dop_role='transporter', amount_main_role=4)
             self.get_positions_for_shooting_back()
         if self.role == 'warrior':
             if not self.shooting_back:
@@ -606,7 +603,7 @@ class YurchenkoDrone(BasicDrone):
         if self.role == 'warrior':
             self.shoot_or_change_target()
         else:
-            if isinstance(self.target_copy, Asteroid) and self.target_copy.payload >= self.cargo.free_space:
+            if isinstance(self.target_copy, Asteroid) and self.target_copy.payload >= self.free_space:
                 self.turn_to(self.my_mothership)
                 self.target_copy = None
             self.load_from(asteroid)
