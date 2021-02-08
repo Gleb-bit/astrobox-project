@@ -80,7 +80,8 @@ class ZakharovContext:
 
     def estimation_scene(self, scene):
         self.my_scene = {
-            'sum_payload': sum([asteroid.cargo.payload for asteroid in scene.asteroids]),
+            'sum_payload': sum([asteroid.cargo.payload for asteroid in scene.asteroids]) +
+            sum([drone.cargo.payload for drone in scene.drones if not drone.is_alive]),
             'enemy_motherships': dict([(m.team, m) for m in scene.motherships if m.team != self.my_team[0].team]),
             'enemy_teams': [t for t in scene.teams if t != self.my_team[0].team],
             'count_dead_my_team': len([d for d in self.my_team if not d.is_alive]),
@@ -144,11 +145,14 @@ class ZakharovContext:
                           self.my_scene['enemy_teams'])) < 2
         ):
             self.strategy = 'Marauder'
-            # если у любой чужой команды больше 1 дрона
-            if any(map(lambda t: len(self.my_scene['enemy_drones'][t]) > 1, self.my_scene['enemy_drones'])):
-                # выделяем 3-х защитников
+            # если у любой чужой команды больше 1 дрона  и погибло больше 1-го дрона
+            if (
+                    any(map(lambda t: len(self.my_scene['enemy_drones'][t]) > 1, self.my_scene['enemy_drones']))
+                    and self.my_scene['count_dead_my_team'] > 1
+            ):
+                # выделяем 2-х защитников
                 if len([d for d in self.my_team if d.personal_strategy and
-                                               isinstance(d.personal_strategy, StrategyDefender)]) < 3:
+                                               isinstance(d.personal_strategy, StrategyDefender)]) < 2:
                     drone.personal_strategy = 'Defender'
             else:
                 for d in self.my_team:
@@ -177,7 +181,7 @@ class ZakharovContext:
                 isinstance(self.strategy, StrategyDefender) and
                 self.my_scene['sum_payload'] > 0
         ):
-            self.strategy = 'Loader'
+            self.strategy = 'FastLoader'
         # если у любой  чужой команды  остался 1 дрон и остался элериум
         elif (
                 any(map(lambda t: len(self.my_scene['enemy_drones'][t]) == 1,
@@ -185,7 +189,7 @@ class ZakharovContext:
                 isinstance(self.strategy, StrategyDefender) and
                 self.my_scene['sum_payload'] > 0
         ):
-            self.strategy = 'Loader'
+            self.strategy = 'FastLoader'
             if self.my_scene['count_dead_my_team'] > 0:
                 if len([d for d in self.my_team if isinstance(d.personal_strategy, StrategyDefender)]) <= 2:
                     drone.personal_strategy = 'Defender'
@@ -204,14 +208,7 @@ class ZakharovContext:
             if not isinstance(self.strategy, StrategyDefender):
                 self.strategy = 'Defender'
         else:
-
-            if len(drone.scene.teams) > 2:
-                self.strategy = 'FastLoader'
-            else:
-                self.strategy = 'Loader'
-                # if self.my_scene['sum_payload'] > 0 and len([d for d in self.my_team if d.personal_strategy and
-                #                                             isinstance(d.personal_strategy,StrategyFastLoader)]) < 1:
-                #     drone.personal_strategy = 'FastLoader'
+            self.strategy = 'FastLoader'
 
         if type(drone.personal_strategy) == type(self._strategy):
             drone.personal_strategy = None
@@ -291,7 +288,7 @@ class StrategyLoader(Strategy):
     def do_step(self, drone):
         drone.limit_health = 0.9
         drone.heartbeat_do = False
-        drone.turn_do = False
+
         if drone.actions:
             return
         target = self.get_target(drone)
@@ -340,7 +337,8 @@ class StrategyFastLoader(StrategyLoader):
         :return: asteroid
         """
 
-        targets = [a for a in drone.asteroids if (self.get_asteroid_surplus(a, drone) > 0 and drone.distance_to(a) > 1)]
+        targets = [a for a in drone.asteroids if (self.get_asteroid_surplus(a, drone) > 0)]
+        #and drone.distance_to(a) > 1)]
         targets.extend([d for d in drone.scene.drones if not d.is_empty and not d.is_alive])
         targets.sort(key=lambda x: drone.distance_to(x), reverse=False)
 
@@ -428,7 +426,7 @@ class StrategyFastLoader(StrategyLoader):
                     drone.flag_on_load_complete = False
                     drone.loader_thief += 1
                     return
-                if not drone.prev_target.cargo.is_empty:
+                if isinstance(drone.prev_target, GameObject) and not drone.prev_target.cargo.is_empty:
                     drone.actions.append(['load', drone.prev_target])
                     drone.flag_on_load_complete = False
                     drone.loader_thief = 0
@@ -457,87 +455,8 @@ class StrategyFastLoader(StrategyLoader):
 
 
 
-    # def do_step1(self, drone):
-    #
-    #     if drone.heartbeat_do:
-    #         if drone.prev_action == 'load':
-    #             enemy_loader = drone.context.near_enemy(drone)
-    #             if enemy_loader:
-    #                 if isinstance(drone.prev_target, Asteroid):
-    #                     drone.actions = []
-    #                     drone.actions.append(['load', enemy_loader])
-    #                 drone.loader_thief += 1
-    #
-    #
-    #             if not drone.is_full and not drone.prev_target.cargo.is_empty and not drone.is_moving:
-    #                 if drone.flag_on_load_complete:
-    #                     if drone.loader_thief > 5:
-    #                         drone.actions = []
-    #                         drone.actions.append(['shot', enemy_loader])
-    #                         drone.loader_thief = 0
-    #                     else:
-    #                         drone.actions = []
-    #                         drone.actions.append(['load', drone.prev_target])
-    #                     # return
-    #                 # if drone._transition.is_finished:
-    #                 #     if drone.loader_thief > 5:
-    #                 #         drone.actions = []
-    #                 #         drone.actions.append(['shot', enemy_loader])
-    #                 #         drone.loader_thief = 0
-    #                 #     else:
-    #                 #         drone.actions = []
-    #                 #         drone.actions.append(['load', drone.prev_target])
-    #                 # return
-    #         elif drone.distance_to(drone.my_mothership) < 15 and drone.prev_action == 'unload':
-    #             if not drone.cargo.is_empty and drone.meter_2 < 1:
-    #                 return
-    #         # elif drone.prev_action == 'move' and drone.distance_to(drone.target) > 1:
-    #         #     return
 
-
-        # drone.heartbeat_do = True
-        # drone.limit_health = 0.9
-        # if drone.actions:
-        #     return
-        # target = self.get_target(drone)
-        #
-        # if not target:
-        #     if drone.distance_to(drone.my_mothership) > 1:
-        #         target = drone.my_mothership
-        #     else:
-        #         return
-        #
-        # if target == drone.my_mothership:
-        #     drone.actions.append(['move', target])
-        #     next_target = self._get_my_asteroid(drone)
-        #     # if next_target and next_target != drone.my_mothership:
-        #     #     drone.actions.append(['turn', next_target])
-        #
-        #     if not drone.is_empty:
-        #         drone.actions.append(['unload', target])
-        #         #drone.heartbeat_do = False
-        #     next_target = self._get_my_asteroid(drone)
-        #     if next_target and next_target != drone.my_mothership:
-        #         drone.actions.append(['turn', next_target])
-        #         drone.turn_do = False
-        # else:
-        #
-        #     drone.heartbeat_do = True
-        #     drone.actions.append(['move', target])
-        #     if not drone.is_full:
-        #         drone.actions.append(['load', target])
-        #         drone.loader_thief = 0
-        #     if drone.free_space >= target.cargo.payload:
-        #         next_target = self._get_my_asteroid(drone)
-        #         if next_target is None:
-        #             next_target = drone.my_mothership
-        #     else:
-        #         next_target = drone.my_mothership
-        #     drone.actions.append(['turn', next_target])
-        #     drone.turn_do = False
-
-
-class StrategyMarauder(StrategyFastLoader):
+class StrategyMarauder(StrategyLoader):
 
     def get_target(self, drone):
         """
@@ -554,7 +473,7 @@ class StrategyMarauder(StrategyFastLoader):
                 if count_alive_drone <= 1:
                     drone.target = mothership
                     return drone.target
-            drone.target = None
+            drone.target = drone.my_mothership
         return drone.target
 
 
@@ -614,7 +533,6 @@ class StrategyDefender(Strategy):
     def do_step(self, drone):
         drone.limit_health = 0.5
         drone.heartbeat_do = False
-        drone.turn_do = False
         if drone.actions:
             return
         if not drone.is_empty:
@@ -670,8 +588,8 @@ class ZakharovDrone(Drone):
         self._personal_strategy = None
         self.actions = []
         self.heartbeat_do = False
-        self.turn_do = False
         self.flag_on_load_complete = False
+        self.flag_on_unload_complete = False
         self.prev_action = ''
         self.prev_target = None
         self.registry_context()
@@ -686,7 +604,6 @@ class ZakharovDrone(Drone):
                 self.prev_action = ''
                 self.prev_target = None
                 #self.heartbeat_do = False
-                self.turn_do = False
                 self.actions.append(['move', self.my_mothership])
                 if not self.is_empty:
                     self.actions.append(['unload', self.my_mothership])
@@ -735,11 +652,11 @@ class ZakharovDrone(Drone):
             self.actions.pop(0)
 
         elif action == 'unload':
-
-            self.unload_to(target)
-            self.actions.pop(0)
-            self.prev_action = 'unload'
-            self.do_action()
+            if not self.is_moving:
+                self.unload_to(target)
+                self.actions.pop(0)
+                self.prev_action = 'unload'
+                #self.do_action()
 
         elif action == 'turn':
 
