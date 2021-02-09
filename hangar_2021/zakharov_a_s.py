@@ -342,6 +342,19 @@ class StrategyFastLoader(StrategyLoader):
         targets.extend([d for d in drone.scene.drones if not d.is_empty and not d.is_alive])
         targets.sort(key=lambda x: drone.distance_to(x), reverse=False)
 
+        for team in drone.context.my_scene['enemy_teams']:
+            if len(drone.context.my_scene['enemy_drones_defender'][team]) > 1:
+                for target in targets:
+                    if (
+                            drone.context.my_scene['enemy_motherships'][team].distance_to(target) <=
+                            MOTHERSHIP_HEALING_DISTANCE + drone.gun.shot_distance or
+                            len([d for d in drone.scene.drones
+                                 if d.is_empty and d.is_alive
+                                    and d.distance_to(target) <= drone.gun.shot_distance
+                                    and d.team != drone.team]) > 1
+                    ):
+                        targets.remove(target)
+
         for asteroid in targets:
             if self.get_asteroid_surplus(asteroid, drone) >= drone.free_space and not drone.alarm_near_target(asteroid):
                 return asteroid
@@ -590,11 +603,11 @@ class ZakharovDrone(Drone):
         self.heartbeat_do = False
         self.flag_on_load_complete = False
         self.flag_on_unload_complete = False
+        self.loader_thief = 0
         self.prev_action = ''
         self.prev_target = None
         self.registry_context()
         ZakharovDrone.context.get_step(self)
-        # self.do_action()
 
     def do_action(self):
         if (self.meter_2 < self.limit_health and self.distance_to(self.my_mothership) > MOTHERSHIP_HEALING_DISTANCE
@@ -645,7 +658,6 @@ class ZakharovDrone(Drone):
                 self.prev_action = 'move'
 
         elif action == 'load':
-
             self.load_from(target)
             self.prev_action = 'load'
             self.prev_target = target
@@ -656,16 +668,17 @@ class ZakharovDrone(Drone):
                 self.unload_to(target)
                 self.actions.pop(0)
                 self.prev_action = 'unload'
-                #self.do_action()
+                self.prev_target = target
 
         elif action == 'turn':
 
             if not self.is_moving:
                 self.turn_to(target)
                 self.actions.pop(0)
-                # self.prev_action = 'turn'
+                if not self.heartbeat_do:
+                    self.do_action()
+
         elif action == "shot":
-            # if not self.heartbeat_do:
             self.shot(target)
             self.actions.pop(0)
         else:
