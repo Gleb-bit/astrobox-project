@@ -1,3 +1,6 @@
+from pprint import pprint
+from typing import Final
+
 from astrobox.core import Drone
 from robogame_engine.geometry import Point, Vector
 from hangar_2021.shirokov_a_s_add.brain_center import BrainCenterShirokovDrones
@@ -11,14 +14,14 @@ class ShirokovDrone(Drone):
 
     my_brain_center = BrainCenterShirokovDrones()  # класс для командного центра
     statistic = StatisticShirokovDrones() if my_brain_center.print_statistic is True else None  # вывод статистики
-    commands = {'perimeter_alarm': (1, my_brain_center.defender_base),
-                'found_dead_drones_with_ell': (2, my_brain_center.scavenger),
-                'found_dead_bases_with_ell': (3, my_brain_center.scavenger),
-                'found_enemy_bases_without_drones': (4, my_brain_center.siege_master),
-                'mothership_has_little_health': (5, my_brain_center.defender_base)}  # команды дронам о ситуации на поле боя
-    HEALTH_LIMIT_PERCENT = 0.60  # здоровье дрона в процентах, при котором дрон летит на родную базу лечиться
-    ACCURACY_SHOT_AIMING = 5  # значение в градусах, при котором допустим выстрел по цели
-    ACCURACY_CANCEL_SHOT_FRIENDLY_FIRE = 30  # значение в градусах, при котором не допустим выстрел из-за френдли файра
+    commands: Final = {'perimeter_alarm': (1, my_brain_center.defender_base),
+                       'found_dead_drones_with_ell': (2, my_brain_center.scavenger),
+                       'found_dead_bases_with_ell': (3, my_brain_center.scavenger),
+                       'found_enemy_bases_without_drones': (4, my_brain_center.siege_master),
+                       'mothership_has_little_health': (5, my_brain_center.defender_base)}  # команды дронам о ситуации на поле боя
+    HEALTH_LIMIT_PERCENT: float = 0.60  # здоровье дрона в процентах, при котором дрон летит на родную базу лечиться
+    ACCURACY_SHOT_AIMING: int = 5  # значение в градусах, при котором допустим выстрел по цели
+    ACCURACY_CANCEL_SHOT_FRIENDLY_FIRE: int = 30  # значение в градусах, при котором не допустим выстрел из-за френдли файра
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -38,7 +41,7 @@ class ShirokovDrone(Drone):
         self.role = self.my_brain_center.define_start_role(self.id)
         self.find_and_turn_move_target(fly=True)
 
-    def find_and_turn_move_target(self, fly: bool):
+    def find_and_turn_move_target(self, *, fly: bool):
         """
         Поиск цели (точки или объекта) и действие (поворот или полет), совершаемое по отношению к цели
 
@@ -171,8 +174,7 @@ class ShirokovDrone(Drone):
                     self.turn_to(
                         self.my_mothership)  # если после загрузки эллириума у дрона будет забит трюм до максимума, то сразу поворачиваемся к материнскому кораблю
                 else:
-                    self.find_and_turn_move_target(
-                        fly=False)  # если после загрузки эллириума у дрона будет свободное место в трюме, то сразу поворачиваемся к следующей цели
+                    self.find_and_turn_move_target(fly=False)  # если после загрузки эллириума у дрона будет свободное место в трюме, то сразу поворачиваемся к следующей цели
                 self.load_from(asteroid)
             else:
                 self.find_and_turn_move_target(fly=True)
@@ -281,8 +283,8 @@ class ShirokovDrone(Drone):
         Базовый метод для проверок от имени дрона в реальном времени
         """
 
-        print([(base, base.payload) for base in self.my_brain_center.ret_enemy_bases_by_status(filter_alive=True)])
-        print(self.my_mothership.payload)
+        # print([(base, base.payload) for base in self.my_brain_center.ret_enemy_bases_by_status(filter_alive=True)])
+        # print(self.my_mothership.payload)
 
         if self.statistic is not None:  # блок про статистику, если не выводим, то не обращаем внимания
             if self.my_brain_center.ret_dead_or_alive_my_drones_main_status is False:  # если все дроны мертвы
@@ -293,10 +295,14 @@ class ShirokovDrone(Drone):
                         self.statistic.statistics_have_been_displayed = True  # мы вывели статистику, переключаем показатель
 
         if self.checks_in_heartbeat_for_this_drone() is True:  # делаем проверки для конкретного дрона
-            if self.role.checks_in_heartbeat_for_drone_with_role(self.current_path_target) is False:  # делаем проверки для роли конкретного дрона
-                self.find_and_turn_move_target(fly=True)  # если проверка на роль не прошла, то общая команда для всех - искать новую цель для полета
+            if self.role.checks_in_heartbeat_for_drone_with_role(
+                    self.current_path_target) is False:  # делаем проверки для роли конкретного дрона
+                self.find_and_turn_move_target(
+                    fly=True)  # если проверка на роль не прошла, то общая команда для всех - искать новую цель для полета
 
             check_field_from_brain_center = self.my_brain_center.checks_in_heartbeat_for_brain_center()  # запрос о состоянии поля
+            # pprint(check_field_from_brain_center)
+            # print('___')
             for key_situation, value_situation_code in check_field_from_brain_center.items():  # обработка запроса о состоянии поля
                 if value_situation_code is True and self.role.highest_priority is False:
                     if self.role != self.commands[key_situation][1]:
