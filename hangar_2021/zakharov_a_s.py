@@ -29,6 +29,7 @@ class ZakharovContext:
             'FastLoader': StrategyFastLoader()
         }
         self._strategy = self.strategies[strategy]
+        self.max_drone_personal_strategy = 0
 
     @property
     def strategy(self) -> Strategy:
@@ -41,8 +42,7 @@ class ZakharovContext:
         self._strategy = self.strategies[strategy]
         for d in self.my_team:
             d.personal_strategy = None
-            d.actions = []
-            d.angle = -1
+            d.set_parameters_init()
 
     def valid_place_gun(self, drone, target):
         for partner in self.my_team:
@@ -81,7 +81,7 @@ class ZakharovContext:
     def estimation_scene(self, scene):
         self.my_scene = {
             'sum_payload': sum([asteroid.cargo.payload for asteroid in scene.asteroids]) +
-            sum([drone.cargo.payload for drone in scene.drones if not drone.is_alive]),
+                           sum([drone.cargo.payload for drone in scene.drones if not drone.is_alive]),
             'enemy_motherships': dict([(m.team, m) for m in scene.motherships if m.team != self.my_team[0].team]),
             'enemy_teams': [t for t in scene.teams if t != self.my_team[0].team],
             'count_dead_my_team': len([d for d in self.my_team if not d.is_alive]),
@@ -124,19 +124,9 @@ class ZakharovContext:
         ):
             self.strategy = 'Defender'
             if self.my_scene['sum_payload'] > 0:
-                if len([d for d in self.my_team if d.personal_strategy and isinstance(d.personal_strategy,
-                                                                                 StrategyFastLoader)]) < 1:
-                    drone.personal_strategy = 'FastLoader'
-            # if (
-            #         ((len([m for m in drone.scene.motherships if not m.is_alive and not m.cargo.is_empty]) > 0
-            #          or any(map(lambda t: len([d for d in self.my_scene['enemy_drones'][t] if d.is_alive]) == 0,
-            #                  self.my_scene['enemy_teams'])))
-            #          and all(map(lambda t: len(self.my_scene['enemy_drone_defenders'][t])>2,
-            #                self.my_scene['enemy_teams']))
-            # ):
-            #     if len([d for d in self.my_team if d.personal_strategy and isinstance(d.personal_strategy,
-            #                                                                      StrategyMarauder)]) < 1:
-            #         drone.personal_strategy = 'Marauder'
+                self.max_drone_personal_strategy = 1
+                drone.personal_strategy = 'FastLoader'
+
         # если погибла чужая база или все дроны и нет охотников
         elif ((len([m for m in drone.scene.motherships if not m.is_alive and not m.cargo.is_empty]) > 0 or
                any(map(lambda t: len([d for d in self.my_scene['enemy_drones'][t] if d.is_alive]) == 0,
@@ -151,14 +141,9 @@ class ZakharovContext:
                     and self.my_scene['count_dead_my_team'] > 1
             ):
                 # выделяем 2-х защитников
-                if len([d for d in self.my_team if d.personal_strategy and
-                                               isinstance(d.personal_strategy, StrategyDefender)]) < 2:
-                    drone.personal_strategy = 'Defender'
-            else:
-                for d in self.my_team:
-                    d.personal_strategy = None
-                    d.actions = []
-                    d.angle = -1
+                self.max_drone_personal_strategy = 2
+                drone.personal_strategy = 'Defender'
+
 
         # если мы потеряли дрона и у нас больше элериума чем у любой другой команды
         # и у любой чужой команды больше чем 1 дрон
@@ -171,8 +156,8 @@ class ZakharovContext:
 
             self.strategy = 'Defender'
             # если остался элериум отправляем 1-го грузчика
-            if self.my_scene['sum_payload'] > 0 and len([d for d in self.my_team if d.personal_strategy and
-                                                            isinstance(d.personal_strategy, StrategyFastLoader)]) < 1:
+            if self.my_scene['sum_payload'] > 0:
+                self.max_drone_personal_strategy = 1
                 drone.personal_strategy = 'FastLoader'
         # если у всех чужих команд  остался 1 дрон и остался элериум
         elif (
@@ -191,18 +176,18 @@ class ZakharovContext:
         ):
             self.strategy = 'FastLoader'
             if self.my_scene['count_dead_my_team'] > 0:
-                if len([d for d in self.my_team if isinstance(d.personal_strategy, StrategyDefender)]) <= 2:
-                    drone.personal_strategy = 'Defender'
+                self.max_drone_personal_strategy = 2
+                drone.personal_strategy = 'Defender'
         # если мы потеряли больше 1 дрона
         elif self.my_scene['count_dead_my_team'] > 1:
             self.strategy = 'FastLoader'
-            if len([d for d in self.my_team if isinstance(d.personal_strategy, StrategyDefender)]) < 2:
-                drone.personal_strategy = 'Defender'
+            self.max_drone_personal_strategy = 2
+            drone.personal_strategy = 'Defender'
         # если нападают на базу
         elif drone.my_mothership.meter_2 < 0.9:
             if drone.my_mothership.cargo.payload > 1400 or drone.my_mothership.meter_2 < 0.5:
-                if len([d for d in self.my_team if isinstance(d.personal_strategy, StrategyDefender)]) < 3:
-                    drone.personal_strategy = 'Defender'
+                self.max_drone_personal_strategy = 3
+                drone.personal_strategy = 'Defender'
         # если кончился элериум на астероидах
         elif self.my_scene['sum_payload'] == 0:
             if not isinstance(self.strategy, StrategyDefender):
@@ -338,7 +323,6 @@ class StrategyFastLoader(StrategyLoader):
         """
 
         targets = [a for a in drone.asteroids if (self.get_asteroid_surplus(a, drone) > 0)]
-        #and drone.distance_to(a) > 1)]
         targets.extend([d for d in drone.scene.drones if not d.is_empty and not d.is_alive])
         targets.sort(key=lambda x: drone.distance_to(x), reverse=False)
 
@@ -393,8 +377,6 @@ class StrategyFastLoader(StrategyLoader):
             if drone.distance_to(target) > 1:
                 drone.actions.append(['move', target])
 
-
-
     def do_step(self, drone):
         drone.heartbeat_do = True
         drone.limit_health = 0.9
@@ -434,7 +416,6 @@ class StrategyFastLoader(StrategyLoader):
             if not drone.is_full:
                 enemy_loader = drone.context.near_enemy(drone)
                 if enemy_loader:
-                    # if isinstance(drone.prev_target, Asteroid):
                     drone.actions.append(['load', enemy_loader])
                     drone.flag_on_load_complete = False
                     drone.loader_thief += 1
@@ -466,9 +447,6 @@ class StrategyFastLoader(StrategyLoader):
                 drone.actions.append(['move', drone.my_mothership])
 
 
-
-
-
 class StrategyMarauder(StrategyLoader):
 
     def get_target(self, drone):
@@ -497,15 +475,16 @@ class StrategyDefender(Strategy):
         global_angles = [[[0, 90, 30, 60], [0, 270, 300, 330]], [[180, 90, 120, 150], [180, 270, 210, 240]]]
         self.angles = global_angles[index_mothership_x][index_mothership_y]
 
+    def get_position_of_angle(self, drone):
+        position = Point(drone.my_mothership.coord.x + MOTHERSHIP_HEALING_DISTANCE - 1,
+                         drone.my_mothership.coord.y)
+        vec = Vector.from_points(drone.my_mothership.coord, position)
+        if drone.angle >= 0:
+            vec.rotate(drone.angle)
+        position = Point(drone.my_mothership.coord.x + vec.x, drone.my_mothership.coord.y + vec.y)
+        return position
+
     def get_place_near_mothership(self, drone, exclude_angle=-1):
-        def get_position_of_angle():
-            position = Point(drone.my_mothership.coord.x + MOTHERSHIP_HEALING_DISTANCE - 1,
-                             drone.my_mothership.coord.y)
-            vec = Vector.from_points(drone.my_mothership.coord, position)
-            if drone.angle >= 0:
-                vec.rotate(drone.angle)
-            position = Point(drone.my_mothership.coord.x + vec.x, drone.my_mothership.coord.y + vec.y)
-            return position
 
         if (
                 drone.angle >= 0 and
@@ -514,7 +493,7 @@ class StrategyDefender(Strategy):
         ):
             if drone.angle == -1 and drone.distance_to(drone.my_mothership) > 1:
                 return drone.my_mothership.coord
-            position = get_position_of_angle()
+            position = self.get_position_of_angle(drone)
             if drone.distance_to(position) > 1:
                 return position
             else:
@@ -528,7 +507,7 @@ class StrategyDefender(Strategy):
                 is_valide = is_valide and (partner.angle != angle) and (angle != exclude_angle)
             if is_valide:
                 drone.angle = angle
-                return get_position_of_angle()
+                return self.get_position_of_angle(drone)
         return None
 
     def get_enemy_target(self, my_drone):
@@ -575,7 +554,6 @@ class ZakharovDrone(Drone):
     total_distance_empty = 0
     total_distance = 0
     limit_health = 0.5
-    angle = -1
 
     @property
     def personal_strategy(self) -> Strategy:
@@ -588,17 +566,19 @@ class ZakharovDrone(Drone):
             return
         if self.personal_strategy and type(self.personal_strategy) == type(self.context.strategies[strategy]):
             return
-        self._personal_strategy = self.context.strategies[strategy]
-        self.actions = []
-        self.angle = -1
+        count_drone_personal_strategy = len([drone for drone in self.context.my_team
+                if isinstance(drone.personal_strategy, self.context.strategies[strategy])])
+        if count_drone_personal_strategy < self.context.max_drone_personal_strategy:
+            self._personal_strategy = self.context.strategies[strategy]
+            self.set_parameters_init()
+
 
     def registry_context(self):
         if ZakharovDrone.context is None:
             ZakharovDrone.context = ZakharovContext('FastLoader', self.my_mothership)
         ZakharovDrone.context.new_drone(drone=self)
 
-    def on_born(self):
-        self._personal_strategy = None
+    def set_parameters_init(self):
         self.actions = []
         self.heartbeat_do = False
         self.flag_on_load_complete = False
@@ -606,6 +586,11 @@ class ZakharovDrone(Drone):
         self.loader_thief = 0
         self.prev_action = ''
         self.prev_target = None
+        self.angle = -1
+
+    def on_born(self):
+        self._personal_strategy = None
+        self.set_parameters_init()
         self.registry_context()
         ZakharovDrone.context.get_step(self)
 
@@ -616,7 +601,7 @@ class ZakharovDrone(Drone):
                 self.actions = []
                 self.prev_action = ''
                 self.prev_target = None
-                #self.heartbeat_do = False
+                # self.heartbeat_do = False
                 self.actions.append(['move', self.my_mothership])
                 if not self.is_empty:
                     self.actions.append(['unload', self.my_mothership])
@@ -688,7 +673,7 @@ class ZakharovDrone(Drone):
     def move_at(self, target, speed=None):
         distance = self.distance_to(target)
         if not isinstance(target, Point):
-            vec = Vector.from_points(self.coord, target.coord, distance - CARGO_TRANSITION_DISTANCE +1)
+            vec = Vector.from_points(self.coord, target.coord, distance - CARGO_TRANSITION_DISTANCE + 1)
             new_coord = Point(x=self.coord.x + vec.x, y=self.coord.y + vec.y)
         else:
             new_coord = target
@@ -796,4 +781,3 @@ class ZakharovDrone(Drone):
 
 
 drone_class = ZakharovDrone
-
