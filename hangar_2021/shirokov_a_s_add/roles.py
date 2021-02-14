@@ -1,5 +1,7 @@
 from operator import itemgetter
 from random import choice
+from typing import final, Final
+
 from robogame_engine.geometry import Point, Vector
 
 
@@ -19,7 +21,7 @@ class RoleAbstract:
     check_safety_obj = None  # атрибут для хранения инфо о том, нужно ли проверять безопасность объекта полета
 
     def __init__(self, center):
-        self.brain_center = center
+        self.brain_center: Final = center
 
     def get_target_for_fly(self, my_drone_id: int, to_move: bool):
         """
@@ -197,7 +199,7 @@ class RoleCollector(RoleEarner):
     highest_priority = True  # переопределяем highest_priority (у роли-наследника будет высший приоритет)
     collecting_resource_from_the_dead_obj = None  # атрибут для хранения информации о том, нужно ли сборщикам собирать эллириум с мертвых объектов
 
-    def collecting_targets_for_collectors(self, quadrant: bool, dead: bool):
+    def collecting_targets_for_collectors(self, *, quadrant: bool, dead: bool):
         """
         Метод для сбора потенциальных целей для Сборщиков.
 
@@ -225,6 +227,7 @@ class RoleCollector(RoleEarner):
         return objects_for_fly
 
 
+@final
 class RoleSeniorCollector(RoleCollector):
     """
     Класс Старшие собиратели.
@@ -240,7 +243,7 @@ class RoleSeniorCollector(RoleCollector):
 
     def __init__(self, center):
         super().__init__(center)
-        self.TAKE_INTO_WORK_OBJ_WITH_ELL = center.MAX_DRONE_ELL  # в константу выносим максимальное кол-во эллириума на борту дрона
+        self.TAKE_INTO_WORK_OBJ_WITH_ELL: Final = center.MAX_DRONE_ELL  # в константу выносим максимальное кол-во эллириума на борту дрона
 
     def get_target_for_fly(self, my_drone_id: int, to_move: bool):  # переопределили метод из суперкласса
         """
@@ -292,6 +295,7 @@ class RoleSeniorCollector(RoleCollector):
                     self.dict_for_distribution[obj_id] = None
 
 
+@final
 class RoleJuniorCollector(RoleCollector):
     """
     Класс Младшие собиратели.
@@ -306,7 +310,7 @@ class RoleJuniorCollector(RoleCollector):
 
     def __init__(self, center):
         super().__init__(center)
-        self.MAX_FREE_SPACE_IN_DRONE = center.MAX_DRONE_ELL  # в константу выносим максимальное кол-во эллириума на борту дрона
+        self.MAX_FREE_SPACE_IN_DRONE: Final = center.MAX_DRONE_ELL  # в константу выносим максимальное кол-во эллириума на борту дрона
 
     def get_sum_free_space_in_other_drones_on_ast(self, obj_with_ell_id: int):
         """
@@ -390,6 +394,7 @@ class RoleJuniorCollector(RoleCollector):
             return next_asteroid
 
 
+@final
 class RoleScavenger(RoleEarner):
     """
     Класс Падальщики.
@@ -485,6 +490,7 @@ class RoleScavenger(RoleEarner):
         return False
 
 
+@final
 class RoleDefenderBase(RoleDestroyer):
     """
     Класс Защитник Базы.
@@ -535,8 +541,7 @@ class RoleDefenderBase(RoleDestroyer):
         for enemy_drone_id in bc.enemy_drones_around_base:
             enemy_drone = bc.get_object_for_id(enemy_drone_id)
             if enemy_drone.is_alive is True:
-                if enemy_drone.distance_to(enemy_drone.my_mothership) > bc.MOTHERSHIP_HEALING_DISTANCE:  # если вражеский дрон находится в зоне жизни своей базы, то по нему бесполезно стрелять
-                    potential_targets.append([enemy_drone, bc.all_objects_on_field['my_base'].distance_to(enemy_drone)])
+                potential_targets.append([enemy_drone, bc.all_objects_on_field['my_base'].distance_to(enemy_drone)])
         try:
             next_combat_target = min(potential_targets, key=itemgetter(1))[0]
         except ValueError:
@@ -609,6 +614,7 @@ class RoleDefenderBase(RoleDestroyer):
             return True
 
 
+@final
 class RoleSiegeMaster(RoleDestroyer):
     """
     Класс Осадный мастер.

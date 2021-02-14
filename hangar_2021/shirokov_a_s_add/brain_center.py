@@ -1,10 +1,11 @@
 from math import sin, cos, pi
-from typing import Dict
+from typing import Dict, Final
 from astrobox.themes.default import MOTHERSHIP_HEALING_DISTANCE, MAX_DRONE_ELERIUM, DRONE_MAX_SHIELD, \
     MOTHERSHIP_MAX_SHIELD
 from robogame_engine import scene
 from robogame_engine.geometry import Point
-from hangar_2021.shirokov_a_s_add.roles import RoleDefenderBase, RoleScavenger, RoleSiegeMaster, RoleSeniorCollector, RoleJuniorCollector
+from hangar_2021.shirokov_a_s_add.roles import RoleDefenderBase, RoleScavenger, RoleSiegeMaster, RoleSeniorCollector, \
+    RoleJuniorCollector
 from statistics import median
 
 
@@ -29,19 +30,19 @@ class BrainCenterShirokovDrones:
     my_quadrant = None  # четверть поля, где зареспаунился наш материнский корабль
     commands_count = None  # количество команд на поле
     MIN_MOTHERSHIP_HEALTH = 0.40  # минимальное здоровье материнского корабля в процентах, ниже которого бьется общая тревога
-    MAX_MOTHERSHIP_HEALTH = MOTHERSHIP_MAX_SHIELD  # максимальное здоровье материнского корабля
-    MOTHERSHIP_HEALING_DISTANCE = MOTHERSHIP_HEALING_DISTANCE  # расстояние вокруг материнского корабля, где у дронов восстанавливается здоровье
-    MAX_DRONE_ELL = MAX_DRONE_ELERIUM  # максимально возможное количество эллириума в трюме дрона
-    MAX_DRONE_HEALTH = DRONE_MAX_SHIELD  # максимально возможное здоровье дрона
-    SCHEMA_FOR_DEFEND = {'count_points': 3,
-                         'delta_between_first_and_last_point': 110,
-                         'distance_coefficient_for': {'first_and_last_point': 1, 'middle_point': 0.6,
-                                                      'other_point': 0.75}}
-    SCHEMA_FOR_ATTACK = {'count_points': 5,
-                         'delta_between_first_and_last_point': 90,
-                         'distance_coefficient_for': {'first_and_last_point': 0.4, 'middle_point': 0.4,
-                                                      'other_point': 0.4}}
-    DEGREES_DEVIATION = {1: 90, 2: 270, 3: 0, 4: 180}  # отклонение в градусах, зависящее от квадранта базы, рассчитываемое для точек
+    MAX_MOTHERSHIP_HEALTH: Final = MOTHERSHIP_MAX_SHIELD  # максимальное здоровье материнского корабля
+    MOTHERSHIP_HEALING_DISTANCE: Final = MOTHERSHIP_HEALING_DISTANCE  # расстояние вокруг материнского корабля, где у дронов восстанавливается здоровье
+    MAX_DRONE_ELL: Final = MAX_DRONE_ELERIUM  # максимально возможное количество эллириума в трюме дрона
+    MAX_DRONE_HEALTH: Final = DRONE_MAX_SHIELD  # максимально возможное здоровье дрона
+    SCHEMA_FOR_DEFEND: Final = {'count_points': 3,
+                                'delta_between_first_and_last_point': 110,
+                                'distance_coefficient_for': {'first_and_last_point': 1, 'middle_point': 0.6,
+                                                             'other_point': 0.75}}
+    SCHEMA_FOR_ATTACK: Final = {'count_points': 5,
+                                'delta_between_first_and_last_point': 90,
+                                'distance_coefficient_for': {'first_and_last_point': 0.4, 'middle_point': 0.4,
+                                                             'other_point': 0.4}}
+    DEGREES_DEVIATION: Final = {1: 90, 2: 270, 3: 0, 4: 180}  # отклонение в градусах, зависящее от квадранта базы, рассчитываемое для точек
     enemy_drones_around_base = []  # список вражеских дронов, подлетевших к материнскому кораблю на опасное расстояние
     dead_obj_with_ell_on_field = {}  # словарь с мертвыми вражескими дронами и материнскими кораблями, на борту которых есть эллириум
     enemy_bases_without_drones = []  # вражеские базы, оставшиеся без дронов (дроны либо мертвы, либо далеко от базы)
@@ -100,11 +101,11 @@ class BrainCenterShirokovDrones:
         self.attack_points = self.update_attack_points()
 
     @staticmethod
-    def recognize_quadrant_for_obj(obj):
+    def recognize_quadrant_for_obj(obj: object):
         """
         Метод, определяющий четверть, в пределах которого находится объект
 
-        :param obj: База, для которой нужно определить четверть
+        :param obj: Объект, для которой нужно определить четверть
         :type obj: Object
         :return: Номер четверти базы
         :rtype: int
@@ -164,7 +165,7 @@ class BrainCenterShirokovDrones:
             attack_points[enemy_base.id] = points_tuple
         return attack_points
 
-    def recognize_points_around_base(self, base_obj: object, schema: dict, default_distance: int, count_points=None):
+    def recognize_points_around_base(self, *, base_obj: object, schema: dict, default_distance: int, count_points=None):
         """
         Метод, позволяющий рассчитать точки вокруг базы для атаки или защиты по входным данным
 
@@ -223,7 +224,7 @@ class BrainCenterShirokovDrones:
                     if self.ret_my_drones_roles.count(key_role) == value_count:
                         continue
                     else:
-                        self.update_role(drone_id, key_role, True)
+                        self.update_role(drone_id, key_role, start_role=True)
                         return key_role
 
     def change_default_role(self, drone_id: int):
@@ -283,7 +284,7 @@ class BrainCenterShirokovDrones:
             self.update_role(drone_id, role_for_return)
         return role_for_return
 
-    def update_role(self, drone_id: int, new_role: object, start_role=False):
+    def update_role(self, drone_id: int, new_role: object, *, start_role=False):
         """
         Метод для регистрации id дрона в списке держателей конкретной роли
 
@@ -500,7 +501,7 @@ class BrainCenterShirokovDrones:
 
         return [drone for drone in self.all_objects_on_field['my_drones'] if drone.current_path_target == filter_target]
 
-    def ret_drones_by_status(self, filter_alive: bool, filter_our: bool or None):
+    def ret_drones_by_status(self, *, filter_alive: bool, filter_our: bool or None):
         """
         Метод для получения списка дронов по разным параметрам
 
@@ -530,7 +531,7 @@ class BrainCenterShirokovDrones:
             elif filter_our is None:
                 return [drone for drone in self.all_objects_on_field['all_drones'] if drone.is_alive is False]
 
-    def ret_enemy_bases_by_status(self, filter_alive: bool):
+    def ret_enemy_bases_by_status(self, *, filter_alive: bool):
         """
         Метод для получения списка баз по параметру
 
