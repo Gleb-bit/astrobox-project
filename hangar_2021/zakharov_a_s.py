@@ -118,6 +118,13 @@ class ZakharovContext:
                        (50 < d.distance_to(self.my_scene['enemy_motherships'][t]) <= MOTHERSHIP_HEALING_DISTANCE)])
                   for t in self.my_scene['enemy_teams']])
 
+    def get_hunter(self):
+        """
+        :return: общее количество пустых не двигающихся дронов, охотников, возле нашей базы
+        """
+        return sum(map(lambda t: len(self.my_scene['enemy_drones_my_mothership'][t]),
+                        self.my_scene['enemy_teams']))
+
     def get_step(self, drone):
         if drone.meter_2 < drone.limit_health:
             drone.actions = []
@@ -128,8 +135,7 @@ class ZakharovContext:
         self.estimation_scene(drone.scene)
         # если возле нашей базы больше 2-х пустых (или 1 ого), не двигающихся дронов (охотников)
         if (
-                sum(map(lambda t: len(self.my_scene['enemy_drones_my_mothership'][t]),
-                        self.my_scene['enemy_teams'])) > len(drone.scene.teams) // 2
+                 self.get_hunter() > len(drone.scene.teams) // 2
         ):
             self.strategy = 'Defender'
             if self.my_scene['sum_payload'] > 0:
@@ -140,8 +146,7 @@ class ZakharovContext:
         elif ((len([m for m in drone.scene.motherships if not m.is_alive and not m.cargo.is_empty]) > 0 or
                any(map(lambda t: len([d for d in self.my_scene['enemy_drones'][t] if d.is_alive]) == 0,
                        self.my_scene['enemy_teams'])))
-              and sum(map(lambda t: len(self.my_scene['enemy_drones_my_mothership'][t]),
-                          self.my_scene['enemy_teams'])) < 2
+              and self.get_hunter() < 2
         ):
             self.strategy = 'Marauder'
             # если у любой чужой команды больше 1 дрона  и погибло больше 1-го дрона
@@ -572,7 +577,8 @@ class ZakharovDrone(Drone):
         if self.personal_strategy and type(self.personal_strategy) == type(self.context.strategies[strategy]):
             return
         count_drone_personal_strategy = len([drone for drone in self.context.my_team
-                if isinstance(drone.personal_strategy, self.context.strategies[strategy])])
+                                             if drone._personal_strategy and drone.is_alive and
+                                             type(drone._personal_strategy) == type(self.context.strategies[strategy])])
         if count_drone_personal_strategy < self.context.max_drone_personal_strategy:
             self._personal_strategy = self.context.strategies[strategy]
             self.set_parameters_init()
@@ -662,7 +668,7 @@ class ZakharovDrone(Drone):
 
         elif action == 'turn':
 
-            if not self.is_moving:
+            if not self.is_moving or not self.heartbeat_do:
                 self.turn_to(target)
                 self.actions.pop(0)
                 if not self.heartbeat_do:
