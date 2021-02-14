@@ -1,12 +1,8 @@
 # -*- coding: utf-8 -*-
-import math
 from astrobox.core import *
 from abc import ABC, abstractmethod
 from astrobox.themes.default import MOTHERSHIP_HEALING_DISTANCE
 from robogame_engine.geometry import Point, Vector
-
-theme.FIELD_WIDTH = 1200
-theme.FIELD_HEIGHT = 1200
 
 
 class Strategy(ABC):
