@@ -339,14 +339,7 @@ class StrategyFastLoader(StrategyLoader):
         for team in drone.context.my_scene['enemy_teams']:
             if len(drone.context.my_scene['enemy_drones_defender'][team]) > 1:
                 for target in targets:
-                    if (
-                            drone.context.my_scene['enemy_motherships'][team].distance_to(target) <=
-                            MOTHERSHIP_HEALING_DISTANCE + drone.gun.shot_distance or
-                            len([d for d in drone.scene.drones
-                                 if d.is_empty and d.is_alive
-                                    and d.distance_to(target) <= drone.gun.shot_distance
-                                    and d.team != drone.team]) > 1
-                    ):
+                    if self.get_hunter_near_target(drone, target) > 1:
                         targets.remove(target)
 
         for asteroid in targets:
@@ -615,7 +608,6 @@ class ZakharovDrone(Drone):
                 self.actions = []
                 self.prev_action = ''
                 self.prev_target = None
-                # self.heartbeat_do = False
                 self.actions.append(['move', self.my_mothership])
                 if not self.is_empty:
                     self.actions.append(['unload', self.my_mothership])
