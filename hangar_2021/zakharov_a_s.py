@@ -46,7 +46,7 @@ class ZakharovContext:
 
     def valid_place_gun(self, drone, target):
         """
-        :return: True, если другие мои дроны не загораживают цель
+        Возвращает True, если другие мои дроны не загораживают цель
         """
         for partner in self.my_team:
             if (
@@ -66,7 +66,7 @@ class ZakharovContext:
 
     def near_enemy(self, drone):
         """
-        :return: возвращает вражеский дрон, если расстояние до него позволяет загружать элериум
+        Возвращает вражеский дрон, если расстояние до него позволяет загружать элериум
         """
         for t in self.my_scene['enemy_teams']:
             for enemy_drone in self.my_scene['enemy_drones'][t]:
@@ -79,7 +79,7 @@ class ZakharovContext:
 
     def get_enemy_at_gun(self, drone):
         """
-        :return: возвращает один дрон, попадающий под цель
+        Возвращает один дрон, попадающий под цель
         """
         for d in drone.scene.drones:
             if d.team != drone.team and drone.distance_to(d) <= drone.gun.shot_distance and d.is_alive:
@@ -120,10 +120,36 @@ class ZakharovContext:
 
     def get_hunter(self):
         """
-        :return: общее количество пустых не двигающихся дронов, охотников, возле нашей базы
+        Возвращает общее количество пустых не двигающихся дронов, охотников, возле нашей базы
         """
         return sum(map(lambda t: len(self.my_scene['enemy_drones_my_mothership'][t]),
                         self.my_scene['enemy_teams']))
+
+    def get_dead_enemy_mothership(self, drone):
+        """
+        Возвращает количество не пустых, не живых баз
+        """
+        return len([m for m in drone.scene.motherships if not m.is_alive and not m.cargo.is_empty])
+
+    def check_live_enemy_drone(self, count_live_drone=0):
+        """
+        Проверяет количество живых дронов в каждой чужой команде
+
+        :param count_live_drone: проверяемое число живых дронов
+        :return: True, если число дронов в любой чужой команде равно count_live_drone
+        """
+        return any(map(lambda t: len([d for d in self.my_scene['enemy_drones'][t] if d.is_alive]) == count_live_drone,
+                self.my_scene['enemy_teams']))
+
+    def check_more_live_enemy_drone(self, count_live_drone=1):
+        """
+        Проверяет количество живых дронов в каждой чужой команде
+
+        :param count_live_drone: проверяемое число живых дронов
+        :return: True, если число дронов в любой чужой команде больше count_live_drone
+            """
+        return any(map(lambda t: len([d for d in self.my_scene['enemy_drones'][t] if d.is_alive]) > count_live_drone,
+                       self.my_scene['enemy_teams']))
 
     def get_step(self, drone):
         if drone.meter_2 < drone.limit_health:
@@ -134,26 +160,19 @@ class ZakharovContext:
             return
         self.estimation_scene(drone.scene)
         # если возле нашей базы больше 2-х пустых (или 1 ого), не двигающихся дронов (охотников)
-        if (
-                 self.get_hunter() > len(drone.scene.teams) // 2
-        ):
+        if self.get_hunter() > len(drone.scene.teams) // 2:
             self.strategy = 'Defender'
             if self.my_scene['sum_payload'] > 0:
                 self.max_drone_personal_strategy = 1
                 drone.personal_strategy = 'FastLoader'
 
         # если погибла чужая база или все дроны и нет охотников
-        elif ((len([m for m in drone.scene.motherships if not m.is_alive and not m.cargo.is_empty]) > 0 or
-               any(map(lambda t: len([d for d in self.my_scene['enemy_drones'][t] if d.is_alive]) == 0,
-                       self.my_scene['enemy_teams'])))
+        elif ((self.get_dead_enemy_mothership(drone) > 0 or self.check_live_enemy_drone(0))
               and self.get_hunter() < 2
         ):
             self.strategy = 'Marauder'
             # если у любой чужой команды больше 1 дрона  и погибло больше 1-го дрона
-            if (
-                    any(map(lambda t: len(self.my_scene['enemy_drones'][t]) > 1, self.my_scene['enemy_drones']))
-                    and self.my_scene['count_dead_my_team'] > 1
-            ):
+            if self.check_more_live_enemy_drone(1):
                 # выделяем 2-х защитников
                 self.max_drone_personal_strategy = 2
                 drone.personal_strategy = 'Defender'
@@ -165,7 +184,7 @@ class ZakharovContext:
                 self.my_scene['count_dead_my_team'] > 0 and
                 all(map(lambda t: self.my_team[0].my_mothership.cargo.payload >
                                   self.my_scene['enemy_motherships'][t].cargo.payload, self.my_scene['enemy_teams']))
-                and any(map(lambda t: len(self.my_scene['enemy_drones'][t]) > 1, self.my_scene['enemy_drones']))
+                and self.check_more_live_enemy_drone(1)
         ):
 
             self.strategy = 'Defender'
@@ -183,8 +202,7 @@ class ZakharovContext:
             self.strategy = 'FastLoader'
         # если у любой  чужой команды  остался 1 дрон и остался элериум
         elif (
-                any(map(lambda t: len(self.my_scene['enemy_drones'][t]) == 1,
-                        self.my_scene['enemy_drones'])) and
+                self.check_more_live_enemy_drone(1) and
                 self.my_scene['sum_payload'] > 0
         ):
             self.strategy = 'FastLoader'
@@ -242,7 +260,6 @@ class StrategyLoader(Strategy):
         """
         :return:  цель астероид или дрон для загрузки элериума
         """
-
         targets = [a for a in drone.asteroids if (self.get_asteroid_surplus(a, drone) > 0 and
                                                   drone.distance_to(a) > 1)]
         targets.extend([d for d in drone.scene.drones if not d.is_empty and not d.is_alive])
