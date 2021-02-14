@@ -28,9 +28,8 @@ class BasicDrone(Drone):
     distance_enemy_object_near = 100
     angle_fire_line = 15
 
-    def __init__(self):
-        # TODO - Неплохо бы проинспектировать используемый метод в супер-классе. там кварги в параметрах
-        super().__init__()
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.being_treated = False
         self.target = None
         self.target_copy = None
@@ -135,7 +134,7 @@ class BasicDrone(Drone):
                     nearest_asteroid) <= enemy.gun.shot_distance and enemy.gun.cooldown > 0] if enemies_near_asteroid else False
         return nearest_asteroids[number_asteroid]
 
-    def check_target(self, nearest_asteroids, dif_between_free_space_and_most_filled_aster=50,
+    def check_target(self, nearest_asteroids, remaining_amount_elerium=50,
                      free_space_of_transporter=20, enemies_near_target=True, number_asteroid=0, index_asteroid=1,
                      index_payload=2):
         nearest_asteroid = nearest_asteroids[number_asteroid][index_asteroid]
@@ -143,7 +142,7 @@ class BasicDrone(Drone):
         if self.role == 'transporter' and self.free_space >= free_space_of_transporter:
             nearest_asteroids = self.get_tuple_most_filled_asteroids(nearest_asteroids)
             if nearest_asteroids and nearest_asteroids[number_asteroid][
-                index_payload] - self.free_space >= dif_between_free_space_and_most_filled_aster:
+                index_payload] - self.free_space >= remaining_amount_elerium:
                 nearest_asteroid = nearest_asteroids[number_asteroid][index_asteroid]
                 nearest_asteroid_index = nearest_asteroids.index(nearest_asteroids[number_asteroid])
         return self.check_for_presence_in_teammates(nearest_asteroids, nearest_asteroid, number_asteroid,
