@@ -185,7 +185,6 @@ class ZakharovContext:
         elif (
                 any(map(lambda t: len(self.my_scene['enemy_drones'][t]) == 1,
                         self.my_scene['enemy_drones'])) and
-                isinstance(self.strategy, StrategyDefender) and
                 self.my_scene['sum_payload'] > 0
         ):
             self.strategy = 'FastLoader'
@@ -204,8 +203,7 @@ class ZakharovContext:
                 drone.personal_strategy = 'Defender'
         # если кончился элериум на астероидах
         elif self.my_scene['sum_payload'] == 0:
-            if not isinstance(self.strategy, StrategyDefender):
-                self.strategy = 'Defender'
+            self.strategy = 'Defender'
         else:
             self.strategy = 'FastLoader'
 
@@ -225,9 +223,21 @@ class ZakharovContext:
 class StrategyLoader(Strategy):
 
     def get_asteroid_surplus(self, asteroid, my_drone):
+        """
+        :return: остаток элерума после загрузки моих дронов цель у которых астероид (arg1)
+        """
         return asteroid.cargo.payload - sum(
             [drone.free_space for drone in my_drone.context.my_team if drone.target == asteroid])
 
+    def get_hunter_near_target(self, drone, target):
+        """
+        :param drone: объект ZakharoveDrone
+        :param target: type GameObject | цель с которой нужно собрать элериум
+        :return: количество недвигающихся, живых, пустых, чужих дронов в области выстрела до цели
+        """
+        return len([d for d in drone.scene.drones if d.is_empty and d.is_alive and not d.is_moving
+                                                  and d.distance_to(target) <= drone.gun.shot_distance
+                                                  and d.team != drone.team])
     def _get_my_asteroid(self, drone):
         """
         :return:  цель астероид или дрон для загрузки элериума
@@ -239,14 +249,7 @@ class StrategyLoader(Strategy):
         for team in drone.context.my_scene['enemy_teams']:
             if len(drone.context.my_scene['enemy_drones_defender'][team]) > 1:
                 for target in targets:
-                    if (
-                            drone.context.my_scene['enemy_motherships'][team].distance_to(target) <=
-                            MOTHERSHIP_HEALING_DISTANCE + drone.gun.shot_distance or
-                            len([d for d in drone.scene.drones
-                                 if d.is_empty and d.is_alive
-                                    and d.distance_to(target) <= drone.gun.shot_distance
-                                    and d.team != drone.team]) > 1
-                    ):
+                    if self.get_hunter_near_target(drone, target) > 1:
                         targets.remove(target)
 
         targets.sort(key=lambda x: drone.distance_to(x), reverse=False)
