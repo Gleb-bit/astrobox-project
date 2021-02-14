@@ -45,6 +45,9 @@ class ZakharovContext:
             d.set_parameters_init()
 
     def valid_place_gun(self, drone, target):
+        """
+        :return: True, если другие мои дроны не загораживают цель
+        """
         for partner in self.my_team:
             if (
                     not partner.is_alive or (partner.coord.x == drone.coord.x and partner.coord.y == drone.coord.y)
@@ -62,6 +65,9 @@ class ZakharovContext:
         return True
 
     def near_enemy(self, drone):
+        """
+        :return: возвращает вражеский дрон, если расстояние до него позволяет загружать элериум
+        """
         for t in self.my_scene['enemy_teams']:
             for enemy_drone in self.my_scene['enemy_drones'][t]:
                 if (drone.distance_to(enemy_drone) < CARGO_TRANSITION_DISTANCE
@@ -72,6 +78,9 @@ class ZakharovContext:
         return None
 
     def get_enemy_at_gun(self, drone):
+        """
+        :return: возвращает один дрон, попадающий под цель
+        """
         for d in drone.scene.drones:
             if d.team != drone.team and drone.distance_to(d) <= drone.gun.shot_distance and d.is_alive:
                 vec1 = Vector(d.coord.x - drone.coord.x, d.coord.y - drone.coord.y)
@@ -216,12 +225,7 @@ class StrategyLoader(Strategy):
 
     def _get_my_asteroid(self, drone):
         """
-        Функция возвращает цель астероид для загрузки elerium
-
-        Составляет список целей из еще не выбрвнных другими дронами астероидов у которых  есть elerium
-        вначале проверяет, первую цель по списку для полной загрузки, если таких нет,
-        то  выбирает ближайшую к дрону цель из составленного списка
-        :return: asteroid
+        :return:  цель астероид или дрон для загрузки элериума
         """
 
         targets = [a for a in drone.asteroids if (self.get_asteroid_surplus(a, drone) > 0 and
@@ -253,6 +257,9 @@ class StrategyLoader(Strategy):
         return target
 
     def get_target(self, drone):
+        """
+        :return: цель для передвижения
+        """
         if drone.free_space == 0:
             drone.target = drone.my_mothership
         else:
@@ -314,12 +321,7 @@ class StrategyFastLoader(StrategyLoader):
 
     def _get_my_asteroid(self, drone):
         """
-        Функция возвращает цель астероид для загрузки elerium
-
-        Составляет список целей из еще не выбрвнных другими дронами астероидов у которых  есть elerium
-        вначале проверяет, первую цель по списку для полной загрузки, если таких нет,
-        то  выбирает ближайшую к дрону цель из составленного списка
-        :return: asteroid
+        :return: возвращает цель астероид для загрузки элериума
         """
 
         targets = [a for a in drone.asteroids if (self.get_asteroid_surplus(a, drone) > 0)]
@@ -349,6 +351,7 @@ class StrategyFastLoader(StrategyLoader):
         return None
 
     def devide_step_path(self, drone, target):
+
         if drone.distance_to(target) > 150:
             for angle_delta in range(12):
                 vec = Vector.from_points(drone.coord, target.coord)
@@ -371,6 +374,7 @@ class StrategyFastLoader(StrategyLoader):
                 new_coord = Point(x=drone.coord.x + vec.x, y=drone.coord.y + vec.y)
                 drone.actions.append(['move_step', new_coord])
                 return
+            # передвигаемся не по прямой до цели, а по 150 точек, со случайным углом
             new_coord = Point(x=drone.coord.x + vec.x, y=drone.coord.y + vec.y)
             drone.actions.append(['move_step', new_coord])
         else:
@@ -451,8 +455,7 @@ class StrategyMarauder(StrategyLoader):
 
     def get_target(self, drone):
         """
-        меняем  цель  на уничтоженные базы
-        :return: asteroid
+        :return:  уничтоженную базу или базу только с одним живым дроном
         """
         if drone.free_space == 0:
             drone.target = drone.my_mothership
@@ -476,6 +479,9 @@ class StrategyDefender(Strategy):
         self.angles = global_angles[index_mothership_x][index_mothership_y]
 
     def get_position_of_angle(self, drone):
+        """
+        :return: точку возле базы для защиты, в зависимости от угла расположения
+        """
         position = Point(drone.my_mothership.coord.x + MOTHERSHIP_HEALING_DISTANCE - 1,
                          drone.my_mothership.coord.y)
         vec = Vector.from_points(drone.my_mothership.coord, position)
@@ -485,7 +491,6 @@ class StrategyDefender(Strategy):
         return position
 
     def get_place_near_mothership(self, drone, exclude_angle=-1):
-
         if (
                 drone.angle >= 0 and
                 50 < drone.distance_to(drone.my_mothership) <= MOTHERSHIP_HEALING_DISTANCE
@@ -729,7 +734,7 @@ class ZakharovDrone(Drone):
 
     def verify_angle(self, partner: GameObject, target: Point):
         """
-        возвращает истину, если partner перекрывает цель
+        :return: True, если partner перекрывает цель
         """
         v_from_self_to_target = Vector(target.x - self.coord.x, target.y - self.coord.y)
         v_from_self_to_partner = Vector(partner.coord.x - self.coord.x, partner.coord.y - self.coord.y)
@@ -740,6 +745,10 @@ class ZakharovDrone(Drone):
             return False
 
     def valide_place(self, target: Point):
+        """
+        :param target: type GameObject| цель которую надо поразить
+        :return: True, если не один дрон из своей команды не перекрывает цель
+        """
         for partner in self.context.my_team:
             if not partner.is_alive or partner is self:
                 continue
