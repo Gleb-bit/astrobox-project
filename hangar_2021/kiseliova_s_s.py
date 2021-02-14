@@ -81,7 +81,7 @@ class SimonDrone(Drone):
             self.action = 'move_to_plase_for_attack'
         elif self.action == 'move_to_mathership':
             # TODO - Запрещённый приём! Разворачивайте дронов исключительно через turn_to
-            self.vector = Vector.from_points(self.coord, self.mothership.coord)
+            # self.vector = Vector.from_points(self.coord, self.mothership.coord)
             self.move_at(self.my_mothership)
         elif self.health < 40:
             self.action = 'move_to_mathership'
@@ -158,7 +158,9 @@ class SimonDrone(Drone):
                     self.action = 'get_drone_for_attack'
                 else:
                     self.action = 'get_drone_for_attack_from_mothership'
-            self.vector = Vector.from_points(self.coord, target.coord)
+            # TODO - Запрещённый приём! Разворачивайте дронов исключительно через turn_to
+            # self.vector = Vector.from_points(self.coord, target.coord)
+            self.turn_to(target)
             if self.not_shot_on_my_drones():
                 self.gun.shot(target)
 
