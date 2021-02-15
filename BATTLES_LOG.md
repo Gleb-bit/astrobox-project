@@ -1,7 +1,9 @@
-##### Результаты соревнований с 14.01.2021 по 14.02.2021
+##### Результаты соревнований с 15.01.2021 по 15.02.2021
 
 Дата сражения | Продолжительность (шагов игры) | Первый результат | Второй результат | Третий результат | Четвертый результат
 --- | --- | --- | --- | --- | ---
+2021-02-15 21:57:40 | 17001 | 488 - ZakharovDrone | 399 - BysevDrone /dead/ | 386 - DemintsevDrone | 373 - YurchenkoDrone
+2021-02-15 21:56:24 | 17001 | 814 - ZakharovDrone /dead/ | 715 - GarinDrone /dead/
 2021-02-14 23:03:10 | 17001 | 456 - DemintsevDrone | 379 - VorobyevDrone | 338 - SivkovDrone | 247 - BysevDrone /dead/
 2021-02-14 22:59:35 | 3500 | 854 - VorobyevDrone /dead/ | 510 - GarinDrone
 2021-02-14 21:56:19 | 13397 | 933 - SmirnovDrone /dead/ | 657 - IlyinDrone /dead/ | 0 - SimonDrone /dead/ | 0 - DevastatorDrone /dead/

@@ -1,21 +1,22 @@
-##### Рейтинг по состоянию на 14.02.2021
+##### Рейтинг по состоянию на 15.02.2021
 
 Позиция|Имя команды|Рейтинг
 ---|---|---:
 1|VoychenkoDrones|1000
 2|BeskaevDrone|889
-3|YurchenkoDrone|817
+3|YurchenkoDrone|788
 4|SivkovDrone|773
 5|ShirokovDrone|772
-6|DemintsevDrone|763
-7|OlshannikovDron|756
-8|CheslavlevDrone|733
-9|VorobyevDrone|718
-10|GarinDrone|708
-11|KachanovDrone|675
-12|LepilinDron|657
-13|BysevDrone|529
-14|SmirnovDrone|523
-15|IlyinDrone|488
-16|SimonDrone|411
-17|DevastatorDrone|401
+6|OlshannikovDron|756
+7|DemintsevDrone|749
+8|ZakharovDrone|737
+9|CheslavlevDrone|733
+10|VorobyevDrone|718
+11|GarinDrone|698
+12|KachanovDrone|675
+13|LepilinDron|657
+14|BysevDrone|562
+15|SmirnovDrone|523
+16|IlyinDrone|488
+17|SimonDrone|411
+18|DevastatorDrone|401
