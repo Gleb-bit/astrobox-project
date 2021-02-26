@@ -25,7 +25,7 @@ class BasicDrone(Drone):
     mothership_full_health = None
     min_percents_mothership_health = 50
     min_percents_drone_health = 50
-    distance_enemy_object_near = 100
+    distance_some_object_near = 100
     angle_fire_line = 15
 
     def __init__(self, **kwargs):
@@ -131,10 +131,10 @@ class BasicDrone(Drone):
         payload_of_nearest_asteroid = nearest_asteroids[nearest_asteroid_index][index_payload]
         enemies_near_asteroid = self.get_enemies_near_asteroid(nearest_asteroid)
         while (nearest_asteroid in [teammate.target for teammate in
-                                    self.teammates] and not payload_of_nearest_asteroid) or nearest_asteroid.is_empty or len(
-            enemies_near_asteroid) >= safe_len_enemies:
+                                    self.teammates] and not payload_of_nearest_asteroid) or nearest_asteroid.is_empty or \
+                len(enemies_near_asteroid) >= safe_len_enemies:
             if not nearest_asteroids or number_asteroid + 1 == len(nearest_asteroids):
-                return None
+                return
             else:
                 number_asteroid += 1
                 nearest_asteroid = nearest_asteroids[number_asteroid][index_asteroid]
@@ -156,21 +156,17 @@ class BasicDrone(Drone):
                                                     nearest_asteroid_index)
 
     def get_nearest_asteroid(self, index_payload=2, index_asteroid=1):
-        if all(drone.target for drone in YurchenkoDrone.soldiers):
-            for drone in YurchenkoDrone.soldiers:
-                if isinstance(drone.target, Asteroid):
-                    drone.target = None
         if not YurchenkoDrone.nearest_asteroids:
             YurchenkoDrone.nearest_asteroids = self.get_tuple_nearest_asteroids()
             if not YurchenkoDrone.nearest_asteroids:
-                return None
+                return
         target = self.check_target(YurchenkoDrone.nearest_asteroids)
         if not target:
-            return None
-        payload_of_nearest_asteroid = target[index_payload]
+            return
+        payload_of_target = target[index_payload]
         target_index = YurchenkoDrone.nearest_asteroids.index(
             target)
-        if self.free_space >= payload_of_nearest_asteroid:
+        if self.free_space >= payload_of_target:
             YurchenkoDrone.nearest_asteroids.remove(target)
         else:
             YurchenkoDrone.nearest_asteroids[target_index][index_payload] -= self.free_space
@@ -184,7 +180,7 @@ class BasicDrone(Drone):
 
     def go_to_asteroid_or_mothership(self):
         nearest_not_empty_asteroid = self.go_to_nearest_not_empty_asteroid()
-        if not nearest_not_empty_asteroid or self.cargo.is_full or self.target == nearest_not_empty_asteroid:
+        if not nearest_not_empty_asteroid or self.is_full or self.target == nearest_not_empty_asteroid:
             self.move_at_home()
 
     def move_at_home(self):
@@ -204,9 +200,9 @@ class BasicDrone(Drone):
                                            teammate.firing_position and teammate.firing_position.distance_to(
                                                place) <= YurchenkoDrone.save_distance]
         bases_near = [base for base in self.get_bases_alive() if
-                      base.distance_to(place) <= YurchenkoDrone.distance_enemy_object_near]
+                      base.distance_to(place) <= YurchenkoDrone.distance_some_object_near]
         enemies_near = [enemy for enemy in self.get_enemy_alive_drones() if
-                        enemy.distance_to(place) <= YurchenkoDrone.distance_enemy_object_near]
+                        enemy.distance_to(place) <= YurchenkoDrone.distance_some_object_near]
         if place and soldier.valide_place(
                 place) and not bases_near and not enemies_near and not teammates_firing_positions_near:
             return place
@@ -246,7 +242,7 @@ class BasicDrone(Drone):
             target) <= enemy.gun.shot_distance and (
                                        not enemy.is_moving or enemy.gun.cooldown > 0)] if self.beware_of_enemies else False
         while (target in [teammate.target for teammate in
-                          self.teammates]) or enemies_near_target and len(enemies_near_target) >= 2:
+                          self.teammates]) or enemies_near_target and len(enemies_near_target) > 1:
             if target_number == len(all_enemies['load_enemy_drones']):
                 self.go_to_asteroid_or_mothership()
                 return
@@ -259,9 +255,8 @@ class BasicDrone(Drone):
         return target
 
     def get_roles(self, main_role, dop_role, amount_main_role):
-        alive_our_drones = self.get_alive_our_drones()
-        for soldier in alive_our_drones:
-            if len([soldier for soldier in alive_our_drones if soldier.role == main_role]) < amount_main_role:
+        for soldier in YurchenkoDrone.soldiers:
+            if len([soldier for soldier in YurchenkoDrone.soldiers if soldier.role == main_role]) < amount_main_role:
                 soldier.role = main_role
             else:
                 soldier.role = dop_role
@@ -299,7 +294,6 @@ class BasicDrone(Drone):
         партнеров.
 
         :param point: анализируемое место
-        :param target: цель
         :return: True or False
         """
         is_valide = 0 < point.x < theme.FIELD_WIDTH and 0 < point.y < theme.FIELD_HEIGHT
@@ -339,7 +333,7 @@ class BasicDrone(Drone):
             place = self.get_place_and_angle(soldier, purpose, target, ang)
             if place:
                 return place
-        return None
+        return
 
     def scalar(self, vec1, vec2):
         return vec1.x * vec2.x + vec1.y * vec2.y
@@ -454,7 +448,7 @@ class BasicDrone(Drone):
             if firing_position:
                 return
 
-    def get_action_for_shooting_back(self, low_mothership_health, target_number):
+    def get_action_for_shooting_back(self, low_mothership_health):
         if self.being_treated or low_mothership_health:
             self.move_at(YurchenkoDrone.position_for_shooting_back[self.id])
         else:
@@ -463,23 +457,15 @@ class BasicDrone(Drone):
                                                 for enemy in self.get_enemy_alive_drones()]
             enemy_alive_drones = self.get_enemy_alive_drones()
             enemies_far = [self.distance_to(enemy) > self.gun.shot_distance for enemy in enemy_alive_drones if
-                           enemy.distance_to(enemy.mothership) > MOTHERSHIP_HEALING_DISTANCE]
+                           not enemy.is_moving]
             if (all(enemy_alive_drones_on_mothership) or all(
                     enemies_far)) and self.target or not enemy_alive_drones:
-                self.shoot_base_or_enemy_or_leave_position(enemy_alive_drones, target_number)
+                self.shoot_base_or_enemy_or_leave_position(enemy_alive_drones)
             else:
                 self.get_target_turn_and_shoot(enemy_alive_drones)
 
-    def shoot_base_or_enemy_or_leave_position(self, enemy_alive_drones, target_number):
-        enemy_bases_in_shot_distance = [base for base in self.get_enemy_bases_alive() if
-                                        self.distance_to(base) <= self.gun.shot_distance and not any(
-                                            enemy for enemy in self.get_enemy_alive_drones() if
-                                            enemy.team == base.team and self.check_object_on_fire_line_to_target(
-                                                self, base, enemy))]
-        if enemy_bases_in_shot_distance:
-            self.target = enemy_bases_in_shot_distance[target_number]
-            self.assign_turn_and_shoot_object(self.target)
-        elif not enemy_alive_drones:
+    def shoot_base_or_enemy_or_leave_position(self, enemy_alive_drones):
+        if not enemy_alive_drones:
             self.shooting_back = False
         else:
             self.get_target_turn_and_shoot(enemy_alive_drones)
@@ -526,7 +512,7 @@ class YurchenkoDrone(BasicDrone):
                 self.become_collector_or_shoot_enemy(shooting_target_teammates_near_base, target)
                 return
 
-        if self.distance_to(self.my_mothership) < YurchenkoDrone.distance_enemy_object_near and self.began_to_fire:
+        if self.distance_to(self.my_mothership) < YurchenkoDrone.distance_some_object_near and self.began_to_fire:
             self.get_and_move_to_firing_position(target)
             return
 
@@ -550,11 +536,11 @@ class YurchenkoDrone(BasicDrone):
 
         self.assign_turn_and_shoot_object(target)
 
-    def shoot_or_change_target(self, min_percents_mothership_health=50, target_number=0):
+    def shoot_or_change_target(self, min_percents_mothership_health=50):
         low_mothership_health = self.my_mothership.health / YurchenkoDrone.mothership_full_health * 100 <= min_percents_mothership_health
         if self.shooting_back or low_mothership_health:
-            self.get_action_for_shooting_back(low_mothership_health, target_number)
-        elif self.target is not None and self.target.is_alive:
+            self.get_action_for_shooting_back(low_mothership_health)
+        elif self.target and self.target.is_alive:
             self.shoot(self.target)
         else:
             all_enemies = self.get_enemy_drones_and_bases()
