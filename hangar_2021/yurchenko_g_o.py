@@ -125,14 +125,10 @@ class BasicDrone(Drone):
             enemies_near_asteroid = []
         return enemies_near_asteroid
 
-    def check_for_presence_in_teammates(self, nearest_asteroids, nearest_asteroid, number_asteroid,
-                                        nearest_asteroid_index,
-                                        index_payload=2, index_asteroid=1, safe_len_enemies=3):
-        payload_of_nearest_asteroid = nearest_asteroids[nearest_asteroid_index][index_payload]
+    def check_for_presence_in_teammates(self, nearest_asteroids, nearest_asteroid, number_asteroid, index_asteroid=1,
+                                        safe_len_enemies=3):
         enemies_near_asteroid = self.get_enemies_near_asteroid(nearest_asteroid)
-        while (nearest_asteroid in [teammate.target for teammate in
-                                    self.teammates] and not payload_of_nearest_asteroid) or nearest_asteroid.is_empty or \
-                len(enemies_near_asteroid) >= safe_len_enemies:
+        while nearest_asteroid.is_empty or len(enemies_near_asteroid) >= safe_len_enemies:
             if not nearest_asteroids or number_asteroid + 1 == len(nearest_asteroids):
                 return
             else:
@@ -145,15 +141,12 @@ class BasicDrone(Drone):
                      free_space_of_transporter=20, number_asteroid=0, index_asteroid=1,
                      index_payload=2):
         nearest_asteroid = nearest_asteroids[number_asteroid][index_asteroid]
-        nearest_asteroid_index = nearest_asteroids.index(nearest_asteroids[number_asteroid])
         if self.role == 'transporter' and self.free_space >= free_space_of_transporter:
             nearest_asteroids = self.get_tuple_most_filled_asteroids(nearest_asteroids)
             if nearest_asteroids and nearest_asteroids[number_asteroid][
                 index_payload] - self.free_space >= remaining_amount_elerium:
                 nearest_asteroid = nearest_asteroids[number_asteroid][index_asteroid]
-                nearest_asteroid_index = nearest_asteroids.index(nearest_asteroids[number_asteroid])
-        return self.check_for_presence_in_teammates(nearest_asteroids, nearest_asteroid, number_asteroid,
-                                                    nearest_asteroid_index)
+        return self.check_for_presence_in_teammates(nearest_asteroids, nearest_asteroid, number_asteroid)
 
     def get_nearest_asteroid(self, index_payload=2, index_asteroid=1):
         if not YurchenkoDrone.nearest_asteroids:
@@ -361,6 +354,11 @@ class BasicDrone(Drone):
                     return
         self.get_roles(main_role='transporter', dop_role='transporter', amount_main_role=4)
 
+    def enemies_near_pos_for_shoot_back(self):
+        return any(
+            enemy.distance_to(YurchenkoDrone.position_for_shooting_back[self.id]) <= self.gun.shot_distance for enemy in
+            self.get_enemy_alive_drones() if enemy.gun.cooldown > 0)
+
     def assign_turn_and_shoot_object(self, object):
         self.assign_target_firing_position_and_attack_place(object, self.coord)
         self.turn_to(object)
@@ -566,9 +564,7 @@ class YurchenkoDrone(BasicDrone):
         elif (self.my_mothership.payload <= max(
                 [enemy_base.payload for enemy_base in
                  self.get_enemy_bases(
-                     self)])) and not any(
-            enemy.distance_to(YurchenkoDrone.position_for_shooting_back[self.id]) <= self.gun.shot_distance for enemy in
-            self.get_enemy_alive_drones() if enemy.gun.cooldown > 0):
+                     self)])) and not self.enemies_near_pos_for_shoot_back():
             self.get_destination()
         else:
             self.shoot_or_change_target()
