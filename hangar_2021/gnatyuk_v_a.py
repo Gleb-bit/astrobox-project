@@ -6,9 +6,8 @@ from astrobox.core import Drone, Unit
 import logging
 
 from robogame_engine.geometry import Point, Vector
-from stage_04_soldiers.devastator import DevastatorDrone
 
-logging.basicConfig(filename='my_drone.log', filemode='w', level=logging.INFO)
+# logging.basicConfig(filename='my_drone.log', filemode='w', level=logging.INFO)
 
 
 class GnatDrone(Drone):
@@ -18,9 +17,9 @@ class GnatDrone(Drone):
     partial_distance = 0
     DANGER_DISTANCE_TO_BASE = 100
 
-    def __init__(self, name, **kwargs):
+    def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.name = name
+        self.name = None
         self._strategy = Collector()
         self.attack_range = self.gun.shot_distance
         self.asteroid_to_collect = None
@@ -37,6 +36,7 @@ class GnatDrone(Drone):
         self._strategy = strategy
 
     def on_born(self):
+        self.name = len(self.my_team)
         self.my_team.append(self)
         self.asteroid_to_collect = self._get_my_asteroid()
         self.target = self.asteroid_to_collect
@@ -51,20 +51,12 @@ class GnatDrone(Drone):
                 self.move_at(self.target)
                 return
 
-            devastators = [drone for drone in self.scene.drones if
-                           drone.is_alive and isinstance(drone, DevastatorDrone)]
-            if len(devastators) < 3:  # TODO возможно нужно добавить проверку на стейт у девастаторов
-                for devastator in devastators:
-                    if self.distance_to(devastator) < self.attack_range:
-                        # self.victim = devastator
-                        # break
-                        self.shoot(devastator)
-                        return
-                else:
-                    self.target = self.get_attack_point(base=True)
-                if round(self.x) == self.target.x and round(self.y) == self.target.y:
-                    self.shoot(self.victim)
-                return
+            # free_elerium = sum([asteroid.payload for asteroid in self.scene.asteroids])
+            # if not free_elerium:
+            #     self.target = self.get_attack_point(base=True)
+            #     if round(self.x) == self.target.x and round(self.y) == self.target.y:
+            #         self.shoot(self.victim)
+            #     return
 
             if self.victim:
                 self.shoot(self.victim)
@@ -83,13 +75,13 @@ class GnatDrone(Drone):
 
     def shoot(self, victim):
         self.turn_to(victim)
-        if self.distance_to(victim) >= self.attack_range:
+        if self.distance_to(victim) > self.attack_range:
             return
         for partner in self.my_team:
-            if partner is self:
+            if partner is self or not partner.is_alive:
                 continue
-            if (partner.near(victim) and partner.is_alive) or \
-                    (self.get_angle(partner, victim) < 20 and self.distance_to(partner) < self.distance_to(victim)):
+            if partner.near(victim) \
+                    or (self.get_angle(partner, victim) < 20 and self.distance_to(partner) < self.distance_to(victim)):
                 return
         self.gun.shot(victim)
 
@@ -143,9 +135,9 @@ class GnatDrone(Drone):
             self.load_from(mothership)
 
     def on_unload_complete(self):
-        if self.name < 2:
+        free_elerium = sum([asteroid.payload for asteroid in self.scene.asteroids])
+        if not free_elerium:
             self.strategy = Military()
-            print('now im military')
             self.target = self.get_attack_point()
         else:
             self.target = self._get_my_asteroid()
@@ -158,7 +150,6 @@ class GnatDrone(Drone):
             self.target = self._get_my_asteroid()
             if self.target is self.my_mothership:
                 self.strategy = Military()
-                print('now im military')
         self.strategy.act(self)
 
     def on_heartbeat(self):
@@ -185,7 +176,7 @@ class GnatDrone(Drone):
             self.empty_distance += int(self.distance_to(self.target))
         else:
             self.partial_distance += int(self.distance_to(self.target))
-        logging.info(f'{self.name} - {self.empty_distance} - {self.partial_distance} - {self.full_distance}')
+        # logging.info(f'{self.name} - {self.empty_distance} - {self.partial_distance} - {self.full_distance}')
 
     def collect_from_destroyed(self):
         pass
@@ -194,13 +185,18 @@ class GnatDrone(Drone):
         pass
 
     def get_victim(self):
-        enemies = [drone for drone in self.scene.drones if (drone not in self.my_team and drone.is_alive)]
+        enemies = [drone for drone in self.scene.drones if (drone not in self.my_team and drone.is_alive)
+                   and not drone.near(drone.mothership)]
         enemies_bases = [base for base in self.scene.motherships if (base is not self.my_mothership and base.is_alive)]
-        enemies.extend(enemies_bases)
-        distance_to_enemies = sorted([(self.distance_to(enemy), enemy) for enemy in enemies], key=lambda x: x[0])[0]
+
         if enemies:
-            victim = distance_to_enemies[1]
-            return victim
+            nearest_enemy = sorted([(self.distance_to(enemy), enemy) for enemy in enemies], key=lambda x: x[0])[0]
+            if nearest_enemy[0] < self.attack_range:
+                return nearest_enemy[1]
+        if enemies_bases:
+            nearest_enemy_base = sorted([(self.distance_to(enemy), enemy)
+                                         for enemy in enemies_bases], key=lambda x: x[0])[0]
+            return nearest_enemy_base[1]
         return None
 
     def surround_base(self):
@@ -208,8 +204,6 @@ class GnatDrone(Drone):
         base_to_attack = max([(base.payload, base) for base in enemies_bases], key=lambda x: x[0])[1]
         if base_to_attack.payload < (self.my_mothership.payload * 0.95):
             return
-            # self.target = self.get_attack_point()
-            # return self.target
 
         defend_coord = self.get_coord(base_to_attack)
         return Point(base_to_attack.coord.x + defend_coord[0], base_to_attack.coord.y + defend_coord[1])
