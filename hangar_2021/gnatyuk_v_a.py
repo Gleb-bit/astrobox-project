@@ -51,13 +51,6 @@ class GnatDrone(Drone):
                 self.move_at(self.target)
                 return
 
-            # free_elerium = sum([asteroid.payload for asteroid in self.scene.asteroids])
-            # if not free_elerium:
-            #     self.target = self.get_attack_point(base=True)
-            #     if round(self.x) == self.target.x and round(self.y) == self.target.y:
-            #         self.shoot(self.victim)
-            #     return
-
             if self.victim:
                 self.shoot(self.victim)
             else:
