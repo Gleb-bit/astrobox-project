@@ -85,10 +85,11 @@ class Brain:
 
     def get_asteroids_watch(self, person):
         self.updatet_asteroids(asteroids=person.asteroids)
+
         if person.number_drone < len(self.asteroids_not_empty):
-            return self.asteroids_not_empty[person.number_drone]
+            return self.asteroids_not_empty[person.number_drone][0]
         else:
-            return self.asteroids_not_empty[0]
+            return self.asteroids_not_empty[0][0]
 
     def get_asretoid_after_born(self, person):
         self.updatet_asteroids(asteroids=person.asteroids)
@@ -252,9 +253,6 @@ class Brain:
                 else:
                     if int(person.payload) == 0 and person.near(person.my_mothership):
                         self.burn_worker(person)
-                        if self.asteroids_not_empty:
-                            pass
-                            #person.turn_to(self.get_asteroids_watch(person))
                     elif int(person.payload) != 100:
                         if not person.near(person.my_mothership) and self.where_all_team[person.number_drone].payload > 0:
                             person.load_from(self.where_all_team[person.number_drone])
@@ -267,7 +265,7 @@ class Brain:
                         if person.near(person.my_mothership):
                             # print("Время выгружать")
                             person.unload_to(person.my_mothership)
-                            #person.turn_to(self.get_asteroids_watch(person))
+                            person.turn_to(self.get_asteroids_watch(person))
                             self.my_money +=person.payload
 
                         else:
