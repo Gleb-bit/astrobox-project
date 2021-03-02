@@ -34,6 +34,7 @@ class Brain:
         self.start_game_flag_2 = False
 
         self.army_live={}
+        self.bases_quantity = 0
     def start_game(self):
         if self.start_game_flag is None:
             self.start_game_flag = True
@@ -89,7 +90,6 @@ class Brain:
         else:
             return self.asteroids_not_empty[0]
 
-
     def get_asretoid_after_born(self, person):
         self.updatet_asteroids(asteroids=person.asteroids)
         for i in range(len(self.asteroids_not_empty) - 1):
@@ -114,6 +114,7 @@ class Brain:
         else:
             self.where_all_team[person.number_drone] = person.my_mothership
             return person.my_mothership
+
 
     def after_asteroid_worker(self, person):
         for i in range(len(self.asteroids_not_empty) - 1):
@@ -190,7 +191,7 @@ class Brain:
             quantity=self.army_quantity
         center_field = Point(theme.FIELD_WIDTH // 2, theme.FIELD_HEIGHT // 2)
         Radius = ((point.x - center_field.x) ** 2 + (point.y - center_field.y) ** 2) ** 0.5
-        radius = Radius * 0.8
+        radius = Radius*0.8
         pfi = [(10 + 20 * i) * 3.14 / 180 for i in range(quantity)]
         win_position = []
         if (person.distance_to(point) > radius and person.distance_to(point) < 1.5*radius) or self.win_position == [] or\
@@ -221,10 +222,16 @@ class Brain:
                 for dron in self.all_team:
                     dron.print_info()
 
+
+    def enough_money_to_win(self):
+        return self.my_money*self.bases_quantity+1>self.all_money
+
     def next_action(self, person):
         self.game_over(person)
+        self.updatet_asteroids(asteroids=person.asteroids)
         self.update_army_quantity()
         self.big_losses(person)
+        self.get_bases(person)
         if person.health < 65:
             person.move_at(person.my_mothership)
             if person.near(person.my_mothership.coord):
@@ -234,34 +241,33 @@ class Brain:
         else:
             if not person.fight:
                 self.updatet_asteroids(person.asteroids)
-                if self.asteroids_not_empty==[] or self.my_money*2+1>self.all_money:
-
-
-                    if person.near(person.my_mothership.coord):
-                        if self.my_money * 2 + 1 > self.all_money or person.payload == 0 or self.army_quantity<=3:
+                if not self.asteroids_not_empty or self.enough_money_to_win():
+                    if person.near(person.my_mothership):
+                        if self.enough_money_to_win() or person.payload == 0 or self.army_quantity<=3:
                             person.fight = True
                         else:
                             person.unload_to(person.mothership)
                     else:
                         person.move_at(person.mothership)
-
                 else:
-                    if int(person.payload) == 0 and person.near(person.my_mothership.coord):
+                    if int(person.payload) == 0 and person.near(person.my_mothership):
                         self.burn_worker(person)
-                        #person.turn_to(Point(300,300))
+                        if self.asteroids_not_empty:
+                            pass
+                            #person.turn_to(self.get_asteroids_watch(person))
                     elif int(person.payload) != 100:
-                        if not person.near(person.my_mothership.coord) and self.where_all_team[person.number_drone].payload > 0:
+                        if not person.near(person.my_mothership) and self.where_all_team[person.number_drone].payload > 0:
                             person.load_from(self.where_all_team[person.number_drone])
-                            #person.turn_to(person.my_mothership.coord)
+                            person.turn_to(person.my_mothership)
                         else:
                             if self.asteroids_not_empty:
                                 self.after_asteroid_worker(person)
 
                     elif int(person.payload) == 100 or self.asteroids_not_empty == []:
-                        if person.near(person.my_mothership.coord):
+                        if person.near(person.my_mothership):
                             # print("Время выгружать")
                             person.unload_to(person.my_mothership)
-                            person.turn_to(self.get_asteroids_watch(person))
+                            #person.turn_to(self.get_asteroids_watch(person))
                             self.my_money +=person.payload
 
                         else:
@@ -286,7 +292,7 @@ class Brain:
                     if person.health < 50:
                         person.move_at(person.my_mothership)
                     else:
-                        if len(self.get_enemies(person)) == 0:
+                        if len(self.get_enemies(person)) == 1:
                             target = self.get_bases(person)[0][0]
                             self.get_win_position(person=person, point=Point(target.coord.x, target.coord.y))
                             my_position_win = self.win_position[person.number_drone]
@@ -402,10 +408,13 @@ class Brain:
         enemies.sort(key=lambda x: x[1])
         return enemies
 
+
+
     def get_bases(self, soldier):
         bases = [(base, soldier.distance_to(base)) for base in soldier.scene.motherships if
                  base.team != soldier.team and base.is_alive]
         bases.sort(key=lambda x: x[1])
+        self.bases_quantity = len(bases)
         return bases
 
 
