@@ -7,6 +7,7 @@ import logging
 
 from robogame_engine.geometry import Point, Vector
 
+
 # logging.basicConfig(filename='my_drone.log', filemode='w', level=logging.INFO)
 
 
@@ -43,41 +44,6 @@ class GnatDrone(Drone):
         self.measure_distance()
         self.move_at(self.target)
 
-    def attack(self, victim=None):
-        if victim is None:
-            self.victim = self.get_victim()
-            if self.distance_to(self.mothership) <= self.DANGER_DISTANCE_TO_BASE:
-                self.target = self.get_attack_point()
-                self.move_at(self.target)
-                return
-
-            if self.victim:
-                self.shoot(self.victim)
-            else:
-                self.collect_from_destroyed()
-        else:
-            self.shoot(victim)
-
-    def get_attack_point(self, base=False):  # TODO
-        if base:
-            base_target = self.surround_base()
-            if base_target:
-                return base_target
-        defend_coord = self.get_coord(self.my_mothership)
-        return Point(self.my_mothership.coord.x + defend_coord[0], self.my_mothership.coord.y + defend_coord[1])
-
-    def shoot(self, victim):
-        self.turn_to(victim)
-        if self.distance_to(victim) > self.attack_range:
-            return
-        for partner in self.my_team:
-            if partner is self or not partner.is_alive:
-                continue
-            if partner.near(victim) \
-                    or (self.get_angle(partner, victim) < 20 and self.distance_to(partner) < self.distance_to(victim)):
-                return
-        self.gun.shot(victim)
-
     def _get_my_asteroid(self):
         best_asteroids = []
         not_collecting_asteroids = []
@@ -88,7 +54,7 @@ class GnatDrone(Drone):
                         break
                 else:
                     not_collecting_asteroids.append(asteroid)
-                    if asteroid.payload >= 90:
+                    if asteroid.payload >= self.free_space:
                         best_asteroids.append(asteroid)
         if best_asteroids:
             best_asteroid = min([(self.distance_to(asteroid), asteroid) for asteroid in best_asteroids])[1]
@@ -100,8 +66,8 @@ class GnatDrone(Drone):
         return best_asteroid
 
     def on_stop_at_asteroid(self, asteroid):
-        if asteroid.payload == 0:
-            return
+        # if asteroid.payload == 0:
+        #     self.target = self._get_my_asteroid()
         if asteroid.payload > self.free_space:
             self.target = self.my_mothership
         else:
@@ -131,12 +97,13 @@ class GnatDrone(Drone):
         free_elerium = sum([asteroid.payload for asteroid in self.scene.asteroids])
         if not free_elerium:
             self.strategy = Military()
-            self.target = self.get_attack_point()
         else:
             self.target = self._get_my_asteroid()
+            self.move_at(self.target)
+
+        self.strategy.act(self)
 
         self.measure_distance()
-        self.move_at(self.target)
 
     def on_wake_up(self):
         if isinstance(self.strategy, Collector):
@@ -150,17 +117,20 @@ class GnatDrone(Drone):
         if current_health < 0.5:
             self.strategy = Mover()
             self.target = self.my_mothership
+            self.strategy.act(self)
             return
 
-        if self.target is None:
-            self.target = self.get_attack_point()
-
-        if round(self.coord.x) == self.target.x and round(self.coord.y) == self.target.y \
-                and isinstance(self.target, Point):
+        if self.on_position():
             self.strategy = Military()
         else:
             self.strategy = Collector()
         self.strategy.act(self)
+
+    def on_position(self):
+        if round(self.coord.x) == self.target.x and round(self.coord.y) == self.target.y \
+                and isinstance(self.target, Point):
+            return True
+        return False
 
     def measure_distance(self):
         if self.is_full:
@@ -171,64 +141,8 @@ class GnatDrone(Drone):
             self.partial_distance += int(self.distance_to(self.target))
         # logging.info(f'{self.name} - {self.empty_distance} - {self.partial_distance} - {self.full_distance}')
 
-    def collect_from_destroyed(self):
-        pass
-
     def on_stop_at_point(self, target):
         pass
-
-    def get_victim(self):
-        enemies = [drone for drone in self.scene.drones if (drone not in self.my_team and drone.is_alive)
-                   and not drone.near(drone.mothership)]
-        enemies_bases = [base for base in self.scene.motherships if (base is not self.my_mothership and base.is_alive)]
-
-        if enemies:
-            nearest_enemy = sorted([(self.distance_to(enemy), enemy) for enemy in enemies], key=lambda x: x[0])[0]
-            if nearest_enemy[0] < self.attack_range:
-                return nearest_enemy[1]
-        if enemies_bases:
-            nearest_enemy_base = sorted([(self.distance_to(enemy), enemy)
-                                         for enemy in enemies_bases], key=lambda x: x[0])[0]
-            return nearest_enemy_base[1]
-        return None
-
-    def surround_base(self):
-        enemies_bases = [base for base in self.scene.motherships if (base is not self.my_mothership and base.is_alive)]
-        base_to_attack = max([(base.payload, base) for base in enemies_bases], key=lambda x: x[0])[1]
-        if base_to_attack.payload < (self.my_mothership.payload * 0.95):
-            return
-
-        defend_coord = self.get_coord(base_to_attack)
-        return Point(base_to_attack.coord.x + defend_coord[0], base_to_attack.coord.y + defend_coord[1])
-
-    def get_coord(self, base):
-        defend_coords = [[130, 40], [40, 130], [110, 110], [-40, 180], [180, -40]]
-        defend_coord = defend_coords[self.name]
-
-        if base.coord.x > 90:
-            defend_coord[0] *= -1
-        if base.coord.y > 90:
-            defend_coord[1] *= -1
-        return defend_coord
-
-    def who_is_fire(self):
-        enemy_drones = [drone for drone in self.scene.drones
-                        if drone not in self.my_team and drone.have_gun and drone.is_alive]
-        candidats = []
-        for drone in enemy_drones:
-            if drone.gun_cooldown >= 0:
-                candidats.append([drone, drone.gun_cooldown])
-        if candidats:
-            self.shoot(candidats[0][0])
-
-    def get_angle(self, partner, victim):
-        def scalar(v1, v2):
-            return v1.x * v2.x + v1.y * v2.y
-
-        to_partner = Vector(partner.x - self.x, partner.y - self.y)
-        to_victim = Vector(victim.x - self.x, victim.y - self.y)
-        cos_partner_victim = scalar(to_partner, to_victim) / (to_partner.module * to_victim.module)
-        return degrees(acos(cos_partner_victim))
 
 
 class Strategy(ABC):
@@ -250,7 +164,117 @@ class Military(Strategy):
 
     def act(self, drone):
         # attack
-        drone.attack()
+        if drone.target is None or (drone.target is drone.my_mothership and drone.fullness == 0):
+            drone.target = self.get_attack_point(drone)
+        if drone.on_position():
+            self.attack(drone)
+        else:
+            drone.move_at(drone.target)
+
+    def attack(self, drone, victim=None):
+        if victim is None:
+            drone.victim = self.get_victim(drone)
+            if drone.distance_to(drone.mothership) <= drone.DANGER_DISTANCE_TO_BASE:
+                drone.target = self.get_attack_point(drone)
+                drone.move_at(drone.target)
+                return
+
+            if drone.victim:
+                self.shoot(drone, drone.victim)
+            else:
+                self.collect_from_destroyed()
+        else:
+            self.shoot(drone, victim)
+
+    def get_attack_point(self, drone, base=False):  # TODO
+        if base:
+            base_target = self.surround_base(drone)
+            if base_target:
+                return base_target
+        defend_coord = self.get_coord(drone, drone.my_mothership)
+        return Point(drone.my_mothership.coord.x + defend_coord[0], drone.my_mothership.coord.y + defend_coord[1])
+
+    def shoot(self, drone, victim):
+        drone.turn_to(victim)
+        if drone.distance_to(victim) > drone.attack_range \
+                or abs(self.get_angle_Ox(drone, victim) - drone.direction) > 5:  # TODO
+            return
+        for partner in drone.my_team:
+            if partner is drone or not partner.is_alive:
+                continue
+            if partner.near(victim) \
+                    or (self.get_angle(drone, partner, victim) < 20
+                        and drone.distance_to(partner) < drone.distance_to(victim)):
+                return
+        drone.gun.shot(victim)
+
+    def get_victim(self, drone):
+        enemies = [d for d in drone.scene.drones if (d not in drone.my_team and d.is_alive)
+                   and not d.near(d.mothership)]
+        enemies_bases = [base for base in drone.scene.motherships if
+                         (base is not drone.my_mothership and base.is_alive)]
+
+        if enemies:
+            nearest_enemy = sorted([(drone.distance_to(enemy), enemy) for enemy in enemies], key=lambda x: x[0])[0]
+            if nearest_enemy[0] <= drone.attack_range:
+                return nearest_enemy[1]
+        if enemies_bases:
+            nearest_enemy_base = sorted([(drone.distance_to(enemy), enemy)
+                                         for enemy in enemies_bases], key=lambda x: x[0])[0]
+            return nearest_enemy_base[1]
+        return None
+
+    def surround_base(self, drone):
+        enemies_bases = [base for base in drone.scene.motherships if
+                         (base is not drone.my_mothership and base.is_alive)]
+        base_to_attack = max([(base.payload, base) for base in enemies_bases], key=lambda x: x[0])[1]
+        if base_to_attack.payload < (drone.my_mothership.payload * 0.95):
+            return
+
+        defend_coord = self.get_coord(drone, base_to_attack)
+        return Point(base_to_attack.coord.x + defend_coord[0], base_to_attack.coord.y + defend_coord[1])
+
+    def get_coord(self, drone, base):
+        defend_coords = [[130, 40], [40, 130], [110, 110], [-40, 180], [180, -40]]
+        defend_coord = defend_coords[drone.name]
+
+        if base.coord.x > 90:
+            defend_coord[0] *= -1
+        if base.coord.y > 90:
+            defend_coord[1] *= -1
+        return defend_coord
+
+    def who_is_fire(self, drone):
+        enemy_drones = [drone for drone in drone.scene.drones
+                        if drone not in drone.my_team and drone.have_gun and drone.is_alive]
+        candidats = []
+        for drone in enemy_drones:
+            if drone.gun_cooldown >= 0:
+                candidats.append([drone, drone.gun_cooldown])
+        if candidats:
+            self.shoot(drone, candidats[0][0])
+
+    def get_angle(self, drone, partner, victim):
+        def scalar(v1, v2):
+            return v1.x * v2.x + v1.y * v2.y
+
+        to_partner = Vector(partner.x - drone.x, partner.y - drone.y)
+        to_victim = Vector(victim.x - drone.x, victim.y - drone.y)
+        cos_partner_victim = scalar(to_partner, to_victim) / (to_partner.module * to_victim.module)
+        return degrees(acos(cos_partner_victim))
+
+    def get_angle_Ox(self, drone, victim):
+        def scalar(v1, v2):
+            return v1.x * v2.x + v1.y * v2.y
+
+        v1 = Vector(victim.x - drone.x, victim.y - drone.y)
+        v2 = Vector(1200, 0)
+
+        cos = scalar(v1, v2) / (v1.module * v2.module)
+        return degrees(acos(cos))
+
+    def collect_from_destroyed(self):
+        pass
 
 
 class Mover(Strategy):
